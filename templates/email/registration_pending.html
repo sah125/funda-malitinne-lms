@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { max-width: 600px; margin: auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Funda Malitinne LMS</h2>
+        </div>
+        <div class="content">
+            <h3>Registration Received</h3>
+            <p>Dear {{ full_name }},</p>
+            <p>Thank you for registering with Funda Malitinne Learning Management System.</p>
+            <p>Your registration has been received and is pending approval by an administrator.</p>
+            <p>You will receive a confirmation email once your account has been approved.</p>
+            <p>Once approved, you will be able to:</p>
+            <ul>
+                <li>Access your enrolled courses</li>
+                <li>Complete lessons and quizzes</li>
+                <li>Submit assignments</li>
+                <li>Track your progress</li>
+            </ul>
+            <p>If you have any questions, please contact our support team.</p>
+            <p>Regards,<br>Funda Malitinne Team</p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 Funda Malitinne Learning Management System</p>
+        </div>
+    </div>
+</body>
+</html>

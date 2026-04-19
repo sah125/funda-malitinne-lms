@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Lesson{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-warning text-white">
+                <h4 class="mb-0"><i class="fas fa-edit me-2"></i> Edit Lesson: {{ lesson.title }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label>Lesson Title</label>
+                        <input type="text" name="title" class="form-control" value="{{ lesson.title }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Content</label>
+                        <textarea name="content" class="form-control" rows="8" required>{{ lesson.content }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label>Video URL (YouTube embed link)</label>
+                        <input type="url" name="video_url" class="form-control" value="{{ lesson.video_url|default:'' }}">
+                        <small class="text-muted">Example: https://www.youtube.com/embed/VIDEO_ID</small>
+                    </div>
+                    <div class="mb-3">
+                        <label>Document (PDF, DOC)</label>
+                        {% if lesson.document %}
+                            <p class="text-info">Current file: {{ lesson.document.name }}</p>
+                        {% endif %}
+                        <input type="file" name="document" class="form-control" accept=".pdf,.doc,.docx">
+                        <small class="text-muted">Upload a new file to replace the existing one.</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label>Duration (minutes)</label>
+                            <input type="number" name="duration" class="form-control" value="{{ lesson.duration }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Order</label>
+                            <input type="number" name="order" class="form-control" value="{{ lesson.order }}">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save"></i> Update Lesson
+                    </button>
+                    <a href="{% url 'manage_course' lesson.course.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

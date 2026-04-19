@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { max-width: 600px; margin: auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .button { background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Funda Malitinne LMS</h2>
+        </div>
+        <div class="content">
+            <h3>New Student Registration - Pending Approval</h3>
+            <p>Dear Admin,</p>
+            <p>A new student has registered and requires your approval.</p>
+            
+            <h4>Student Details:</h4>
+            <ul>
+                <li><strong>Name:</strong> {{ user.get_full_name }}</li>
+                <li><strong>Username:</strong> {{ user.username }}</li>
+                <li><strong>Email:</strong> {{ user.email }}</li>
+                <li><strong>ID Number:</strong> {{ user.id_number }}</li>
+                <li><strong>Contact Number:</strong> {{ user.contact_number }}</li>
+            </ul>
+            
+            <p style="text-align: center;">
+                <a href="http://127.0.0.1:8000/admin/core/user/{{ user.id }}/change/" class="button">Review & Approve</a>
+            </p>
+            <p>Please log in to the admin panel to approve or reject this registration.</p>
+            <p>Regards,<br>Funda Malitinne System</p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 Funda Malitinne Learning Management System</p>
+        </div>
+    </div>
+</body>
+</html>

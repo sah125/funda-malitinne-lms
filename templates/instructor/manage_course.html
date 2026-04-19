@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage {{ course.title }}{% endblock %}
+
+{% block content %}
+<style>
+    .course-banner {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 30px;
+        color: white;
+        margin-bottom: 30px;
+    }
+    .section-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+    .lesson-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        transition: background 0.3s;
+    }
+    .lesson-row:hover { background: #f8f9fa; }
+    .lesson-number { 
+        width: 40px;
+        height: 40px;
+        background: #667eea;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+</style>
+
+<div class="course-banner">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h2><i class="fas fa-book-open me-2"></i> {{ course.title }}</h2>
+            <p class="mb-0">{{ course.description|truncatewords:30 }}</p>
+            <div class="mt-2">
+                <span class="badge bg-light text-dark">{{ course.get_level_display }}</span>
+                <span class="badge bg-light text-dark"><i class="fas fa-users"></i> {{ students|length }} Students</span>
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'bulk_upload_students' course.id %}" class="btn btn-light">
+                <i class="fas fa-upload"></i> Bulk Upload
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Lessons Section -->
+    <div class="col-md-7">
+        <div class="section-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4><i class="fas fa-video me-2"></i> Course Lessons</h4>
+                <a href="{% url 'add_lesson' course.id %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus"></i> Add Lesson
+                </a>
+            </div>
+            
+            <div class="module-list">
+                {% for lesson in lessons %}
+                <div class="lesson-row">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="lesson-number">{{ lesson.order }}</div>
+                        <div>
+                            <strong>{{ lesson.title }}</strong>
+                            <br>
+                            <small class="text-muted">
+                                <i class="fas fa-clock"></i> {{ lesson.duration }} min
+                                {% if lesson.video_url %} | <i class="fas fa-video"></i> Video {% endif %}
+                                {% if lesson.document %} | <i class="fas fa-file-pdf"></i> Document {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    <div>
+                        <a href="{% url 'edit_lesson' lesson.id %}" class="btn btn-sm btn-outline-warning">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="{% url 'delete_lesson' lesson.id %}" class="btn btn-sm btn-outline-danger">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                        <a href="{% url 'add_quiz' lesson.id %}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-question-circle"></i> Add Quiz
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-4">
+                    <i class="fas fa-video fa-3x text-muted mb-3"></i>
+                    <p>No lessons yet. <a href="{% url 'add_lesson' course.id %}">Add your first lesson</a></p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Assignments Section -->
+ 
+         <!-- Assignments Section - Update this part -->
+<div class="col-md-5">
+    <div class="section-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4><i class="fas fa-tasks me-2"></i> Assignments</h4>
+            <a href="{% url 'add_assignment' course.id %}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus"></i> Add Assignment
+            </a>
+        </div>
+        
+        {% for assignment in assignments %}
+        <div class="lesson-row">
+            <div>
+                <strong>{{ assignment.title }}</strong>
+                <br>
+                <small class="text-muted">
+                    Due: {{ assignment.due_date|date:"M d, Y" }} | Points: {{ assignment.total_points }}
+                </small>
+            </div>
+            <div>
+                <a href="{% url 'view_submissions' assignment.id %}" class="btn btn-sm btn-info">
+                    <i class="fas fa-eye"></i> View ({{ assignment.submissions.count }})
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-4">
+            <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+            <p>No assignments yet. <a href="{% url 'add_assignment' course.id %}">Create your first assignment</a></p>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Students Section -->
+    <div class="section-card">
+        <h4><i class="fas fa-users me-2"></i> Enrolled Students ({{ students|length }})</h4>
+        <div class="module-list" style="max-height: 300px; overflow-y: auto;">
+            {% for student in students %}
+            <div class="lesson-row">
+                <div>
+                    <strong>{{ student.get_full_name|default:student.username }}</strong>
+                    <br>
+                    <small class="text-muted">{{ student.email }}</small>
+                </div>
+                <a href="{% url 'bulk_upload_students' course.id %}?student={{ student.id }}" class="btn btn-sm btn-outline-info">
+                    <i class="fas fa-chart-line"></i>
+                </a>
+            </div>
+            {% empty %}
+            <div class="text-center py-4">
+                <p>No students enrolled yet.</p>
+                <a href="{% url 'bulk_upload_students' course.id %}" class="btn btn-sm btn-info">
+                    <i class="fas fa-upload"></i> Bulk Upload Students
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+        
+        <!-- Students Section -->
+        <div class="section-card">
+            <h4><i class="fas fa-users me-2"></i> Enrolled Students ({{ students|length }})</h4>
+            <div class="module-list" style="max-height: 300px; overflow-y: auto;">
+                {% for student in students %}
+                <div class="lesson-row">
+                    <div>
+                        <strong>{{ student.get_full_name|default:student.username }}</strong>
+                        <br>
+                        <small class="text-muted">{{ student.email }}</small>
+                    </div>
+                    {% with progress=student.progress.first %}
+                        {% if progress %}
+                            <span class="badge bg-success">{{ progress.progress_percentage }}%</span>
+                        {% else %}
+                            <span class="badge bg-secondary">0%</span>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+                {% empty %}
+                <div class="text-center py-4">
+                    <p>No students enrolled yet.</p>
+                    <a href="{% url 'bulk_upload_students' course.id %}" class="btn btn-sm btn-info">
+                        <i class="fas fa-upload"></i> Bulk Upload Students
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

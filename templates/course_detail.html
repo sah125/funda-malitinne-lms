@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ course.title }}{% endblock %}
+
+{% block content %}
+{% if progress %}
+<div class="card mb-4 bg-light">
+    <div class="card-body">
+        <h5 class="card-title">
+            <i class="fas fa-chart-line me-2"></i> Your Progress
+        </h5>
+        <div class="progress mb-2" style="height: 30px;">
+            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" 
+                 role="progressbar" 
+                 style="width: {{ progress.progress_percentage }}%;" 
+                 aria-valuenow="{{ progress.progress_percentage }}" 
+                 aria-valuemin="0" 
+                 aria-valuemax="100">
+                {{ progress.progress_percentage }}% Complete
+            </div>
+        </div>
+        <div class="row text-center mt-3">
+            <div class="col-4">
+                <small class="text-muted">Lessons Completed</small>
+                <h5 class="mb-0">{{ progress.completed_lessons.count }} / {{ lessons|length }}</h5>
+            </div>
+            <div class="col-4">
+                <small class="text-muted">Progress</small>
+                <h5 class="mb-0">{{ progress.progress_percentage }}%</h5>
+            </div>
+            <div class="col-4">
+                <small class="text-muted">Status</small>
+                <h5 class="mb-0">
+                    {% if progress.progress_percentage == 100 %}
+                        <span class="text-success">✅ Completed</span>
+                    {% else %}
+                        <span class="text-warning">In Progress</span>
+                    {% endif %}
+                </h5>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2>{{ course.title }}</h2>
+                <p>{{ course.description }}</p>
+                <p class="text-muted">
+                    <i class="fas fa-chalkboard-teacher"></i> Instructor: {{ course.instructor.username }}
+                    <br>
+                    <i class="fas fa-signal"></i> Level: {{ course.get_level_display }}
+                </p>
+                {% if progress %}
+                    <div class="progress mb-3">
+                        <div class="progress-bar bg-success" style="width: {{ progress.progress_percentage }}%">
+                            {{ progress.progress_percentage }}% Complete
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if progress %}
+        <div class="card mb-4 bg-light">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-chart-line me-2"></i> Your Progress
+                </h5>
+                <div class="progress mb-2" style="height: 25px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                         role="progressbar" 
+                         style="width: {{ progress.progress_percentage }}%;" 
+                         aria-valuenow="{{ progress.progress_percentage }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        {{ progress.progress_percentage }}% Complete
+                    </div>
+                </div>
+                <div class="row text-center mt-3">
+                    <div class="col-4">
+                        <small class="text-muted">Lessons</small>
+                        <h6>{{ progress.completed_lessons.count }} / {{ lessons|length }}</h6>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted">Quizzes</small>
+                        <h6>{{ progress.completed_quizzes.count }} / {{ course.quizzes.count }}</h6>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted">Assignments</small>
+                        <h6>{{ progress.completed_assignments.count }} / {{ assignments|length }}</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <h3><i class="fas fa-video"></i> Lessons</h3>
+        {% for lesson in lessons %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5>{{ lesson.title }}</h5>
+                            <p class="text-muted small">
+                                <i class="fas fa-clock"></i> {{ lesson.duration }} minutes
+                            </p>
+                        </div>
+                        <a href="{% url 'lesson_detail' lesson.id %}" class="btn btn-primary">View Lesson</a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="alert alert-info">No lessons added yet.</div>
+        {% endfor %}
+        
+        <h3 class="mt-4"><i class="fas fa-tasks"></i> Assignments</h3>
+        {% for assignment in assignments %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>{{ assignment.title }}</h5>
+                    <p>{{ assignment.description }}</p>
+                    <p class="text-muted">
+                        Due: {{ assignment.due_date|date:"M d, Y" }} | Points: {{ assignment.total_points }}
+                    </p>
+                    <a href="{% url 'submit_assignment' assignment.id %}" class="btn btn-success">Submit Assignment</a>
+                </div>
+            </div>
+        {% empty %}
+            <div class="alert alert-info">No assignments yet.</div>
+        {% endfor %}
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Course Progress</h4>
+            </div>
+            <div class="card-body text-center">
+                {% if progress %}
+                    <h2>{{ progress.progress_percentage }}%</h2>
+                    <p>Complete</p>
+                    <p>{{ progress.completed_lessons.count }} of {{ lessons|length }} lessons completed</p>
+                {% else %}
+                    <p>Enroll to track your progress</p>
+                    <a href="{% url 'enroll_course' course.id %}" class="btn btn-primary">Enroll Now</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Assignment{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Add Assignment to {{ course.title }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label>Assignment Title</label>
+                        <input type="text" name="title" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Description</label>
+                        <textarea name="description" class="form-control" rows="5" required></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label>Due Date</label>
+                            <input type="datetime-local" name="due_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Total Points</label>
+                            <input type="number" name="total_points" class="form-control" value="100">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Assignment</button>
+                    <a href="{% url 'manage_course' course.id %}" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
