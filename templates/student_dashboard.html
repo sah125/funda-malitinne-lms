@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2>Welcome, {{ user.username }}!</h2>
+        <p>Your learning journey continues</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>My Enrolled Courses</h4>
+            </div>
+            <div class="card-body">
+                {% if enrolled_courses %}
+                    <div class="row">
+                        {% for course in enrolled_courses %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5>{{ course.title }}</h5>
+                                        <p>{{ course.description|truncatewords:15 }}</p>
+                                        <p class="text-muted small">
+                                            <i class="fas fa-chalkboard-teacher"></i> {{ course.instructor.username }}
+                                        </p>
+                                        <a href="{% url 'course_detail' course.id %}" class="btn btn-primary btn-sm">Continue Learning</a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center">You haven't enrolled in any courses yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Your Stats</h4>
+            </div>
+            <div class="card-body text-center">
+                <h3>{{ enrolled_courses|length }}</h3>
+                <p>Enrolled Courses</p>
+                <hr>
+                <a href="#available" class="btn btn-outline-primary">Browse More Courses</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<a href="{% url 'certificates' %}" class="btn btn-outline-info">
+    <i class="fas fa-award"></i> My Certificates
+</a>
+
+<div id="available" class="card mt-4">
+    <div class="card-header">
+        <h4>Available Courses</h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for course in available_courses %}
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5>{{ course.title }}</h5>
+                            <p>{{ course.description|truncatewords:10 }}</p>
+                            <a href="{% url 'enroll_course' course.id %}" class="btn btn-success btn-sm">Enroll Now</a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-center">No more courses available.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

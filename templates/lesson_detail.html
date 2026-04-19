@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ lesson.title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-body">
+                <a href="{% url 'course_detail' course.id %}" class="btn btn-secondary mb-3">
+                    ← Back to Course
+                </a>
+                
+                <h2>{{ lesson.title }}</h2>
+                
+                {% if lesson.video_url %}
+                    <div class="ratio ratio-16x9 mb-4">
+                        <iframe src="{{ lesson.video_url }}" allowfullscreen></iframe>
+                    </div>
+                {% endif %}
+                
+                <div class="lesson-content mt-4">
+                    {{ lesson.content|linebreaks }}
+                </div>
+                
+                <!-- Document Viewer -->
+                {% if lesson.document %}
+                <div class="mt-4">
+                    <h5><i class="fas fa-file-pdf me-2"></i> Course Material</h5>
+                    <div class="border rounded p-3" style="background: #f8f9fa;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-file-pdf text-danger me-2"></i>
+                                <strong>{{ lesson.document.name|cut:"lesson_documents/" }}</strong>
+                            </div>
+                            <a href="{{ lesson.document.url }}" target="_blank" class="btn btn-sm btn-primary">
+                                <i class="fas fa-external-link-alt"></i> View Document
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Mark as Complete Button -->
+                {% if user.role == 'student' %}
+                    <div class="mt-4 text-center">
+                        {% if lesson in progress.completed_lessons.all %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle"></i> You have completed this lesson!
+                            </div>
+                        {% else %}
+                            <form method="POST">
+                                {% csrf_token %}
+                                <button type="submit" name="complete" value="yes" class="btn btn-success btn-lg">
+                                    <i class="fas fa-check-circle"></i> Mark as Complete
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Progress Card -->
+        <div class="card mt-3">
+            <div class="card-body">
+                <h5>Your Progress in {{ course.title }}</h5>
+                <div class="progress mb-2" style="height: 30px;">
+                    <div class="progress-bar bg-success progress-bar-striped" 
+                         role="progressbar" 
+                         style="width: {{ progress.progress_percentage }}%;" 
+                         aria-valuenow="{{ progress.progress_percentage }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        {{ progress.progress_percentage }}% Complete
+                    </div>
+                </div>
+                <p class="mb-0">
+                    <i class="fas fa-check-circle text-success"></i> 
+                    {{ progress.completed_lessons.count }} of {{ course.lessons.count }} lessons completed
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

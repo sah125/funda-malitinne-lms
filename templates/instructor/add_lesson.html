@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Lesson{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Add Lesson to {{ course.title }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label>Lesson Title</label>
+                        <input type="text" name="title" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Content</label>
+                        <textarea name="content" class="form-control" rows="8" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label>Video URL (YouTube embed link)</label>
+                        <input type="url" name="video_url" class="form-control" placeholder="https://www.youtube.com/embed/...">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label>Duration (minutes)</label>
+                            <input type="number" name="duration" class="form-control" value="30">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Order</label>
+                            <input type="number" name="order" class="form-control" value="1">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Lesson</button>
+                    <a href="{% url 'manage_course' course.id %}" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
