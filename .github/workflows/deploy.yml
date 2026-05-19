@@ -1,0 +1,52 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'core/**'
+      - 'lms/**'
+      - 'requirements.txt'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy via SSH
+      env:
+        SSH_KEY: ${{ secrets.SSH_KEY }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
+        
+        ssh $SERVER_USER@$SERVER_HOST << 'EOF'
+        set -e
+        cd /opt/funda_malitinne_system
+        
+        echo "Pulling latest code..."
+        git pull origin main
+        
+        echo "Stopping services..."
+        docker-compose down
+        
+        echo "Building and starting services..."
+        docker-compose up -d
+        
+        echo "Running migrations..."
+        docker-compose exec -T web python manage.py migrate --settings=lms.settings_production
+        
+        echo "Collecting static files..."
+        docker-compose exec -T web python manage.py collectstatic --noinput --settings=lms.settings_production
+        
+        echo "Deployment completed successfully!"
+        EOF

@@ -1,6 +1,5 @@
 from pathlib import Path
 import os
-import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-funda-malitinne-2026'
@@ -50,10 +49,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'lms.wsgi.application'
 
+# Database - SQLite (simple, no extra packages needed)
 DATABASES = {
-    'default': dj_database_url.config(
-        default='postgresql://malitinne_lms_db_user:z1E59c1oEjhwHFODsam72FVfSyOQGAs3@dpg-d7ik62l8nd3s73do1heg-a.frankfurt-postgres.render.com/malitinne_lms_db'
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
 AUTH_USER_MODEL = 'core.User'
@@ -72,6 +73,8 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -97,13 +100,46 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
 ]
 
-# Email Configuration (for testing - use console backend first)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # This will print emails to console
+# Email Configuration (prints to console for testing)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# For real email (Gmail example):
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'your-email@gmail.com'
-# EMAIL_HOST_PASSWORD = 'your-app-password'
+# Logging Configuration for Development
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    },
+}
+
+# Celery Configuration (for development - uses eager execution)
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+# Cache Configuration (Optional - uses database if Redis unavailable)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'funda-malitinne-cache',
+    }
+}
+
+# Create logs directory if it doesn't exist
+import os
+os.makedirs(BASE_DIR / 'logs', exist_ok=True)

@@ -1,85 +1,682 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Student Dashboard{% endblock %}
+{% block title %}Student Dashboard - Funda Malitinne{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <h2>Welcome, {{ user.username }}!</h2>
+<style>
+  :root {
+    --primary: #9f7734;
+    --primary-light: #fbf3a9;
+    --primary-dark: #7a5828;
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-600: #475569;
+    --gray-800: #1e293b;
+    --white: #ffffff;
+    --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background: var(--gray-50);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Layout */
+  .student-wrapper {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* Sidebar – clean light background */
+  .student-sidebar {
+    width: 280px;
+    background: var(--white);
+    border-right: 1px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-shrink: 0;
+    transition: all 0.3s;
+    position: relative;
+    z-index: 100;
+  }
+
+  .sidebar-header {
+    padding: 1.5rem;
+    text-align: center;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .sidebar-header img {
+    max-height: 135px;
+    width: auto;
+  }
+
+  .sidebar-menu {
+    list-style: none;
+    padding: 1rem 0;
+    flex: 1;
+  }
+
+  .sidebar-menu li {
+    margin-bottom: 0.25rem;
+  }
+
+  .sidebar-menu li a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    color: var(--gray-600);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+  }
+
+  .sidebar-menu li a i {
+    width: 1.25rem;
+    font-size: 1rem;
+  }
+
+  .sidebar-menu li a:hover,
+  .sidebar-menu li a.active {
+    background: var(--gray-100);
+    color: var(--primary);
+    border-left-color: var(--primary);
+  }
+
+  /* Sidebar footer (logout) */
+  .sidebar-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--gray-200);
+  }
+
+  .sidebar-footer a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--gray-600);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+  }
+
+  .sidebar-footer a:hover {
+    background: var(--gray-100);
+    color: #dc2626;
+  }
+
+  /* Main content */
+  .student-main {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-x: auto;
+  }
+
+  /* Top bar – clean, with welcome header */
+  .top-bar {
+    margin-bottom: 2rem;
+  }
+
+  .welcome-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-radius: 1rem;
+    padding: 2rem;
+    color: white;
+    margin-bottom: 1.5rem;
+  }
+
+  .welcome-header h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .welcome-header p {
+    opacity: 0.9;
+    margin: 0;
+  }
+
+  .user-info-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--white);
+    padding: 0.75rem 1.5rem;
+    border-radius: 1rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--gray-200);
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-800);
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: var(--white);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .stat-card i {
+    font-size: 2rem;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    line-height: 1.2;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-600);
+    font-weight: 500;
+    margin-top: 0.25rem;
+  }
+
+  /* Course Cards Grid */
+  .courses-section {
+    margin-top: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .section-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin: 0;
+  }
+
+  .section-header a {
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .section-header a:hover {
+    text-decoration: underline;
+  }
+
+  .courses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .course-card {
+    background: var(--white);
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid var(--gray-200);
+    transition: all 0.3s;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .course-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .course-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 1.25rem;
+  }
+
+  .course-header h5 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .course-instructor {
+    font-size: 0.75rem;
+    opacity: 0.9;
+  }
+
+  .course-instructor i {
+    margin-right: 0.25rem;
+  }
+
+  .course-body {
+    padding: 1.25rem;
+  }
+
+  .course-description {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin-bottom: 1rem;
+    line-height: 1.5;
+    min-height: 60px;
+  }
+
+  .progress-section {
+    margin: 1rem 0;
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    margin-bottom: 0.25rem;
+  }
+
+  .progress {
+    height: 8px;
+    background: var(--gray-200);
+    border-radius: 9999px;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    background: var(--primary);
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.3s ease;
+  }
+
+  .course-meta {
+    margin-bottom: 1rem;
+  }
+
+  .badge-custom {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    border-radius: 9999px;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    margin-right: 0.5rem;
+  }
+
+  .btn-continue {
+    width: 100%;
+    padding: 0.5rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+  }
+
+  .btn-continue:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    color: white;
+  }
+
+  .btn-enroll {
+    width: 100%;
+    padding: 0.5rem;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+  }
+
+  .btn-enroll:hover {
+    background: #059669;
+    transform: translateY(-1px);
+    color: white;
+  }
+
+  /* Alert styles */
+  .alert-info-custom {
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    border-radius: 0.75rem;
+    padding: 2rem;
+    text-align: center;
+    color: #1e40af;
+  }
+
+  .alert-info-custom a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .alert-info-custom a:hover {
+    text-decoration: underline;
+  }
+
+  /* Mobile toggle */
+  .mobile-toggle {
+    display: none;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+  }
+
+  @media (max-width: 768px) {
+    .student-sidebar {
+      position: fixed;
+      left: -280px;
+      height: 100%;
+      z-index: 1000;
+      background: white;
+    }
+    .student-sidebar.open {
+      left: 0;
+    }
+    .student-main {
+      margin-left: 0;
+    }
+    .mobile-toggle {
+      display: inline-block;
+    }
+    .stats-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    .courses-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="student-wrapper">
+  <!-- Sidebar -->
+  <div class="student-sidebar" id="studentSidebar">
+    <div>
+      <div class="sidebar-header">
+        <img src="{% static 'logo-for-mal.png' %}" alt="Funda Malitinne Logo">
+      </div>
+      <ul class="sidebar-menu">
+        <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+        <li><a href="{% url 'student_dashboard' %}" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+        <li><a href="{% url 'certificates' %}"><i class="fas fa-award"></i> My Certificates</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-footer">
+      <a href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="student-main">
+    <button class="mobile-toggle" id="mobileToggle"><i class="fas fa-bars"></i> Menu</button>
+
+    <!-- Welcome Header -->
+    <div class="top-bar">
+      <div class="welcome-header">
+        <h2><i class="fas fa-graduation-cap me-2"></i> Welcome back, {{ user.get_full_name|default:user.username }}!</h2>
         <p>Your learning journey continues</p>
+      </div>
+      
+      <div class="user-info-bar">
+        <div class="page-title">Student Dashboard</div>
+        <div class="user-info">
+          <span><i class="fas fa-user-circle"></i> {{ user.username }}</span>
+        </div>
+      </div>
     </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mb-4">
+      {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }}" style="padding: 1rem; border-radius: 0.5rem; margin-bottom: 0.5rem; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534;">
+          {{ msg }}
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Stats Row -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <i class="fas fa-book-open"></i>
+        <div class="stat-number">{{ enrolled_courses|length }}</div>
+        <div class="stat-label">Enrolled Courses</div>
+      </div>
+      <div class="stat-card">
+        <i class="fas fa-certificate"></i>
+        <div class="stat-number">{{ certificates_count|default:"0" }}</div>
+        <div class="stat-label">Certificates Earned</div>
+      </div>
+      <div class="stat-card">
+        <i class="fas fa-chart-line"></i>
+        <div class="stat-number">{{ average_progress|default:"0" }}%</div>
+        <div class="stat-label">Average Progress</div>
+      </div>
+      <div class="stat-card">
+        <i class="fas fa-clock"></i>
+        <div class="stat-number">{{ courses_in_progress|default:"0" }}</div>
+        <div class="stat-label">In Progress</div>
+      </div>
+    </div>
+
+    <!-- My Enrolled Courses -->
+    <div class="courses-section">
+      <div class="section-header">
+        <h3><i class="fas fa-graduation-cap me-2"></i> My Enrolled Courses</h3>
+        <a href="#available-courses">Browse More Courses <i class="fas fa-arrow-right"></i></a>
+      </div>
+      
+      {% if enrolled_courses %}
+      <div class="courses-grid">
+        {% for course in enrolled_courses %}
+        <div class="course-card">
+          <div class="course-header">
+            <h5 title="{{ course.title }}">{{ course.title|truncatechars:50 }}</h5>
+            <div class="course-instructor">
+              <i class="fas fa-chalkboard-teacher"></i> {{ course.instructor.get_full_name|default:course.instructor.username }}
+            </div>
+          </div>
+          <div class="course-body">
+            <div class="course-description">
+              {{ course.description|truncatewords:20|default:"No description provided." }}
+            </div>
+            
+            <div class="progress-section">
+              <div class="progress-label">
+                <span>Your Progress</span>
+                <span id="progress-{{ course.id }}">0%</span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar" id="progress-bar-{{ course.id }}" style="width: 0%"></div>
+              </div>
+            </div>
+            
+            <div class="course-meta">
+              <span class="badge-custom">{{ course.get_level_display }}</span>
+              <span class="badge-custom"><i class="fas fa-book"></i> {{ course.lessons.count }} lessons</span>
+            </div>
+            
+            <a href="{% url 'course_detail' course.id %}" class="btn-continue" id="btn-{{ course.id }}">
+              <i class="fas fa-play"></i> Continue Learning
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="alert-info-custom">
+        <i class="fas fa-info-circle fa-2x mb-3 d-block"></i>
+        <p class="mb-3">You haven't enrolled in any courses yet.</p>
+        <a href="#available-courses" class="btn-action btn-primary-custom" style="display: inline-block; padding: 0.5rem 1rem; background: var(--primary); color: white; border-radius: 0.5rem; text-decoration: none;">
+          Browse Available Courses
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Available Courses -->
+    <div id="available-courses" class="courses-section">
+      <div class="section-header">
+        <h3><i class="fas fa-book me-2"></i> Available Courses</h3>
+      </div>
+      
+      {% if available_courses %}
+      <div class="courses-grid">
+        {% for course in available_courses %}
+        <div class="course-card">
+          <div class="course-header">
+            <h5 title="{{ course.title }}">{{ course.title|truncatechars:50 }}</h5>
+            <div class="course-instructor">
+              <i class="fas fa-chalkboard-teacher"></i> {{ course.instructor.get_full_name|default:course.instructor.username }}
+            </div>
+          </div>
+          <div class="course-body">
+            <div class="course-description">
+              {{ course.description|truncatewords:20|default:"No description provided." }}
+            </div>
+            
+            <div class="course-meta">
+              <span class="badge-custom">{{ course.get_level_display }}</span>
+              <span class="badge-custom"><i class="fas fa-book"></i> {{ course.lessons.count }} lessons</span>
+              {% if course.price and course.price > 0 %}
+              <span class="badge-custom"><i class="fas fa-tag"></i> R{{ course.price }}</span>
+              {% else %}
+              <span class="badge-custom"><i class="fas fa-gratipay"></i> Free</span>
+              {% endif %}
+            </div>
+            
+            <a href="{% url 'enroll_course' course.id %}" class="btn-enroll" onclick="return confirm('Enroll in {{ course.title }}?')">
+              <i class="fas fa-plus-circle"></i> Enroll Now
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="alert-info-custom">
+        <i class="fas fa-check-circle fa-2x mb-3 d-block"></i>
+        <p class="mb-0">No more courses available at the moment. Check back soon!</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
 </div>
 
-<div class="row">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h4>My Enrolled Courses</h4>
-            </div>
-            <div class="card-body">
-                {% if enrolled_courses %}
-                    <div class="row">
-                        {% for course in enrolled_courses %}
-                            <div class="col-md-6 mb-3">
-                                <div class="card h-100">
-                                    <div class="card-body">
-                                        <h5>{{ course.title }}</h5>
-                                        <p>{{ course.description|truncatewords:15 }}</p>
-                                        <p class="text-muted small">
-                                            <i class="fas fa-chalkboard-teacher"></i> {{ course.instructor.username }}
-                                        </p>
-                                        <a href="{% url 'course_detail' course.id %}" class="btn btn-primary btn-sm">Continue Learning</a>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="text-center">You haven't enrolled in any courses yet.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-4">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h4>Your Stats</h4>
-            </div>
-            <div class="card-body text-center">
-                <h3>{{ enrolled_courses|length }}</h3>
-                <p>Enrolled Courses</p>
-                <hr>
-                <a href="#available" class="btn btn-outline-primary">Browse More Courses</a>
-            </div>
-        </div>
-    </div>
-</div>
+<script>
+  // Mobile sidebar toggle
+  const toggleBtn = document.getElementById('mobileToggle');
+  const sidebar = document.getElementById('studentSidebar');
+  
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      sidebar.classList.toggle('open');
+    });
+  }
+  
+  // Close sidebar when clicking outside on mobile
+  document.addEventListener('click', function(e) {
+    if (window.innerWidth <= 768 && 
+        sidebar.classList.contains('open') && 
+        !sidebar.contains(e.target) && 
+        e.target !== toggleBtn) {
+      sidebar.classList.remove('open');
+    }
+  });
+  
+  // Prevent clicks inside sidebar from closing it
+  if (sidebar) {
+    sidebar.addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+  }
+  
+  // Load course progress data via AJAX
+  document.addEventListener('DOMContentLoaded', function() {
+    {% for course in enrolled_courses %}
+      fetch('/debug/progress/{{ course.id }}/')
+        .then(response => response.json())
+        .then(data => {
+          const progressPercent = data.progress_percentage || 0;
+          const progressSpan = document.getElementById('progress-{{ course.id }}');
+          const progressBar = document.getElementById('progress-bar-{{ course.id }}');
+          const continueBtn = document.getElementById('btn-{{ course.id }}');
+          
+          if (progressSpan) progressSpan.textContent = progressPercent + '%';
+          if (progressBar) progressBar.style.width = progressPercent + '%';
+          
+          if (continueBtn && progressPercent === 100) {
+            continueBtn.innerHTML = '<i class="fas fa-redo"></i> Review Course';
+          } else if (continueBtn && progressPercent > 0) {
+            continueBtn.innerHTML = '<i class="fas fa-play"></i> Continue Learning';
+          }
+        })
+        .catch(error => console.error('Error loading progress:', error));
+    {% endfor %}
+  });
+</script>
 
-<a href="{% url 'certificates' %}" class="btn btn-outline-info">
-    <i class="fas fa-award"></i> My Certificates
-</a>
-
-<div id="available" class="card mt-4">
-    <div class="card-header">
-        <h4>Available Courses</h4>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            {% for course in available_courses %}
-                <div class="col-md-4 mb-3">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5>{{ course.title }}</h5>
-                            <p>{{ course.description|truncatewords:10 }}</p>
-                            <a href="{% url 'enroll_course' course.id %}" class="btn btn-success btn-sm">Enroll Now</a>
-                        </div>
-                    </div>
-                </div>
-            {% empty %}
-                <p class="text-center">No more courses available.</p>
-            {% endfor %}
-        </div>
-    </div>
-</div>
 {% endblock %}

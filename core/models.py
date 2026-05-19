@@ -22,7 +22,6 @@ class User(AbstractUser):
     verification_token = models.CharField(max_length=100, blank=True, null=True)
     reset_password_token = models.CharField(max_length=100, blank=True, null=True)
     reset_password_expires = models.DateTimeField(blank=True, null=True)
-    # REMOVED: created_at - Django User already has date_joined
     
     # New fields for registration
     id_number = models.CharField(max_length=20, blank=True, null=True)
@@ -119,6 +118,8 @@ class Lesson(models.Model):
     )
     duration = models.IntegerField(default=0, help_text="Duration in minutes")
     order = models.IntegerField(default=0)
+    # Module relationship (add this field)
+    module = models.ForeignKey('LearningModule', on_delete=models.SET_NULL, null=True, blank=True, related_name='lessons')
     
     class Meta:
         ordering = ['order']
@@ -155,9 +156,7 @@ class QuizQuestion(models.Model):
     option_b = models.CharField(max_length=500, blank=True)
     option_c = models.CharField(max_length=500, blank=True)
     option_d = models.CharField(max_length=500, blank=True)
-    correct_answer = models.CharField(max_length=10, choices=[
-        ('A', 'A'), ('B', 'B'), ('C', 'C'), ('D', 'D'), ('True', 'True'), ('False', 'False')
-    ])
+    correct_answer = models.CharField(max_length=255)
     
     class Meta:
         ordering = ['order']
@@ -276,3 +275,308 @@ class Notification(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.title}"
+    
+
+
+
+class LessonModule(models.Model):
+    """Module within a lesson for step-by-step learning"""
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='modules')
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    content_type = models.CharField(max_length=20, choices=[
+        ('text', 'Text Content'),
+        ('video', 'Video Content'),
+        ('interactive', 'Interactive Element'),
+        ('quiz', 'Quick Quiz'),
+        ('coding', 'Coding Exercise'),
+        ('scenario', 'Scenario Based'),
+    ], default='text')
+    order = models.IntegerField(default=0)
+    is_locked = models.BooleanField(default=False)
+    time_estimate = models.IntegerField(help_text="Time in minutes", default=5)
+    points = models.IntegerField(default=10)
+    
+    class Meta:
+        ordering = ['order']
+
+class UserModuleProgress(models.Model):
+    """Track progress through individual modules"""
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='module_progress')
+    module = models.ForeignKey(LessonModule, on_delete=models.CASCADE)
+    completed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    time_spent = models.IntegerField(default=0)  # seconds
+    score = models.IntegerField(null=True, blank=True)
+    attempts = models.IntegerField(default=0)
+    
+    class Meta:
+        unique_together = ['student', 'module']
+
+class LessonInteraction(models.Model):
+    """Track student interaction with lessons (prevents auto-complete)"""
+    student = models.ForeignKey(User, on_delete=models.CASCADE)
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE)
+    last_activity = models.DateTimeField(auto_now=True)
+    total_time_spent = models.IntegerField(default=0)  # seconds
+    modules_completed = models.IntegerField(default=0)
+    last_module_viewed = models.IntegerField(default=0)
+    completed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        unique_together = ['student', 'lesson']
+
+class Badge(models.Model):
+    """Gamification badges"""
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    icon = models.CharField(max_length=50, help_text="Font Awesome icon class")
+    points_required = models.IntegerField(default=0)
+    lessons_completed = models.IntegerField(default=0)
+    courses_completed = models.IntegerField(default=0)
+    
+class UserBadge(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='badges')
+    badge = models.ForeignKey(Badge, on_delete=models.CASCADE)
+    earned_at = models.DateTimeField(auto_now_add=True)
+
+class DailyStreak(models.Model):
+    """Track daily login streaks"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='streaks')
+    current_streak = models.IntegerField(default=0)
+    longest_streak = models.IntegerField(default=0)
+    last_active = models.DateField(auto_now=True)
+    total_xp = models.IntegerField(default=0)
+    level = models.IntegerField(default=1)
+
+
+# ==================== NEW MODELS (BLACKBOARD-STYLE) ====================
+
+class Announcement(models.Model):
+    """Course announcements like Blackboard"""
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='announcements')
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='announcements')
+    is_pinned = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.course.title} - {self.title}"
+    
+    class Meta:
+        ordering = ['-is_pinned', '-created_at']
+
+
+class CourseGroup(models.Model):
+    """Study groups within a course like Blackboard"""
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='groups')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    members = models.ManyToManyField(User, related_name='course_groups', blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_groups')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.course.title} - {self.name}"
+    
+    @property
+    def member_count(self):
+        return self.members.count()
+
+
+class Attendance(models.Model):
+    """Attendance tracking like Blackboard"""
+    STATUS_CHOICES = (
+        ('present', 'Present'),
+        ('absent', 'Absent'),
+        ('late', 'Late'),
+        ('excused', 'Excused'),
+    )
+    
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='attendances')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='attendances')
+    date = models.DateField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='present')
+    notes = models.TextField(blank=True, null=True)
+    marked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='marked_attendances')
+    
+    class Meta:
+        unique_together = ['student', 'course', 'date']
+    
+    def __str__(self):
+        return f"{self.student.username} - {self.course.title} - {self.date}"
+
+
+class LearningModule(models.Model):
+    """Group lessons into modules like Blackboard"""
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='learning_modules')
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    order = models.IntegerField(default=0)
+    is_visible = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['order']
+    
+    def __str__(self):
+        return f"{self.course.title} - {self.title}"
+    
+    @property
+    def lesson_count(self):
+        return self.lessons.count()
+    
+    @property
+    def total_duration(self):
+        return sum(l.duration for l in self.lessons.all())
+    
+
+# ==================== LEARNER PROFILE SYSTEM (QCTO COMPLIANT) ====================
+
+class LearnerProfile(models.Model):
+    """Extended learner profile for QCTO compliance"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='learner_profile')
+    
+    # Section A: Personal & Contact (additional fields beyond User model)
+    physical_address = models.TextField(blank=True, null=True)
+    emergency_contact_name = models.CharField(max_length=200, blank=True, null=True)
+    emergency_contact_phone = models.CharField(max_length=20, blank=True, null=True)
+    
+    # Section C: Internship / Workplace Experience
+    host_company_name = models.CharField(max_length=255, blank=True, null=True)
+    mou_file = models.FileField(upload_to='mou_documents/', blank=True, null=True)
+    mou_start_date = models.DateField(blank=True, null=True)
+    mou_end_date = models.DateField(blank=True, null=True)
+    supervisor_name = models.CharField(max_length=200, blank=True, null=True)
+    supervisor_phone = models.CharField(max_length=20, blank=True, null=True)
+    supervisor_email = models.EmailField(blank=True, null=True)
+    
+    # Section D: Academic Tracking
+    current_course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True, related_name='enrolled_learners')
+    enrollment_date = models.DateField(blank=True, null=True)
+    expected_completion_date = models.DateField(blank=True, null=True)
+    assessment_notes = models.TextField(blank=True, null=True)
+    certificate_issued = models.BooleanField(default=False)
+    certificate_issued_date = models.DateField(blank=True, null=True)
+    
+    # POPIA Compliance
+    popia_consent = models.BooleanField(default=False)
+    popia_consent_date = models.DateTimeField(blank=True, null=True)
+    data_processing_consent = models.BooleanField(default=False)
+    
+    # Timestamps
+    profile_updated = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Learner Profile"
+        verbose_name_plural = "Learner Profiles"
+    
+    def __str__(self):
+        return f"Profile for {self.user.get_full_name() or self.user.username}"
+    
+    def get_completion_percentage(self):
+        """Calculate profile completion percentage for QCTO reporting"""
+        fields = [self.physical_address, self.emergency_contact_name, self.id_number,
+                  self.host_company_name, self.supervisor_name]
+        filled = sum(1 for f in fields if f)
+        return int((filled / len(fields)) * 100) if fields else 0
+
+
+class LearnerDocument(models.Model):
+    """Documents uploaded for learners (ID, qualifications, CV, agreements)"""
+    DOCUMENT_TYPES = (
+        ('id_copy', 'Certified ID Copy'),
+        ('qualification', 'Highest Qualification'),
+        ('cv', 'Curriculum Vitae'),
+        ('learner_agreement', 'Signed Learner Agreement'),
+        ('proof_of_residence', 'Proof of Residence'),
+        ('medical_certificate', 'Medical Certificate'),
+        ('other', 'Other Document'),
+    )
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='documents')
+    document_type = models.CharField(max_length=50, choices=DOCUMENT_TYPES)
+    title = models.CharField(max_length=200, blank=True, null=True)
+    file = models.FileField(upload_to='learner_documents/%Y/%m/%d/')
+    file_name = models.CharField(max_length=500)
+    file_size = models.IntegerField(help_text="File size in bytes", default=0)
+    description = models.TextField(blank=True, null=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='uploaded_documents')
+    upload_date = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
+    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='verified_documents')
+    verified_date = models.DateTimeField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['-upload_date']
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_document_type_display()}"
+
+
+class LogbookEntry(models.Model):
+    """Workplace experience logbook entries"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='logbook_entries')
+    entry_date = models.DateField()
+    hours_spent = models.DecimalField(max_digits=5, decimal_places=1, default=0, help_text="Hours spent on this activity")
+    description = models.TextField()
+    skills_learned = models.TextField(blank=True, null=True)
+    supervisor_comments = models.TextField(blank=True, null=True)
+    attachment = models.FileField(upload_to='logbook_attachments/%Y/%m/', blank=True, null=True)
+    supervisor_approved = models.BooleanField(default=False)
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='approved_logbooks')
+    approved_date = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-entry_date']
+        verbose_name_plural = "Logbook entries"
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.entry_date}"
+
+
+class BackupLog(models.Model):
+    """Track system backups for QCTO 5.5 compliance"""
+    backup_timestamp = models.DateTimeField(auto_now_add=True)
+    backup_type = models.CharField(max_length=50, choices=[('full', 'Full Backup'), ('incremental', 'Incremental')])
+    backup_size = models.BigIntegerField(help_text="Size in bytes", default=0)
+    status = models.CharField(max_length=20, choices=[('success', 'Success'), ('failed', 'Failed'), ('in_progress', 'In Progress')])
+    initiated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    notes = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['-backup_timestamp']
+    
+    def __str__(self):
+        return f"Backup on {self.backup_timestamp.strftime('%Y-%m-%d %H:%M')}"
+
+
+class AuditLog(models.Model):
+    """Track all data access for POPIA compliance"""
+    ACTION_CHOICES = (
+        ('view', 'View'),
+        ('create', 'Create'),
+        ('edit', 'Edit'),
+        ('delete', 'Delete'),
+        ('export', 'Export'),
+        ('download', 'Download'),
+    )
+    
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    resource_type = models.CharField(max_length=100)
+    resource_id = models.IntegerField(null=True)
+    ip_address = models.GenericIPAddressField(null=True)
+    user_agent = models.TextField(blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    details = models.JSONField(default=dict, blank=True)
+    
+    class Meta:
+        ordering = ['-timestamp']
+    
+    def __str__(self):
+        return f"{self.user} - {self.action} - {self.resource_type} - {self.timestamp}"

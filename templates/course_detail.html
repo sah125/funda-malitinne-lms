@@ -1,131 +1,356 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}{{ course.title }}{% endblock %}
+{% block title %}{{ course.title }} - Funda Malitinne{% endblock %}
 
 {% block content %}
-{% if progress %}
-<div class="card mb-4 bg-light">
-    <div class="card-body">
-        <h5 class="card-title">
-            <i class="fas fa-chart-line me-2"></i> Your Progress
-        </h5>
-        <div class="progress mb-2" style="height: 30px;">
-            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" 
-                 role="progressbar" 
-                 style="width: {{ progress.progress_percentage }}%;" 
-                 aria-valuenow="{{ progress.progress_percentage }}" 
-                 aria-valuemin="0" 
-                 aria-valuemax="100">
-                {{ progress.progress_percentage }}% Complete
-            </div>
-        </div>
-        <div class="row text-center mt-3">
-            <div class="col-4">
-                <small class="text-muted">Lessons Completed</small>
-                <h5 class="mb-0">{{ progress.completed_lessons.count }} / {{ lessons|length }}</h5>
-            </div>
-            <div class="col-4">
-                <small class="text-muted">Progress</small>
-                <h5 class="mb-0">{{ progress.progress_percentage }}%</h5>
-            </div>
-            <div class="col-4">
-                <small class="text-muted">Status</small>
-                <h5 class="mb-0">
-                    {% if progress.progress_percentage == 100 %}
-                        <span class="text-success">✅ Completed</span>
-                    {% else %}
-                        <span class="text-warning">In Progress</span>
-                    {% endif %}
-                </h5>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
+<style>
+  .lesson-item {
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+    margin-bottom: 1rem;
+  }
+  
+  .lesson-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  
+  .lesson-item.completed {
+    border-left-color: #10b981;
+    background: linear-gradient(90deg, #f0fdf4 0%, white 100%);
+  }
+  
+  .lesson-item.in-progress {
+    border-left-color: #f59e0b;
+    background: linear-gradient(90deg, #fffbeb 0%, white 100%);
+  }
+  
+  .lesson-item.locked {
+    border-left-color: #94a3b8;
+    opacity: 0.7;
+  }
+  
+  .lesson-status-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 2rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  
+  .status-completed {
+    background: #10b981;
+    color: white;
+  }
+  
+  .status-in-progress {
+    background: #f59e0b;
+    color: white;
+  }
+  
+  .status-locked {
+    background: #94a3b8;
+    color: white;
+  }
+  
+  .view-lesson-btn {
+    transition: all 0.3s ease;
+    border-radius: 0.5rem;
+  }
+  
+  .view-lesson-btn:hover {
+    transform: translateX(3px);
+  }
+  
+  .stat-number {
+    font-size: 2rem;
+    font-weight: 800;
+  }
+  
+  .stat-label {
+    font-size: 0.75rem;
+    opacity: 0.9;
+  }
+</style>
+
 <div class="row">
     <div class="col-md-8">
-        <div class="card mb-4">
+        <!-- Course Header Card -->
+        <div class="card mb-4 border-0 shadow-sm">
+            {% if course.featured_image %}
+            <img src="{{ course.featured_image.url }}" class="card-img-top" alt="{{ course.title }}" style="max-height: 300px; object-fit: cover;">
+            {% endif %}
             <div class="card-body">
-                <h2>{{ course.title }}</h2>
-                <p>{{ course.description }}</p>
-                <p class="text-muted">
-                    <i class="fas fa-chalkboard-teacher"></i> Instructor: {{ course.instructor.username }}
-                    <br>
-                    <i class="fas fa-signal"></i> Level: {{ course.get_level_display }}
-                </p>
-                {% if progress %}
-                    <div class="progress mb-3">
-                        <div class="progress-bar bg-success" style="width: {{ progress.progress_percentage }}%">
-                            {{ progress.progress_percentage }}% Complete
-                        </div>
-                    </div>
-                {% endif %}
+                <h2 class="mb-3">{{ course.title }}</h2>
+                <p class="text-muted">{{ course.description }}</p>
+                <div class="d-flex flex-wrap gap-3 mb-3">
+                    <span class="badge bg-secondary">
+                        <i class="fas fa-chalkboard-teacher"></i> {{ course.instructor.get_full_name|default:course.instructor.username }}
+                    </span>
+                    <span class="badge bg-info">
+                        <i class="fas fa-signal"></i> {{ course.get_level_display }}
+                    </span>
+                    <span class="badge bg-primary">
+                        <i class="fas fa-users"></i> {{ course.students.count }} students
+                    </span>
+                </div>
             </div>
         </div>
         
+        <!-- Progress Tracking Card (if enrolled) -->
         {% if progress %}
-        <div class="card mb-4 bg-light">
+        <div class="card mb-4 border-0 shadow-sm">
             <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-chart-line me-2"></i> Your Progress
+                <h5 class="card-title mb-3">
+                    <i class="fas fa-chart-line me-2" style="color: #9f7734;"></i> Your Progress
                 </h5>
-                <div class="progress mb-2" style="height: 25px;">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                <div class="progress mb-3" style="height: 12px; border-radius: 1rem;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
                          role="progressbar" 
-                         style="width: {{ progress.progress_percentage }}%;" 
+                         style="width: {{ progress.progress_percentage }}%; background: linear-gradient(90deg, #9f7734, #7a5828); border-radius: 1rem;" 
                          aria-valuenow="{{ progress.progress_percentage }}" 
                          aria-valuemin="0" 
                          aria-valuemax="100">
-                        {{ progress.progress_percentage }}% Complete
                     </div>
                 </div>
-                <div class="row text-center mt-3">
+                <div class="row text-center">
                     <div class="col-4">
-                        <small class="text-muted">Lessons</small>
-                        <h6>{{ progress.completed_lessons.count }} / {{ lessons|length }}</h6>
+                        <div class="stat-number">{{ progress.completed_lessons.count }}</div>
+                        <div class="stat-label">Lessons Done</div>
+                        <small class="text-muted">/ {{ lessons|length }}</small>
                     </div>
                     <div class="col-4">
-                        <small class="text-muted">Quizzes</small>
-                        <h6>{{ progress.completed_quizzes.count }} / {{ course.quizzes.count }}</h6>
+                        <div class="stat-number">{{ progress.progress_percentage }}%</div>
+                        <div class="stat-label">Complete</div>
                     </div>
                     <div class="col-4">
-                        <small class="text-muted">Assignments</small>
-                        <h6>{{ progress.completed_assignments.count }} / {{ assignments|length }}</h6>
+                        <div class="stat-number">
+                            {% if progress.progress_percentage == 100 %}
+                                <i class="fas fa-trophy"></i>
+                            {% else %}
+                                <i class="fas fa-hourglass-half"></i>
+                            {% endif %}
+                        </div>
+                        <div class="stat-label">
+                            {% if progress.progress_percentage == 100 %}
+                                Completed!
+                            {% else %}
+                                In Progress
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
         {% endif %}
         
-        <h3><i class="fas fa-video"></i> Lessons</h3>
+        <!-- Lessons Section with Status Colors -->
+        <h3 class="mb-3">
+            <i class="fas fa-video me-2" style="color: #9f7734;"></i> Lessons
+        </h3>
+        
         {% for lesson in lessons %}
-            <div class="card mb-3">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5>{{ lesson.title }}</h5>
-                            <p class="text-muted small">
-                                <i class="fas fa-clock"></i> {{ lesson.duration }} minutes
-                            </p>
+            {% if progress %}
+                {# Check if lesson is completed #}
+                {% if lesson in progress.completed_lessons.all %}
+                    {# Completed Lesson #}
+                    <div class="card lesson-item completed border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <h5 class="mb-0">{{ forloop.counter }}. {{ lesson.title }}</h5>
+                                        <span class="lesson-status-badge status-completed">
+                                            <i class="fas fa-check-circle"></i> Completed
+                                        </span>
+                                    </div>
+                                    <p class="text-muted small mb-2">{{ lesson.content|truncatewords:20 }}</p>
+                                    <div class="d-flex gap-3">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock"></i> {{ lesson.duration }} minutes
+                                        </small>
+                                    </div>
+                                </div>
+                                <div>
+                                    <a href="{% url 'lesson_detail' lesson.id %}" class="btn btn-success view-lesson-btn">
+                                        <i class="fas fa-redo"></i> Review Lesson
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                        <a href="{% url 'lesson_detail' lesson.id %}" class="btn btn-primary">View Lesson</a>
+                    </div>
+                {% elif forloop.counter == 1 %}
+                    {# First lesson - In Progress #}
+                    <div class="card lesson-item in-progress border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <h5 class="mb-0">{{ forloop.counter }}. {{ lesson.title }}</h5>
+                                        <span class="lesson-status-badge status-in-progress">
+                                            <i class="fas fa-spinner fa-pulse"></i> In Progress
+                                        </span>
+                                    </div>
+                                    <p class="text-muted small mb-2">{{ lesson.content|truncatewords:20 }}</p>
+                                    <div class="d-flex gap-3">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock"></i> {{ lesson.duration }} minutes
+                                        </small>
+                                    </div>
+                                </div>
+                                <div>
+                                    <a href="{% url 'lesson_detail' lesson.id %}" class="btn btn-warning view-lesson-btn">
+                                        <i class="fas fa-play"></i> Start Learning
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    {# Check previous lesson completion #}
+                    {% with prev_index=forloop.counter0|add:"-1" %}
+                        {% with prev_lesson=lessons|slice:prev_index|first %}
+                            {% if prev_lesson in progress.completed_lessons.all %}
+                                {# Previous lesson completed - This lesson is unlocked #}
+                                <div class="card lesson-item in-progress border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex align-items-center gap-2 mb-2">
+                                                    <h5 class="mb-0">{{ forloop.counter }}. {{ lesson.title }}</h5>
+                                                    <span class="lesson-status-badge status-in-progress">
+                                                        <i class="fas fa-spinner fa-pulse"></i> In Progress
+                                                    </span>
+                                                </div>
+                                                <p class="text-muted small mb-2">{{ lesson.content|truncatewords:20 }}</p>
+                                                <div class="d-flex gap-3">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-clock"></i> {{ lesson.duration }} minutes
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <a href="{% url 'lesson_detail' lesson.id %}" class="btn btn-warning view-lesson-btn">
+                                                    <i class="fas fa-play"></i> Start Learning
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                {# Previous lesson not completed - This lesson is locked #}
+                                <div class="card lesson-item locked border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex align-items-center gap-2 mb-2">
+                                                    <h5 class="mb-0">{{ forloop.counter }}. {{ lesson.title }}</h5>
+                                                    <span class="lesson-status-badge status-locked">
+                                                        <i class="fas fa-lock"></i> Locked
+                                                    </span>
+                                                </div>
+                                                <p class="text-muted small mb-2">{{ lesson.content|truncatewords:20 }}</p>
+                                                <div class="d-flex gap-3">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-clock"></i> {{ lesson.duration }} minutes
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <button class="btn btn-secondary view-lesson-btn" disabled>
+                                                    <i class="fas fa-lock"></i> Complete Previous First
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+                    {% endwith %}
+                {% endif %}
+            {% else %}
+                {# Not enrolled - All lessons locked #}
+                <div class="card lesson-item locked border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-0">{{ forloop.counter }}. {{ lesson.title }}</h5>
+                                <p class="text-muted small mb-0 mt-1">
+                                    <i class="fas fa-clock"></i> {{ lesson.duration }} minutes
+                                </p>
+                            </div>
+                            <div>
+                                <a href="{% url 'enroll_course' course.id %}" class="btn btn-secondary">
+                                    <i class="fas fa-lock"></i> Enroll to Unlock
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            {% endif %}
         {% empty %}
             <div class="alert alert-info">No lessons added yet.</div>
         {% endfor %}
         
-        <h3 class="mt-4"><i class="fas fa-tasks"></i> Assignments</h3>
+        <!-- Quizzes Section -->
+        {% if quizzes %}
+        <h3 class="mt-4 mb-3">
+            <i class="fas fa-question-circle me-2" style="color: #9f7734;"></i> Quizzes
+        </h3>
+        {% for quiz_item in quizzes %}
+            <div class="card mb-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1">{{ quiz_item.quiz.title }}</h5>
+                            <p class="text-muted small mb-0">Part of: {{ quiz_item.lesson.title }}</p>
+                        </div>
+                        {% if quiz_item.attempt and quiz_item.attempt.completed_at %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-check"></i> Completed - {{ quiz_item.attempt.percentage|floatformat:0 }}%
+                            </span>
+                        {% else %}
+                            <a href="{% url 'take_quiz' quiz_item.quiz.id %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-play"></i> Take Quiz
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        {% endif %}
+        
+        <!-- Assignments Section -->
+        <h3 class="mt-4 mb-3">
+            <i class="fas fa-tasks me-2" style="color: #9f7734;"></i> Assignments
+        </h3>
         {% for assignment in assignments %}
-            <div class="card mb-3">
+            <div class="card mb-3 border-0 shadow-sm">
                 <div class="card-body">
                     <h5>{{ assignment.title }}</h5>
-                    <p>{{ assignment.description }}</p>
-                    <p class="text-muted">
-                        Due: {{ assignment.due_date|date:"M d, Y" }} | Points: {{ assignment.total_points }}
-                    </p>
-                    <a href="{% url 'submit_assignment' assignment.id %}" class="btn btn-success">Submit Assignment</a>
+                    <p class="text-muted small">{{ assignment.description|truncatewords:30 }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted">
+                                <i class="fas fa-calendar"></i> Due: {{ assignment.due_date|date:"M d, Y" }}
+                            </small>
+                            <small class="text-muted ms-3">
+                                <i class="fas fa-star"></i> Points: {{ assignment.total_points }}
+                            </small>
+                        </div>
+                        {% if progress %}
+                            <a href="{% url 'submit_assignment' assignment.id %}" class="btn btn-success btn-sm">
+                                <i class="fas fa-upload"></i> Submit Assignment
+                            </a>
+                        {% else %}
+                            <button class="btn btn-secondary btn-sm" disabled>
+                                <i class="fas fa-lock"></i> Enroll to Submit
+                            </button>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         {% empty %}
@@ -133,20 +358,95 @@
         {% endfor %}
     </div>
     
+    <!-- Sidebar -->
     <div class="col-md-4">
-        <div class="card">
+        <!-- Course Info Card -->
+        <div class="card mb-4 border-0 shadow-sm">
             <div class="card-header bg-primary text-white">
-                <h4 class="mb-0">Course Progress</h4>
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Course Info</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Total Lessons:</strong>
+                    <span class="float-end">{{ lessons|length }}</span>
+                </div>
+                <div class="mb-3">
+                    <strong>Total Quizzes:</strong>
+                    <span class="float-end">{{ quizzes|length }}</span>
+                </div>
+                <div class="mb-3">
+                    <strong>Assignments:</strong>
+                    <span class="float-end">{{ assignments|length }}</span>
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <strong>Certificate:</strong>
+                    <span class="float-end">
+                        {% if progress and progress.progress_percentage == 100 %}
+                            <a href="{% url 'download_certificate' course.id %}" class="text-success">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        {% else %}
+                            <span class="text-muted">Complete course first</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Enroll Card (if not enrolled) -->
+        {% if not progress %}
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-graduation-cap fa-3x mb-3" style="color: #9f7734;"></i>
+                <h5>Ready to start learning?</h5>
+                <p class="text-muted small">Enroll now to track your progress and earn a certificate</p>
+                <a href="{% url 'enroll_course' course.id %}" class="btn btn-primary w-100">
+                    <i class="fas fa-plus-circle"></i> Enroll Now
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <!-- Quick Stats Card -->
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-simple"></i> Quick Stats</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="display-4 fw-bold" style="color: #9f7734;">{{ progress.progress_percentage }}%</div>
+                    <small class="text-muted">Overall Progress</small>
+                </div>
+                <div class="mb-2">
+                    <small>Lessons Completed</small>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-success" style="width: {% widthratio progress.completed_lessons.count lessons|length 100 %}%;"></div>
+                    </div>
+                    <small class="text-muted">{{ progress.completed_lessons.count }}/{{ lessons|length }}</small>
+                </div>
+                <hr>
+                <div class="text-center">
+                    <a href="{% url 'certificates' %}" class="btn btn-outline-info btn-sm w-100">
+                        <i class="fas fa-award"></i> View My Certificates
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Instructor Card -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header" style="background: #9f7734; color: white;">
+                <h5 class="mb-0"><i class="fas fa-chalkboard-user"></i> Your Instructor</h5>
             </div>
             <div class="card-body text-center">
-                {% if progress %}
-                    <h2>{{ progress.progress_percentage }}%</h2>
-                    <p>Complete</p>
-                    <p>{{ progress.completed_lessons.count }} of {{ lessons|length }} lessons completed</p>
-                {% else %}
-                    <p>Enroll to track your progress</p>
-                    <a href="{% url 'enroll_course' course.id %}" class="btn btn-primary">Enroll Now</a>
-                {% endif %}
+                <i class="fas fa-user-circle fa-3x mb-2" style="color: #9f7734;"></i>
+                <h6 class="mb-1">{{ course.instructor.get_full_name|default:course.instructor.username }}</h6>
+                <small class="text-muted">Course Instructor</small>
+                <hr>
+                <p class="small text-muted mb-0">
+                    <i class="fas fa-envelope"></i> {{ course.instructor.email }}
+                </p>
             </div>
         </div>
     </div>

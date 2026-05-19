@@ -1,481 +1,725 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Funda Malitinne LMS</title>
-    <!-- Malitinne Logo Favicon -->
-    <link rel="icon" type="image/x-icon" href="/static/Malitinne-logo-v.ico">
-    <link rel="shortcut icon" type="image/x-icon" href="/static/Malitinne-logo-v.ico">
-    <link rel="apple-touch-icon" href="/static/Malitinne-logo.png">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
-        }
-        
-        .sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 280px;
-            height: 100%;
-            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-            color: white;
-            z-index: 1000;
-            overflow-y: auto;
-        }
-        
-        .sidebar-header {
-            padding: 25px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .sidebar-header h3 {
-            font-weight: 700;
-            margin: 0;
-            font-size: 1.3rem;
-        }
-        
-        .sidebar-header p {
-            font-size: 11px;
-            opacity: 0.7;
-            margin: 5px 0 0;
-        }
-        
-        .sidebar-menu {
-            padding: 20px 0;
-        }
-        
-        .sidebar-menu-item {
-            padding: 12px 25px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            color: rgba(255,255,255,0.8);
-            text-decoration: none;
-            transition: all 0.3s;
-            cursor: pointer;
-        }
-        
-        .sidebar-menu-item:hover {
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border-left: 3px solid #667eea;
-        }
-        
-        .sidebar-menu-item i {
-            width: 24px;
-            font-size: 1.1rem;
-        }
-        
-        .main-content {
-            margin-left: 280px;
-            padding: 20px;
-        }
-        
-        .top-bar {
-            background: white;
-            border-radius: 15px;
-            padding: 15px 25px;
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        
-        .page-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #333;
-        }
-        
-        .user-avatar {
-            width: 45px;
-            height: 45px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 1.2rem;
-        }
-        
-        .stat-card {
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: transform 0.3s;
-            border-left: 4px solid;
-        }
-        
-        .stat-card:hover { transform: translateY(-5px); }
-        
-        .stat-number { font-size: 2rem; font-weight: 700; margin: 10px 0 0; }
-        .stat-label { color: #666; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
-        
-        .data-card {
-            background: white;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 25px;
-        }
-        
-        .data-card-header {
-            padding: 20px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .data-card-header h5 {
-            margin: 0;
-            font-weight: 600;
-        }
-        
-        .table-custom {
-            margin-bottom: 0;
-            width: 100%;
-        }
-        
-        .table-custom th {
-            background: #f8f9fa;
-            font-weight: 600;
-            border: none;
-            padding: 12px;
-        }
-        
-        .table-custom td {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .btn-custom {
-            border-radius: 10px;
-            padding: 10px 20px;
-            font-weight: 500;
-            transition: all 0.3s;
-        }
-        
-        .btn-custom:hover {
-            transform: translateY(-2px);
-        }
-        
-        @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); }
-            .main-content { margin-left: 0; }
-        }
-    </style>
-</head>
-<body>
+{% extends 'base.html' %}
+{% load static %}
 
-<div class="sidebar">
-    <div class="sidebar-header">
-        <h3><i class="fas fa-graduation-cap"></i> Funda Malitinne</h3>
-        <p>Enterprise LMS Platform</p>
+
+
+{% block title %}Admin Dashboard - Funda Malitinne{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --primary: #9f7734;
+    --primary-light: #fbf3a9;
+    --primary-dark: #7a5828;
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-600: #475569;
+    --gray-800: #1e293b;
+    --white: #ffffff;
+    --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background: var(--gray-50);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Layout */
+  .admin-wrapper {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* Sidebar – clean light background */
+  .admin-sidebar {
+    width: 280px;
+    background: var(--white);
+    border-right: 1px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+
+  .sidebar-header {
+    padding: 1.5rem;
+    text-align: center;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .sidebar-header img {
+    max-height: 135px;
+    width: auto;
+  }
+
+  .sidebar-menu {
+    list-style: none;
+    padding: 1rem 0;
+    flex: 1;
+  }
+
+  .sidebar-menu li {
+    margin-bottom: 0.25rem;
+  }
+
+  .sidebar-menu li a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    color: var(--gray-600);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+  }
+
+  .sidebar-menu li a i {
+    width: 1.25rem;
+    font-size: 1rem;
+  }
+
+  .sidebar-menu li a:hover,
+  .sidebar-menu li a.active {
+    background: var(--gray-100);
+    color: var(--primary);
+    border-left-color: var(--primary);
+  }
+
+  /* Sidebar footer (logout) */
+  .sidebar-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--gray-200);
+  }
+
+  .sidebar-footer a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--gray-600);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+  }
+
+  .sidebar-footer a:hover {
+    background: var(--gray-100);
+    color: #dc2626;
+  }
+
+  /* Main content */
+  .admin-main {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-x: auto;
+  }
+
+  /* Top bar – clean, no extra buttons */
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    background: var(--white);
+    padding: 0.75rem 1.5rem;
+    border-radius: 1rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--gray-200);
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--gray-800);
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: var(--white);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-600);
+    font-weight: 500;
+  }
+
+  .stat-header i {
+    font-size: 1.5rem;
+    color: var(--primary);
+    opacity: 0.7;
+  }
+
+  .stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    line-height: 1.2;
+  }
+
+  /* Data cards */
+  .data-card {
+    background: var(--white);
+    border-radius: 1rem;
+    border: 1px solid var(--gray-200);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+
+  .data-card-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--white);
+  }
+
+  .data-card-header h5 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Tables */
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.875rem 1.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+  }
+
+  .data-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-800);
+  }
+
+  /* Make rows clickable */
+  .clickable-row {
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .clickable-row:hover {
+    background: var(--gray-100);
+    transform: translateX(2px);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    border-radius: 9999px;
+    background: var(--gray-100);
+    color: var(--gray-600);
+  }
+
+  /* Buttons */
+  .btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--primary);
+    color: white;
+  }
+
+  .btn-sm-danger {
+    background: #ef4444;
+  }
+
+  .btn-sm-info {
+    background: #3b82f6;
+  }
+
+  /* Modals (unchanged) */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .modal-overlay.active {
+    display: flex;
+  }
+
+  .modal-container {
+    background: white;
+    border-radius: 1rem;
+    width: 500px;
+    max-width: 90%;
+    padding: 1.5rem;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+
+  .modal-body input,
+  .modal-body select,
+  .modal-body textarea {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  /* Mobile toggle */
+  .mobile-toggle {
+    display: none;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+  }
+
+  /* Tooltip for clickable rows */
+  .clickable-row td:first-child {
+    position: relative;
+  }
+  
+  .clickable-row:hover::after {
+    content: "🔍 Click to view full profile";
+    position: absolute;
+    right: 10px;
+    top: -25px;
+    background: var(--primary);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 100;
+  }
+
+  @media (max-width: 768px) {
+    .admin-sidebar {
+      position: fixed;
+      left: -280px;
+      height: 100%;
+      z-index: 100;
+      background: white;
+    }
+    .admin-sidebar.open {
+      left: 0;
+    }
+    .admin-main {
+      margin-left: 0;
+    }
+    .mobile-toggle {
+      display: inline-block;
+    }
+    .stats-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    .clickable-row:hover::after {
+      display: none;
+    }
+  }
+</style>
+
+<div class="admin-wrapper">
+  <!-- Sidebar -->
+  <div class="admin-sidebar" id="adminSidebar">
+    <div>
+      <div class="sidebar-header">
+        <img src="{% static 'logo-for-mal.png' %}" alt="Funda Malitinne Logo">
+      </div>
+      <ul class="sidebar-menu">
+        <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+        <li><a href="?section=dashboard" class="{% if section == 'dashboard' %}active{% endif %}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+        <li><a href="?section=courses" class="{% if section == 'courses' %}active{% endif %}"><i class="fas fa-book"></i> Courses</a></li>
+        <li><a href="?section=users" class="{% if section == 'users' %}active{% endif %}"><i class="fas fa-users"></i> Users</a></li>
+        <li><a href="?section=instructors" class="{% if section == 'instructors' %}active{% endif %}"><i class="fas fa-chalkboard-teacher"></i> Instructors</a></li>
+        <li><a href="?section=students" class="{% if section == 'students' %}active{% endif %}"><i class="fas fa-user-graduate"></i> Students</a></li>
+        <li><a href="?section=assignments" class="{% if section == 'assignments' %}active{% endif %}"><i class="fas fa-tasks"></i> Assignments</a></li>
+        <li><a href="?section=submissions" class="{% if section == 'submissions' %}active{% endif %}"><i class="fas fa-upload"></i> Submissions</a></li>
+        <li><a href="?section=bulk" class="{% if section == 'bulk' %}active{% endif %}"><i class="fas fa-file-csv"></i> Bulk Upload</a></li>
+      </ul>
     </div>
-    <div class="sidebar-menu">
-        <div class="sidebar-menu-item" onclick="loadSection('dashboard')">
-            <i class="fas fa-tachometer-alt"></i> Dashboard
-        </div>
-        <div class="sidebar-menu-item" onclick="loadSection('courses')">
-            <i class="fas fa-book"></i> Courses
-        </div>
-        <div class="sidebar-menu-item" onclick="loadSection('users')">
-            <i class="fas fa-users"></i> Users
-        </div>
-        <div class="sidebar-menu-item" onclick="loadSection('lessons')">
-            <i class="fas fa-video"></i> Lessons
-        </div>
-        <div class="sidebar-menu-item" onclick="loadSection('assignments')">
-            <i class="fas fa-tasks"></i> Assignments
-        </div>
-        <div class="sidebar-menu-item" onclick="loadSection('submissions')">
-            <i class="fas fa-upload"></i> Submissions
-        </div>
-        <div class="sidebar-menu-item" onclick="loadSection('certificates')">
-            <i class="fas fa-award"></i> Certificates
-        </div>
-        <div class="sidebar-menu-item" onclick="logout()">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </div>
+    <div class="sidebar-footer">
+      <a href="/logout/"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="admin-main">
+    <button class="mobile-toggle" id="mobileToggle"><i class="fas fa-bars"></i> Menu</button>
+
+    <div class="top-bar">
+      <div class="page-title">Admin Dashboard</div>
+      <div class="user-info">
+        <span>Welcome, {{ user.username }}</span>
+      </div>
+    </div>
+
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Dashboard Section -->
+    {% if section == 'dashboard' %}
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-header"><span class="stat-label">Total Courses</span><i class="fas fa-book-open"></i></div>
+        <div class="stat-number">{{ total_courses }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header"><span class="stat-label">Students</span><i class="fas fa-user-graduate"></i></div>
+        <div class="stat-number">{{ total_students }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header"><span class="stat-label">Instructors</span><i class="fas fa-chalkboard-teacher"></i></div>
+        <div class="stat-number">{{ total_instructors }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header"><span class="stat-label">Submissions</span><i class="fas fa-upload"></i></div>
+        <div class="stat-number">{{ total_submissions }}</div>
+      </div>
+    </div>
+
+    <div class="data-card">
+      <div class="data-card-header">
+        <h5><i class="fas fa-clock"></i> Recent Courses</h5>
+        <a href="?section=courses" class="btn-sm">View All</a>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>Title</th><th>Instructor</th><th>Level</th><th>Students</th></tr></thead>
+          <tbody>
+            {% for c in recent_courses %}
+            <tr><td>{{ c.title|truncatechars:55 }}</td><td>{{ c.instructor.username }}</td><td><span class="badge">{{ c.level }}</span></td><td>{{ c.students.count }}</td></tr>
+            {% empty %}<tr><td colspan="4">No courses yet.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="data-card">
+      <div class="data-card-header">
+        <h5><i class="fas fa-users"></i> Recent Users</h5>
+        <a href="?section=users" class="btn-sm">View All</a>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Approved</th></tr></thead>
+          <tbody>
+            {% for u in recent_users %}
+            <tr class="clickable-row" onclick="window.location.href='{% url 'learner_profile' u.id %}'">
+              <td>{{ u.username }}</td>
+              <td>{{ u.email }}</td>
+              <td>{{ u.role }}</td>
+              <td>{% if u.is_approved %}✅ Approved{% else %}⏳ Pending{% endif %}</td>
+            </tr>
+            {% empty %}<tr><td colspan="4">No users found.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Courses Section -->
+    {% if section == 'courses' %}
+    <div class="data-card">
+      <div class="data-card-header">
+        <h5>All Courses</h5>
+        <button class="btn-sm" onclick="openModal('courseModal')">+ Add Course</button>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>ID</th><th>Title</th><th>Instructor</th><th>Level</th><th>Students</th><th>Actions</th></tr></thead>
+          <tbody>
+            {% for c in courses %}
+            <tr>
+              <td>{{ c.id }}</td>
+              <td>{{ c.title|truncatechars:50 }}</td>
+              <td>{{ c.instructor.username }}</td>
+              <td><span class="badge">{{ c.level }}</span></td>
+              <td>{{ c.students.count }}</td>
+              <td>
+                <a href="{% url 'manage_course' c.id %}" class="btn-sm btn-sm-info" style="background:#3b82f6;">Manage</a>
+                <form method="post" action="{% url 'delete_course' c.id %}" style="display:inline;" onsubmit="return confirm('Delete this course?')">{% csrf_token %}<button type="submit" class="btn-sm btn-sm-danger" style="background:#ef4444;">Delete</button></form>
+              </td>
+            </tr>
+            {% empty %}<tr><td colspan="6">No courses found.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Users / Instructors / Students Sections with CLICKABLE ROWS -->
+    {% if section == 'users' or section == 'instructors' or section == 'students' %}
+    <div class="data-card">
+      <div class="data-card-header">
+        <h5>{% if section == 'users' %}All Users{% elif section == 'instructors' %}Instructors{% else %}Students{% endif %}</h5>
+        <button class="btn-sm" onclick="openModal('userModal')">+ Add User</button>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>ID Number</th>
+              <th>Role</th>
+              <th>Approved</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if section == 'users' %}
+              {% for u in all_users %}
+              <tr class="clickable-row" onclick="window.location.href='{% url 'learner_profile' u.id %}'">
+                <td>{{ u.username }}</td>
+                <td>{{ u.get_full_name|default:"-" }}</td>
+                <td>{{ u.email }}</td>
+                <td>{{ u.id_number|default:"-" }}</td>
+                <td><span class="badge {% if u.role == 'admin' %}bg-danger{% elif u.role == 'instructor' %}bg-info{% else %}bg-success{% endif %}">{{ u.role }}</span></td>
+                <td>{% if u.is_approved %}✅{% else %}❌{% endif %}</td>
+                <td>
+                  <form method="post" action="{% url 'delete_user' u.id %}" style="display:inline;" onsubmit="event.stopPropagation(); return confirm('Delete user?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-sm btn-sm-danger" style="background:#ef4444;" onclick="event.stopPropagation();">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            {% elif section == 'instructors' %}
+              {% for u in instructors %}
+              <tr class="clickable-row" onclick="window.location.href='{% url 'learner_profile_admin' u.id %}'">>
+                <td>{{ u.username }}</td>
+                <td>{{ u.get_full_name|default:"-" }}</td>
+                <td>{{ u.email }}</td>
+                <td>{{ u.id_number|default:"-" }}</td>
+                <td><span class="badge bg-info">{{ u.role }}</span></td>
+                <td>{% if u.is_approved %}✅{% else %}❌{% endif %}</td>
+                <td>
+                  <form method="post" action="{% url 'delete_user' u.id %}" style="display:inline;" onsubmit="event.stopPropagation(); return confirm('Delete user?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-sm btn-sm-danger" style="background:#ef4444;" onclick="event.stopPropagation();">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              {% for u in students %}
+              <tr class="clickable-row" onclick="window.location.href='{% url 'learner_profile' u.id %}'">
+                <td>{{ u.username }}</td>
+                <td>{{ u.get_full_name|default:"-" }}</td>
+                <td>{{ u.email }}</td>
+                <td>{{ u.id_number|default:"-" }}</td>
+                <td><span class="badge bg-success">{{ u.role }}</span></td>
+                <td>{% if u.is_approved %}✅{% else %}❌{% endif %}</td>
+                <td>
+                  <form method="post" action="{% url 'delete_user' u.id %}" style="display:inline;" onsubmit="event.stopPropagation(); return confirm('Delete user?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-sm btn-sm-danger" style="background:#ef4444;" onclick="event.stopPropagation();">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Placeholders for assign, submissions, bulk -->
+    {% if section == 'assignments' %}
+    <div class="data-card"><div class="data-card-header"><h5>Assignments</h5></div><div class="card-body">Manage assignments from the <a href="/instructor/">Instructor Dashboard</a>.</div></div>
+    {% endif %}
+    {% if section == 'submissions' %}
+    <div class="data-card"><div class="data-card-header"><h5>Submissions</h5></div><onclick="window.location.href='{% url 'learner_profile' u.id %}'"div class="card-body">Grade submissions from the <a href="/instructor/">Instructor Dashboard</a>.</div></div>
+    {% endif %}
+    {% if section == 'bulk' %}
+    <div class="data-card">
+      <div class="data-card-header"><h5>Bulk Upload Students</h5></div>
+      <div class="card-body">
+        <p>Upload CSV with columns: <code>username, email, password, first_name, last_name</code></p>
+        <form method="post" enctype="multipart/form-data" action="{% url 'api_bulk_upload' %}">
+          {% csrf_token %}
+          <input type="file" name="csv" accept=".csv" required>
+          <button type="submit" class="btn-sm" style="margin-top:10px;">Upload</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
 </div>
 
-<div class="main-content">
-    <div class="top-bar">
-        <div class="page-title" id="pageTitle">Dashboard</div>
-        <div class="user-avatar">
-            {{ user.username|slice:":1"|upper }}
-        </div>
+<!-- Modals (same as before) -->
+<div id="courseModal" class="modal-overlay">
+  <div class="modal-container">
+    <div class="modal-header">Add Course <span onclick="closeModal('courseModal')" style="cursor:pointer">&times;</span></div>
+    <div class="modal-body">
+      <input type="text" id="courseTitle" placeholder="Course Title">
+      <textarea id="courseDesc" rows="3" placeholder="Description"></textarea>
+      <select id="courseLevel"><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select>
+      <input type="number" id="coursePrice" placeholder="Price (R)" value="0">
     </div>
-    
-    <div id="dynamic-content">
-        <!-- Content loads here -->
+    <div style="display:flex; justify-content:flex-end; gap:10px;">
+      <button class="btn-sm" style="background:#6c757d;" onclick="closeModal('courseModal')">Cancel</button>
+      <button class="btn-sm" onclick="createCourse()">Create</button>
     </div>
+  </div>
+</div>
+<div id="userModal" class="modal-overlay">
+  <div class="modal-container">
+    <div class="modal-header">Add User <span onclick="closeModal('userModal')" style="cursor:pointer">&times;</span></div>
+    <div class="modal-body">
+      <input type="text" id="userUsername" placeholder="Username">
+      <input type="email" id="userEmail" placeholder="Email">
+      <select id="userRole"><option value="student">Student</option><option value="instructor">Instructor</option></select>
+      <input type="password" id="userPassword" placeholder="Password">
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:10px;">
+      <button class="btn-sm" style="background:#6c757d;" onclick="closeModal('userModal')">Cancel</button>
+      <button class="btn-sm" onclick="createUser()">Create</button>
+    </div>
+  </div>
 </div>
 
 <script>
-    // Load dashboard on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        loadSection('dashboard');
-    });
-    
-    function loadSection(section) {
-        document.getElementById('pageTitle').innerText = section.charAt(0).toUpperCase() + section.slice(1);
-        
-        if (section === 'dashboard') loadDashboard();
-        else if (section === 'courses') loadCourses();
-        else if (section === 'users') loadUsers();
-        else if (section === 'lessons') loadLessons();
-        else if (section === 'assignments') loadAssignments();
-        else if (section === 'submissions') loadSubmissions();
-        else if (section === 'certificates') loadCertificates();
+  function openModal(id) { document.getElementById(id).classList.add('active'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+  function createCourse() {
+    const title = document.getElementById('courseTitle').value;
+    const desc = document.getElementById('courseDesc').value;
+    const level = document.getElementById('courseLevel').value;
+    const price = document.getElementById('coursePrice').value;
+    if (!title) { alert("Title required"); return; }
+    fetch('/api/courses/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ title, description: desc, level, price })
+    }).then(res => res.json()).then(data => {
+      if (data.id) { alert("Course created"); location.reload(); }
+      else alert("Error: " + JSON.stringify(data));
+    }).catch(err => alert("Error: " + err));
+  }
+
+  function createUser() {
+    const username = document.getElementById('userUsername').value;
+    const email = document.getElementById('userEmail').value;
+    const role = document.getElementById('userRole').value;
+    const password = document.getElementById('userPassword').value;
+    if (!username || !email || !password) { alert("All fields required"); return; }
+    fetch('/api/register/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ username, email, password, role })
+    }).then(res => res.json()).then(data => {
+      if (data.message) { alert("User created"); location.reload(); }
+      else alert("Error: " + JSON.stringify(data));
+    }).catch(err => alert("Error: " + err));
+  }
+
+  function getCookie(name) {
+    let value = "; " + document.cookie;
+    let parts = value.split("; " + name + "=");
+    if (parts.length === 2) return parts.pop().split(";").shift();
+    return null;
+  }
+
+  // Mobile toggle
+  const toggleBtn = document.getElementById('mobileToggle');
+  const sidebar = document.getElementById('adminSidebar');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
+  }
+  document.addEventListener('click', (e) => {
+    if (window.innerWidth <= 768 && sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== toggleBtn) {
+      sidebar.classList.remove('open');
     }
-    
-    function loadDashboard() {
-        document.getElementById('dynamic-content').innerHTML = `
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="stat-card" style="border-left-color: #667eea;">
-                        <div class="stat-label">TOTAL COURSES</div>
-                        <div class="stat-number">{{ total_courses|default:"0" }}</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stat-card" style="border-left-color: #28a745;">
-                        <div class="stat-label">TOTAL STUDENTS</div>
-                        <div class="stat-number">{{ total_students|default:"0" }}</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stat-card" style="border-left-color: #ffc107;">
-                        <div class="stat-label">INSTRUCTORS</div>
-                        <div class="stat-number">{{ total_instructors|default:"0" }}</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stat-card" style="border-left-color: #17a2b8;">
-                        <div class="stat-label">SUBMISSIONS</div>
-                        <div class="stat-number">{{ total_submissions|default:"0" }}</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="data-card">
-                <div class="data-card-header">
-                    <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
-                </div>
-                <div class="card-body p-3">
-                    <div class="row g-2">
-                        <div class="col-md-3">
-                            <button class="btn btn-primary btn-custom w-100" onclick="loadSection('courses')">
-                                <i class="fas fa-plus"></i> Manage Courses
-                            </button>
-                        </div>
-                        <div class="col-md-3">
-                            <button class="btn btn-success btn-custom w-100" onclick="loadSection('users')">
-                                <i class="fas fa-user-plus"></i> Manage Users
-                            </button>
-                        </div>
-                        <div class="col-md-3">
-                            <button class="btn btn-info btn-custom w-100" onclick="loadSection('lessons')">
-                                <i class="fas fa-video"></i> Add Lessons
-                            </button>
-                        </div>
-                        <div class="col-md-3">
-                            <button class="btn btn-warning btn-custom w-100" onclick="loadSection('assignments')">
-                                <i class="fas fa-tasks"></i> Create Assignments
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="data-card">
-                <div class="data-card-header">
-                    <h5><i class="fas fa-book"></i> Recent Courses</h5>
-                </div>
-                <div class="table-responsive">
-                    <table class="table-custom">
-                        <thead>
-                            <tr><th>Title</th><th>Instructor</th><th>Level</th><th>Students</th><th>Created</th></tr>
-                        </thead>
-                        <tbody>
-                            {% for course in recent_courses %}
-                            <tr>
-                                <td><strong>{{ course.title|truncatechars:40 }}</strong></td>
-                                <td>{{ course.instructor.username }}</td>
-                                <td><span class="badge bg-secondary">{{ course.level|default:"Beginner" }}</span></td>
-                                <td>{{ course.students.count }}</td>
-                                <td>{{ course.created_at|date:"M d, Y" }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="5" class="text-center">No courses found. Create one from the Courses section.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <div class="data-card">
-                <div class="data-card-header">
-                    <h5><i class="fas fa-users"></i> Recent Users</h5>
-                </div>
-                <div class="table-responsive">
-                    <table class="table-custom">
-                        <thead>
-                            <tr><th>Username</th><th>Email</th><th>Role</th><th>Joined</th></tr>
-                        </thead>
-                        <tbody>
-                            {% for u in recent_users %}
-                            <tr>
-                                <td><strong>{{ u.username }}</strong></td>
-                                <td>{{ u.email }}</td>
-                                <td><span class="badge bg-info">{{ u.role }}</span></td>
-                                <td>{{ u.date_joined|date:"M d, Y" }}</td>
-                            </tr>
-                            {% empty %}
-                            <td><td colspan="4" class="text-center">No users found</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-    }
-    
-    function loadCourses() {
-        document.getElementById('dynamic-content').innerHTML = `
-            <div class="data-card">
-                <div class="data-card-header">
-                    <h5><i class="fas fa-book"></i> Course Management</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> 
-                        To add or manage courses, use the instructor dashboard or create courses directly.
-                        <hr>
-                        <a href="/instructor/" class="btn btn-primary">Go to Instructor Dashboard</a>
-                        <a href="/admin/core/course/add/" class="btn btn-success">Create Course</a>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    function loadUsers() {
-        document.getElementById('dynamic-content').innerHTML = `
-            <div class="data-card">
-                <div class="data-card-header">
-                    <h5><i class="fas fa-users"></i> User Management</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> 
-                        User management features:
-                        <ul class="mt-2">
-                            <li>Add new students and instructors</li>
-                            <li>Assign roles and permissions</li>
-                            <li>Reset passwords</li>
-                        </ul>
-                        <a href="/admin/core/user/add/" class="btn btn-primary">Add New User</a>
-                        <a href="/admin/core/user/" class="btn btn-secondary">View All Users</a>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    function loadLessons() {
-        document.getElementById('dynamic-content').innerHTML = `
-            <div class="data-card">
-                <div class="data-card-header">
-                    <h5><i class="fas fa-video"></i> Lesson Management</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        Lessons are added to courses. First select a course, then add lessons.
-                        <hr>
-                        <a href="/instructor/" class="btn btn-primary">Go to Instructor Dashboard</a>
-                        <a href="/admin/core/lesson/add/" class="btn btn-success">Add Lesson</a>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    function loadAssignments() {
-        document.getElementById('dynamic-content').innerHTML = `
-            <div class="data-card">
-                <div class="data-card-header">
-                    <h5><i class="fas fa-tasks"></i> Assignment Management</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        Create assignments for students to complete.
-                        <hr>
-                        <a href="/admin/core/assignment/add/" class="btn btn-primary">Create Assignment</a>
-                        <a href="/admin/core/assignment/" class="btn btn-secondary">View All Assignments</a>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    function loadSubmissions() {
-        document.getElementById('dynamic-content').innerHTML = `
-            <div class="data-card">
-                <div class="data-card-header">
-                    <h5><i class="fas fa-upload"></i> Submission Management</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        Grade student submissions from the instructor dashboard.
-                        <hr>
-                        <a href="/instructor/" class="btn btn-primary">Go to Instructor Dashboard</a>
-                        <a href="/admin/core/submission/" class="btn btn-secondary">View All Submissions</a>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    function loadCertificates() {
-        document.getElementById('dynamic-content').innerHTML = `
-            <div class="data-card">
-                <div class="data-card-header">
-                    <h5><i class="fas fa-award"></i> Certificate Management</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        Certificates are automatically generated when students complete courses.
-                        <hr>
-                        <a href="/admin/core/certificate/" class="btn btn-primary">View All Certificates</a>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    function logout() {
-        window.location.href = '/logout/';
-    }
+  });
 </script>
-</body>
-</html>
+
+<!-- Floating AI Chatbot -->
+{% include 'ai_chatbot.html' %}
+
+{% endblock %}

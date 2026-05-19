@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Skills Programmes - Funda Malitinne{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --primary: #9f7734;
+    --primary-dark: #7a5828;
+    --primary-light: #fbf3a9;
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-600: #475569;
+    --gray-800: #1e293b;
+  }
+
+  .page-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    padding: 4rem 2rem;
+    text-align: center;
+    color: white;
+  }
+
+  .page-hero h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+  }
+
+  .page-hero p {
+    font-size: 1.125rem;
+    opacity: 0.9;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .programmes-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+  }
+
+  .filter-bar {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 3rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    padding: 0.5rem 1.5rem;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 2rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .filter-btn.active, .filter-btn:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+
+  .programmes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+  }
+
+  .programme-card {
+    background: white;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+    border: 1px solid var(--gray-200);
+  }
+
+  .programme-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+  }
+
+  .programme-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    border-radius: 2rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin: 1rem 0 0 1rem;
+  }
+
+  .programme-image {
+    height: 180px;
+    background: linear-gradient(135deg, var(--primary-light), rgba(159, 119, 52, 0.2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .programme-image i {
+    font-size: 4rem;
+    color: var(--primary);
+  }
+
+  .programme-content {
+    padding: 1.5rem;
+  }
+
+  .programme-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--gray-800);
+  }
+
+  .programme-level {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: var(--gray-100);
+    border-radius: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    margin-bottom: 0.75rem;
+  }
+
+  .programme-description {
+    color: var(--gray-600);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .programme-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-200);
+  }
+
+  .programme-duration {
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .btn-enquire {
+    padding: 0.5rem 1rem;
+    background: var(--primary);
+    color: white;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.3s;
+  }
+
+  .btn-enquire:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 768px) {
+    .programmes-grid {
+      grid-template-columns: 1fr;
+    }
+    .page-hero h1 {
+      font-size: 1.75rem;
+    }
+  }
+</style>
+
+<div class="page-hero">
+  <h1>Our Skills Programmes</h1>
+  <p>Industry-aligned, QCTO-compliant programmes designed to develop workplace-ready skills</p>
+</div>
+
+<div class="programmes-container">
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterProgrammes('all')">All Programmes</button>
+    <button class="filter-btn" onclick="filterProgrammes('entrepreneurship')">Entrepreneurship</button>
+    <button class="filter-btn" onclick="filterProgrammes('finance')">Financial Management</button>
+    <button class="filter-btn" onclick="filterProgrammes('leadership')">Leadership</button>
+  </div>
+
+  <div class="programmes-grid">
+    <!-- Programme 1 -->
+    <div class="programme-card" data-category="entrepreneurship">
+      <div class="programme-badge">SAQA ID: 2110010232</div>
+      <div class="programme-image">
+        <i class="fas fa-chalkboard-user"></i>
+      </div>
+      <div class="programme-content">
+        <h3 class="programme-title">New Venture Creation</h3>
+        <span class="programme-level">NQF Level 2</span>
+        <p class="programme-description">
+          Learn to start, manage, and grow your own successful venture. Covers entrepreneurship, financial management, marketing, and business planning.
+        </p>
+        <div class="programme-meta">
+          <span class="programme-duration"><i class="fas fa-clock"></i> 12 Lessons</span>
+          <span class="programme-duration"><i class="fas fa-certificate"></i> QCTO Certified</span>
+          <a href="{% url 'lms_portal' %}" class="btn-enquire">Enrol Now →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Programme 2 -->
+    <div class="programme-card" data-category="finance">
+      <div class="programme-badge">US 263474</div>
+      <div class="programme-image">
+        <i class="fas fa-chart-line"></i>
+      </div>
+      <div class="programme-content">
+        <h3 class="programme-title">Financial Management for New Ventures</h3>
+        <span class="programme-level">NQF Level 4</span>
+        <p class="programme-description">
+          Master financial concepts including cash flow management, financial statements, pricing strategies, and budgeting for small businesses.
+        </p>
+        <div class="programme-meta">
+          <span class="programme-duration"><i class="fas fa-clock"></i> 12 Lessons</span>
+          <span class="programme-duration"><i class="fas fa-certificate"></i> Unit Standard</span>
+          <a href="{% url 'lms_portal' %}" class="btn-enquire">Enrol Now →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Programme 3 -->
+    <div class="programme-card" data-category="entrepreneurship">
+      <div class="programme-badge">SP-230305</div>
+      <div class="programme-image">
+        <i class="fas fa-cut"></i>
+      </div>
+      <div class="programme-content">
+        <h3 class="programme-title">Hairstylist Skills Programme</h3>
+        <span class="programme-level">NQF Level 3</span>
+        <p class="programme-description">
+          Comprehensive skills programme for aspiring hairstylists. Includes practical training and business skills for salon management.
+        </p>
+        <div class="programme-meta">
+          <span class="programme-duration"><i class="fas fa-clock"></i> 8 Lessons</span>
+          <span class="programme-duration"><i class="fas fa-certificate"></i> Skills Programme</span>
+          <a href="{% url 'lms_portal' %}" class="btn-enquire">Enrol Now →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Programme 4 -->
+    <div class="programme-card" data-category="leadership">
+      <div class="programme-badge">Coming Soon</div>
+      <div class="programme-image">
+        <i class="fas fa-users"></i>
+      </div>
+      <div class="programme-content">
+        <h3 class="programme-title">Leadership Development</h3>
+        <span class="programme-level">NQF Level 5</span>
+        <p class="programme-description">
+          Develop essential leadership skills including team management, strategic thinking, and effective communication.
+        </p>
+        <div class="programme-meta">
+          <span class="programme-duration"><i class="fas fa-clock"></i> 10 Lessons</span>
+          <span class="programme-duration"><i class="fas fa-certificate"></i> QCTO Certified</span>
+          <a href="#" class="btn-enquire" style="background: #94a3b8;">Coming Soon</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function filterProgrammes(category) {
+    const cards = document.querySelectorAll('.programme-card');
+    const buttons = document.querySelectorAll('.filter-btn');
+    
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    cards.forEach(card => {
+      if (category === 'all' || card.dataset.category === category) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+</script>
+{% endblock %}
