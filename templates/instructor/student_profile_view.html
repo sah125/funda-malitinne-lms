@@ -1,0 +1,560 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ student.get_full_name|default:student.username }} - Student Profile{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary: #9f7734;
+        --primary-dark: #7a5828;
+        --gray-50: #f8fafc;
+        --gray-100: #f1f5f9;
+        --gray-200: #e2e8f0;
+        --gray-600: #475569;
+        --gray-800: #1e293b;
+        --white: #ffffff;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        background: var(--gray-50);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* Profile Container */
+    .profile-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    /* Profile Header Card */
+    .profile-header-card {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        border-radius: 1.5rem;
+        padding: 2rem;
+        color: white;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .profile-header-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        animation: shine 8s ease-in-out infinite;
+    }
+
+    @keyframes shine {
+        0%, 100% { transform: translate(-30%, -30%); }
+        50% { transform: translate(30%, 30%); }
+    }
+
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .profile-name {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .profile-title {
+        font-size: 1rem;
+        opacity: 0.9;
+        margin-bottom: 1rem;
+    }
+
+    .profile-badges {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+
+    .badge-custom {
+        background: rgba(255,255,255,0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    /* Stats Row */
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 1rem;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .stat-number {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--primary);
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Modern Card */
+    .modern-card {
+        background: white;
+        border-radius: 1rem;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .card-header-custom {
+        padding: 1.25rem 1.5rem;
+        background: var(--gray-50);
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .card-header-custom h3 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-body-custom {
+        padding: 1.5rem;
+    }
+
+    /* Info Grid */
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .info-item {
+        padding: 0.75rem;
+        background: var(--gray-50);
+        border-radius: 0.75rem;
+    }
+
+    .info-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--gray-600);
+        margin-bottom: 0.25rem;
+    }
+
+    .info-value {
+        font-weight: 600;
+        color: var(--gray-800);
+    }
+
+    /* Academic Qualifications */
+    .qualification-item {
+        padding: 1rem;
+        border-bottom: 1px solid var(--gray-200);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .qualification-item:last-child {
+        border-bottom: none;
+    }
+
+    .qualification-name {
+        font-weight: 600;
+        color: var(--gray-800);
+    }
+
+    .qualification-date {
+        font-size: 0.75rem;
+        color: var(--gray-600);
+    }
+
+    /* Progress Bar */
+    .progress-item {
+        margin-bottom: 1rem;
+    }
+
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .progress-bar-custom {
+        height: 8px;
+        background: var(--gray-200);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+        border-radius: 4px;
+        transition: width 0.3s;
+    }
+
+    /* Document List */
+    .document-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background: var(--gray-50);
+        border-radius: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .document-name {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Read Only Notice */
+    .readonly-notice {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+        color: #92400e;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .profile-container {
+            padding: 0 1rem;
+        }
+        
+        .stats-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .profile-name {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+
+<div class="profile-container">
+    <!-- Read Only Notice -->
+    <div class="readonly-notice">
+        <i class="fas fa-eye"></i> <strong>View Only Mode</strong> - You are viewing a student profile. You cannot edit this information.
+    </div>
+
+    <!-- Profile Header -->
+    <div class="profile-header-card">
+        <div class="d-flex align-items-center">
+            <div class="profile-avatar me-4">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h1 class="profile-name">{{ student.get_full_name|default:student.username }}</h1>
+                <p class="profile-title">
+                    <i class="fas fa-envelope me-1"></i> {{ student.email }} |
+                    <i class="fas fa-phone ms-2 me-1"></i> {{ student.contact_number|default:"Not provided" }}
+                </p>
+                <div class="profile-badges">
+                    <span class="badge-custom"><i class="fas fa-graduation-cap"></i> Student</span>
+                    <span class="badge-custom"><i class="fas fa-calendar"></i> Enrolled: {{ profile.enrollment_date|date:"M Y"|default:"N/A" }}</span>
+                    {% if profile.current_course %}
+                    <span class="badge-custom"><i class="fas fa-book"></i> {{ profile.current_course.title|truncatechars:30 }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div>
+                <button onclick="window.history.back()" class="btn btn-light">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-number">{{ student.enrolled_courses.count }}</div>
+            <div class="stat-label">Courses Enrolled</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">
+                {% with completed=0 %}
+                    {% for course in student.enrolled_courses.all %}
+                        {% with prog=student.progress_set.all|first %}
+                        {% endwith %}
+                    {% endfor %}
+                {% endwith %}
+                {{ certificates.count }}
+            </div>
+            <div class="stat-label">Certificates Earned</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ documents.count }}</div>
+            <div class="stat-label">Documents</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ logbooks.count }}</div>
+            <div class="stat-label">Logbook Entries</div>
+        </div>
+    </div>
+
+    <!-- Two Column Layout -->
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+            <!-- Biography / About Section -->
+            <div class="modern-card">
+                <div class="card-header-custom">
+                    <h3><i class="fas fa-user"></i> Biography / About</h3>
+                </div>
+                <div class="card-body-custom">
+                    <p style="line-height: 1.6; color: var(--gray-600);">
+                        <strong>{{ student.get_full_name|default:student.username }}</strong> is a dedicated learner currently pursuing 
+                        {% if profile.current_course %}
+                            <strong>{{ profile.current_course.title }}</strong>
+                        {% else %}
+                            professional development
+                        {% endif %}
+                        through Funda Malitinne Learning Management System.
+                    </p>
+                    <p style="line-height: 1.6; color: var(--gray-600); margin-top: 0.75rem;">
+                        {{ profile.assessment_notes|default:"No additional information provided." }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Academic Qualifications -->
+            <div class="modern-card">
+                <div class="card-header-custom">
+                    <h3><i class="fas fa-graduation-cap"></i> Academic Qualifications</h3>
+                </div>
+                <div class="card-body-custom">
+                    <div class="qualification-item">
+                        <div>
+                            <div class="qualification-name">National Senior Certificate</div>
+                            <div class="qualification-date">Matric / Grade 12</div>
+                        </div>
+                        <span class="badge bg-success">Completed</span>
+                    </div>
+                    <div class="qualification-item">
+                        <div>
+                            <div class="qualification-name">Current Enrolment</div>
+                            <div class="qualification-date">{{ profile.current_course.title|default:"No course enrolled" }}</div>
+                        </div>
+                        <span class="badge bg-warning">In Progress</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Course Progress -->
+            <div class="modern-card">
+                <div class="card-header-custom">
+                    <h3><i class="fas fa-chart-line"></i> Course Progress</h3>
+                </div>
+                <div class="card-body-custom">
+                    {% for prog in course_progress %}
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span>{{ prog.course.title|truncatechars:40 }}</span>
+                            <span>{{ prog.progress }}%</span>
+                        </div>
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill" style="width: {{ prog.progress }}%"></div>
+                        </div>
+                        <div class="progress-header mt-1">
+                            <small class="text-muted">{{ prog.completed_lessons }}/{{ prog.total_lessons }} lessons completed</small>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center">No courses enrolled yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Logbook Entries -->
+            <div class="modern-card">
+                <div class="card-header-custom">
+                    <h3><i class="fas fa-book"></i> Logbook / Workplace Experience</h3>
+                </div>
+                <div class="card-body-custom">
+                    {% for entry in logbooks %}
+                    <div class="document-item">
+                        <div class="document-name">
+                            <i class="fas fa-calendar-alt" style="color: var(--primary);"></i>
+                            <div>
+                                <strong>{{ entry.entry_date|date:"M d, Y" }}</strong>
+                                <div class="text-muted small">{{ entry.description|truncatewords:15 }}</div>
+                            </div>
+                        </div>
+                        <span class="badge {% if entry.supervisor_approved %}bg-success{% else %}bg-warning{% endif %}">
+                            {% if entry.supervisor_approved %}Approved{% else %}Pending{% endif %}
+                        </span>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center">No logbook entries yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-4">
+            <!-- Personal Information -->
+            <div class="modern-card">
+                <div class="card-header-custom">
+                    <h3><i class="fas fa-id-card"></i> Personal Information</h3>
+                </div>
+                <div class="card-body-custom">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Full Name</div>
+                            <div class="info-value">{{ student.get_full_name|default:student.username }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">ID Number</div>
+                            <div class="info-value">{{ student.id_number|default:"Not provided" }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Date of Birth</div>
+                            <div class="info-value">{{ student.date_of_birth|date:"F d, Y"|default:"Not provided" }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Gender</div>
+                            <div class="info-value">{{ student.get_gender_display|default:"Not provided" }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Nationality</div>
+                            <div class="info-value">{{ student.nationality|default:"South African" }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Preferred Language</div>
+                            <div class="info-value">{{ student.preferred_language|default:"English" }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="modern-card">
+                <div class="card-header-custom">
+                    <h3><i class="fas fa-address-card"></i> Contact Information</h3>
+                </div>
+                <div class="card-body-custom">
+                    <div class="info-item mb-2">
+                        <div class="info-label">Email Address</div>
+                        <div class="info-value">{{ student.email }}</div>
+                    </div>
+                    <div class="info-item mb-2">
+                        <div class="info-label">Phone Number</div>
+                        <div class="info-value">{{ student.contact_number|default:"Not provided" }}</div>
+                    </div>
+                    <div class="info-item mb-2">
+                        <div class="info-label">Physical Address</div>
+                        <div class="info-value">{{ profile.physical_address|default:"Not provided" }}</div>
+                    </div>
+                    <div class="info-item mb-2">
+                        <div class="info-label">Emergency Contact</div>
+                        <div class="info-value">
+                            {{ profile.emergency_contact_name|default:"Not provided" }}<br>
+                            {% if profile.emergency_contact_phone %}{{ profile.emergency_contact_phone }}{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Uploaded Documents -->
+            <div class="modern-card">
+                <div class="card-header-custom">
+                    <h3><i class="fas fa-file-alt"></i> Documents</h3>
+                </div>
+                <div class="card-body-custom">
+                    {% for doc in documents %}
+                    <div class="document-item">
+                        <div class="document-name">
+                            <i class="fas fa-file-pdf" style="color: #dc2626;"></i>
+                            <div>
+                                <strong>{{ doc.get_document_type_display }}</strong>
+                                <div class="text-muted small">{{ doc.upload_date|date:"M d, Y" }}</div>
+                            </div>
+                        </div>
+                        <a href="{% url 'download_learner_document' doc.id %}" class="btn btn-sm btn-outline-primary" target="_blank">
+                            <i class="fas fa-download"></i>
+                        </a>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center">No documents uploaded.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Certificates -->
+            {% if certificates %}
+            <div class="modern-card">
+                <div class="card-header-custom">
+                    <h3><i class="fas fa-award"></i> Certificates</h3>
+                </div>
+                <div class="card-body-custom">
+                    {% for cert in certificates %}
+                    <div class="document-item">
+                        <div class="document-name">
+                            <i class="fas fa-certificate" style="color: var(--primary);"></i>
+                            <div>
+                                <strong>{{ cert.course.title|truncatechars:30 }}</strong>
+                                <div class="text-muted small">Issued: {{ cert.issued_at|date:"M d, Y" }}</div>
+                            </div>
+                        </div>
+                        <span class="badge bg-success">Issued</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

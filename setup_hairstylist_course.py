@@ -766,8 +766,10 @@ for lesson_data in km01_lessons:
     )
     if created:
         print(f"  ✅ Added lesson {lesson_data['order']}: {lesson_data['title']}")
+    else:
+        print(f"  📖 Lesson exists: {lesson_data['title']}")
 
-# ==================== QUIZZES FOR KM-01 ====================
+# ==================== QUIZZES FOR KM-01 (FIXED VERSION) ====================
 
 km01_quizzes = [
     {
@@ -785,7 +787,7 @@ km01_quizzes = [
         'questions': [
             ('What is the first step in preventing cross-contamination in a salon?', 'multiple_choice', 10, 'A', 'A) Regular disinfection|B) Wearing gloves only|C) Using air freshener|D) Opening windows'),
             ('Which type of safety sign uses yellow triangles with black pictograms?', 'multiple_choice', 10, 'B', 'A) Emergency signs|B) Warning signs|C) Mandatory signs|D) Information signs'),
-            ('What does PPE stand for?', 'short_answer', 10, 'Personal Protective Equipment', ''),
+            ('What does PPE stand for?', 'multiple_choice', 10, 'A', 'A) Personal Protective Equipment|B) Public Protection Equipment|C) Private Protective Equipment|D) Professional Personal Equipment'),
             ('True or False: Chemical waste can be disposed of in regular trash bins.', 'true_false', 5, 'False', ''),
             ('Which of the following is NOT a hazardous chemical found in salons?', 'multiple_choice', 10, 'D', 'A) Hair dyes|B) Bleaches|C) Chemical peels|D) Water'),
         ]
@@ -793,9 +795,9 @@ km01_quizzes = [
     {
         'lesson_title': 'KM-01-KT03: Basic Principles of Firefighting',
         'questions': [
-            ('What are the three elements of the fire triangle?', 'short_answer', 15, 'Heat, fuel, oxygen', ''),
+            ('What are the three elements of the fire triangle?', 'multiple_choice', 15, 'A', 'A) Heat, fuel, oxygen|B) Heat, water, oxygen|C) Fuel, smoke, oxygen|D) Heat, carbon, oxygen'),
             ('Which fire extinguisher is best for electrical fires?', 'multiple_choice', 10, 'A', 'A) CO2 extinguisher|B) Water extinguisher|C) Foam extinguisher|D) Wet chemical'),
-            ('What does P.A.S.S. stand for in fire extinguisher use?', 'short_answer', 15, 'Pull, Aim, Squeeze, Sweep', ''),
+            ('What does P.A.S.S. stand for in fire extinguisher use?', 'multiple_choice', 15, 'A', 'A) Pull, Aim, Squeeze, Sweep|B) Press, Aim, Spray, Sweep|C) Pull, Activate, Squeeze, Spray|D) Push, Aim, Squeeze, Swirl'),
             ('Class A fires involve which materials?', 'multiple_choice', 10, 'A', 'A) Wood, paper, textiles|B) Flammable liquids|C) Electrical equipment|D) Cooking oils'),
             ('True or False: Water extinguishers can be used on electrical fires.', 'true_false', 5, 'False', ''),
         ]
@@ -815,7 +817,7 @@ km01_quizzes = [
         'questions': [
             ('How many seconds does it take to form a first impression?', 'multiple_choice', 10, 'B', 'A) 30 seconds|B) 5-7 seconds|C) 1 minute|D) 10 seconds'),
             ('Which of the following is NOT a benefit of proper etiquette?', 'multiple_choice', 10, 'D', 'A) Confidence boost|B) Stronger friendships|C) Career opportunities|D) Lower salary'),
-            ('What are the three key elements of a professional image?', 'short_answer', 15, 'Appearance, professional behavior, professional conduct', ''),
+            ('What are the three key elements of a professional image?', 'multiple_choice', 15, 'A', 'A) Appearance, professional behavior, professional conduct|B) Attitude, behavior, communication|C) Appearance, attitude, ethics|D) Skills, knowledge, experience'),
             ('True or False: Email subject lines are not important.', 'true_false', 5, 'False', ''),
             ('Which of the following demonstrates a positive attitude at work?', 'multiple_choice', 10, 'A', 'A) Smiling|B) Gossiping|C) Being late|D) Complaining'),
         ]
@@ -836,7 +838,7 @@ km01_quizzes = [
             ('What is the current VAT rate in South Africa?', 'multiple_choice', 10, 'B', 'A) 10%|B) 15%|C) 20%|D) 25%'),
             ('If a product costs R100 excluding VAT, what is the price including VAT?', 'short_answer', 15, 'R115', ''),
             ('Calculate net income if revenue is R50,000 and expenses are R35,000.', 'short_answer', 15, 'R15,000', ''),
-            ('What does PAYE stand for?', 'short_answer', 10, 'Pay As You Earn', ''),
+            ('What does PAYE stand for?', 'multiple_choice', 10, 'A', 'A) Pay As You Earn|B) Pay After Year End|C) Pre-Annual Yield Estimate|D) Post-Annual Year End'),
             ('True or False: Net pay is the amount before deductions.', 'true_false', 5, 'False', ''),
         ]
     }
@@ -882,7 +884,7 @@ for quiz_data in km01_quizzes:
                     'order': quiz.questions.count() + 1
                 }
             )
-        print(f"     📝 Added {len(quiz_data['questions'])} questions")
+        print(f"     📝 Added {len(quiz_data['questions'])} questions to quiz")
 
 print("\n" + "="*60)
 print("🎉 HAIRSTYLIST COURSE SETUP COMPLETE!")

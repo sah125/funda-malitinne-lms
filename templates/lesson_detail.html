@@ -1,86 +1,844 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}{{ lesson.title }}{% endblock %}
+{% block title %}{{ lesson.title }} - Funda Malitinne{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-8 mx-auto">
-        <div class="card">
-            <div class="card-body">
-                <a href="{% url 'course_detail' course.id %}" class="btn btn-secondary mb-3">
-                    ← Back to Course
-                </a>
-                
-                <h2>{{ lesson.title }}</h2>
-                
-                {% if lesson.video_url %}
-                    <div class="ratio ratio-16x9 mb-4">
-                        <iframe src="{{ lesson.video_url }}" allowfullscreen></iframe>
-                    </div>
-                {% endif %}
-                
-                <div class="lesson-content mt-4">
-                    {{ lesson.content|linebreaks }}
-                </div>
-                
-                <!-- Document Viewer -->
-                {% if lesson.document %}
-                <div class="mt-4">
-                    <h5><i class="fas fa-file-pdf me-2"></i> Course Material</h5>
-                    <div class="border rounded p-3" style="background: #f8f9fa;">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-file-pdf text-danger me-2"></i>
-                                <strong>{{ lesson.document.name|cut:"lesson_documents/" }}</strong>
-                            </div>
-                            <a href="{{ lesson.document.url }}" target="_blank" class="btn btn-sm btn-primary">
-                                <i class="fas fa-external-link-alt"></i> View Document
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-                
-                <!-- Mark as Complete Button -->
-                {% if user.role == 'student' %}
-                    <div class="mt-4 text-center">
-                        {% if lesson in progress.completed_lessons.all %}
-                            <div class="alert alert-success">
-                                <i class="fas fa-check-circle"></i> You have completed this lesson!
-                            </div>
-                        {% else %}
-                            <form method="POST">
-                                {% csrf_token %}
-                                <button type="submit" name="complete" value="yes" class="btn btn-success btn-lg">
-                                    <i class="fas fa-check-circle"></i> Mark as Complete
-                                </button>
-                            </form>
-                        {% endif %}
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-        
-        <!-- Progress Card -->
-        <div class="card mt-3">
-            <div class="card-body">
-                <h5>Your Progress in {{ course.title }}</h5>
-                <div class="progress mb-2" style="height: 30px;">
-                    <div class="progress-bar bg-success progress-bar-striped" 
-                         role="progressbar" 
-                         style="width: {{ progress.progress_percentage }}%;" 
-                         aria-valuenow="{{ progress.progress_percentage }}" 
-                         aria-valuemin="0" 
-                         aria-valuemax="100">
-                        {{ progress.progress_percentage }}% Complete
-                    </div>
-                </div>
-                <p class="mb-0">
-                    <i class="fas fa-check-circle text-success"></i> 
-                    {{ progress.completed_lessons.count }} of {{ course.lessons.count }} lessons completed
-                </p>
-            </div>
-        </div>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f5f5f0;
+    min-height: 100vh;
+  }
+
+  .bg-pattern {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239f7734' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  .lesson-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .main-card {
+    background: #ffffff;
+    border-radius: 2rem;
+    overflow: hidden;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+  }
+
+  .lesson-header {
+    background: linear-gradient(135deg, #9f7734 0%, #7a5828 50%, #5c3d1a 100%);
+    padding: 2.5rem;
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .lesson-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: shine 8s ease-in-out infinite;
+  }
+
+  @keyframes shine {
+    0%, 100% { transform: translate(-30%, -30%); }
+    50% { transform: translate(30%, 30%); }
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.3s;
+    margin-bottom: 1.5rem;
+  }
+
+  .back-link:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateX(-5px);
+  }
+
+  .lesson-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #fff, #fef3c7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .stats-bar {
+    background: #fafaf8;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    border-bottom: 1px solid #e8e8e3;
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #4a4a4a;
+  }
+
+  .timer-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #9f7734, #7a5828);
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    color: white;
+    font-weight: 600;
+  }
+
+  .attempts-counter {
+    background: #fef3c7;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    color: #92400e;
+    font-weight: 600;
+  }
+
+  .progress-steps-modern {
+    padding: 2rem;
+    background: #fafaf8;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid #e8e8e3;
+  }
+
+  .step-modern {
+    flex: 1;
+    text-align: center;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .step-number {
+    width: 40px;
+    height: 40px;
+    background: white;
+    border: 2px solid #d4d4cf;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.5rem;
+    font-weight: 700;
+    color: #8a8a8a;
+    transition: all 0.3s;
+  }
+
+  .step-modern.active .step-number {
+    background: #9f7734;
+    border-color: #9f7734;
+    color: white;
+    transform: scale(1.1);
+  }
+
+  .step-modern.completed .step-number {
+    background: #10b981;
+    border-color: #10b981;
+    color: white;
+  }
+
+  .step-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b6b6b;
+  }
+
+  .step-modern.active .step-title {
+    color: #9f7734;
+  }
+
+  .step-modern.completed .step-title {
+    color: #10b981;
+  }
+
+  .content-area {
+    padding: 2rem;
+  }
+
+  .content-card {
+    background: #ffffff;
+    border-radius: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid #e8e8e3;
+  }
+
+  .card-header {
+    padding: 1.5rem;
+    background: #fafaf8;
+    border-bottom: 1px solid #e8e8e3;
+  }
+
+  .card-header h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2d2d2d;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .card-body {
+    padding: 1.5rem;
+  }
+
+  .verification-grid {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .verification-card {
+    background: #fafaf8;
+    border-radius: 1rem;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+  }
+
+  .verification-card:hover {
+    transform: translateX(8px);
+    background: #f5f5f0;
+  }
+
+  .verification-card.checked {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-color: #10b981;
+  }
+
+  .custom-checkbox {
+    width: 28px;
+    height: 28px;
+    background: white;
+    border: 2px solid #d4d4cf;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+  }
+
+  .verification-card.checked .custom-checkbox {
+    background: #10b981;
+    border-color: #10b981;
+    color: white;
+  }
+
+  .verification-card.checked .custom-checkbox::after {
+    content: '✓';
+  }
+
+  .verification-text {
+    flex: 1;
+    font-weight: 500;
+    color: #2d2d2d;
+  }
+
+  .video-wrapper {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    border-radius: 1rem;
+    overflow: hidden;
+    background: #1a1a1a;
+    margin-bottom: 1rem;
+  }
+
+  .video-wrapper iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .quiz-card {
+    background: #fafaf8;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .quiz-question-text {
+    font-weight: 700;
+    color: #2d2d2d;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+  }
+
+  .quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: white;
+    border: 2px solid #e8e8e3;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .quiz-option:hover {
+    border-color: #9f7734;
+    background: #fef3c7;
+    transform: translateX(5px);
+  }
+
+  .quiz-option.selected {
+    border-color: #9f7734;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  }
+
+  .complete-btn-modern {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, #9f7734 0%, #7a5828 100%);
+    color: white;
+    border: none;
+    border-radius: 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .complete-btn-modern:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .complete-btn-modern:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(159, 119, 52, 0.3);
+  }
+
+  .fail-message {
+    background: #fee2e2;
+    border-left: 4px solid #ef4444;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    margin-top: 1rem;
+    color: #991b1b;
+  }
+
+  .toast-modern {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    animation: slideInRight 0.3s ease;
+    z-index: 1000;
+    border-left: 4px solid #10b981;
+  }
+
+  @keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  @media (max-width: 768px) {
+    .lesson-container { padding: 1rem; }
+    .lesson-title { font-size: 1.5rem; }
+    .progress-steps-modern { flex-direction: column; }
+    .step-modern { display: flex; align-items: center; gap: 1rem; }
+    .step-number { margin: 0; }
+  }
+</style>
+
+<div class="bg-pattern"></div>
+
+<div class="lesson-container">
+  <div class="main-card">
+    <div class="lesson-header">
+      <a href="{% url 'course_detail' course.id %}" class="back-link">
+        <i class="fas fa-arrow-left"></i> Back to Course
+      </a>
+      <h1 class="lesson-title">{{ lesson.title }}</h1>
     </div>
+
+    <div class="stats-bar">
+      <div class="stat-item">
+        <i class="fas fa-clock"></i>
+        <span>Time spent</span>
+        <span class="timer-display" id="timer">0:00</span>
+      </div>
+      <div class="stat-item" id="attemptsDisplay">
+        <i class="fas fa-redo"></i>
+        <span>Attempts left</span>
+        <span class="attempts-counter" id="attemptsLeft">3</span>
+      </div>
+    </div>
+
+    <div class="progress-steps-modern">
+      <div class="step-modern" id="step1Indicator" onclick="goToStep(1)">
+        <div class="step-number">1</div>
+        <div class="step-title">Read & Learn</div>
+      </div>
+      <div class="step-modern" id="step2Indicator" onclick="goToStep(2)">
+        <div class="step-number">2</div>
+        <div class="step-title">Watch & Understand</div>
+      </div>
+      <div class="step-modern" id="step3Indicator" onclick="goToStep(3)">
+        <div class="step-number">3</div>
+        <div class="step-title">Quiz & Confirm</div>
+      </div>
+    </div>
+
+    <form id="completeForm" method="POST" action="{% url 'lesson_detail' lesson.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="complete" value="yes">
+    </form>
+
+    <div class="content-area">
+      <!-- Step 1: Reading -->
+      <div id="step1Content" class="content-card">
+        <div class="card-header">
+          <h3><i class="fas fa-book" style="color: #9f7734;"></i> Step 1: Read & Understand</h3>
+        </div>
+        <div class="card-body">
+          <div style="line-height: 1.8; color: #4a4a4a;">{{ lesson.content|linebreaks }}</div>
+          <div class="verification-grid">
+            <div class="verification-card" onclick="toggleVerification(this, 1)">
+              <div class="custom-checkbox"></div>
+              <div class="verification-text">✅ I have read and understood the lesson content</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Video -->
+      <div id="step2Content" class="content-card" style="display: none;">
+        <div class="card-header">
+          <h3><i class="fas fa-video" style="color: #9f7734;"></i> Step 2: Watch the Video</h3>
+        </div>
+        <div class="card-body">
+          {% if lesson.video_url %}
+          <div class="video-wrapper">
+            <iframe src="{{ lesson.video_url }}" frameborder="0" allowfullscreen></iframe>
+          </div>
+          {% else %}
+          <div style="background: #fafaf8; padding: 2rem; text-align: center; border-radius: 1rem;">
+            <i class="fas fa-video-slash fa-3x" style="color: #b0b0b0;"></i>
+            <p style="margin-top: 0.5rem;">No video available for this lesson.</p>
+            <p style="font-size: 0.875rem;">Please proceed to the quiz after reading.</p>
+          </div>
+          {% endif %}
+          <div class="verification-grid">
+            <div class="verification-card" onclick="toggleVerification(this, 2)">
+              <div class="custom-checkbox"></div>
+              <div class="verification-text">
+                {% if lesson.video_url %}
+                🎥 I have watched the entire video
+                {% else %}
+                📖 I have reviewed the lesson content thoroughly
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Quiz - NO CORRECT ANSWERS SHOWN -->
+      <div id="step3Content" class="content-card" style="display: none;">
+        <div class="card-header">
+          <h3><i class="fas fa-question-circle" style="color: #9f7734;"></i> Step 3: Quiz - Verify Your Learning</h3>
+        </div>
+        <div class="card-body">
+          <div class="quiz-card">
+            <div class="quiz-question-text">
+              <strong>Question:</strong> Based on this lesson, what is the most important concept you learned about "{{ lesson.title }}"?
+            </div>
+            <div class="quiz-options" id="quizOptions">
+              <label class="quiz-option" onclick="selectQuizOption(this, 'option1')">
+                <input type="radio" name="quiz" value="option1" hidden>
+                <span>🔰 Option A: I fully understand the key concepts and can apply them</span>
+              </label>
+              <label class="quiz-option" onclick="selectQuizOption(this, 'option2')">
+                <input type="radio" name="quiz" value="option2" hidden>
+                <span>📘 Option B: I understand most concepts but need more practice</span>
+              </label>
+              <label class="quiz-option" onclick="selectQuizOption(this, 'option3')">
+                <input type="radio" name="quiz" value="option3" hidden>
+                <span>🔄 Option C: I need to review the lesson again to fully understand</span>
+              </label>
+            </div>
+          </div>
+          
+          <div id="quizFeedback" style="display: none;"></div>
+          
+          <div class="verification-grid">
+            <div class="verification-card" onclick="submitQuizAnswer()">
+              <div class="custom-checkbox"></div>
+              <div class="verification-text" id="submitQuizText">📝 Submit Quiz Answer</div>
+            </div>
+          </div>
+          
+          <div id="quizResultMessage" style="display: none; margin-top: 1rem; padding: 1rem; border-radius: 0.5rem;"></div>
+        </div>
+      </div>
+
+      <button class="complete-btn-modern" id="completeBtn" disabled onclick="submitLessonCompletion()">
+        <i class="fas fa-lock"></i> Complete All Steps First
+      </button>
+    </div>
+  </div>
+
+  <!-- Progress Card -->
+  <div class="main-card" style="margin-top: 1.5rem;">
+    <div class="card-header">
+      <h3><i class="fas fa-chart-line" style="color: #9f7734;"></i> Your Progress</h3>
+    </div>
+    <div class="card-body">
+      <div class="progress" style="height: 12px; border-radius: 1rem; background: #e8e8e3;">
+        <div class="progress-bar" role="progressbar" 
+             style="width: {{ progress.progress_percentage }}%; background: linear-gradient(90deg, #9f7734, #7a5828); border-radius: 1rem;">
+        </div>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-top: 0.75rem;">
+        <span><i class="fas fa-check-circle text-success"></i> {{ progress.completed_lessons.count }} of {{ course.lessons.count }} lessons</span>
+        <span style="font-weight: 700; color: #9f7734;">{{ progress.progress_percentage }}% Complete</span>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  let timeSpent = parseInt(localStorage.getItem('lesson_{{ lesson.id }}_time') || '0');
+  let timerInterval;
+  let stepsCompleted = {1: false, 2: false, 3: false};
+  let currentStep = 1;
+  let quizAttempts = parseInt(localStorage.getItem('lesson_{{ lesson.id }}_attempts') || '3');
+  let quizPassed = localStorage.getItem('lesson_{{ lesson.id }}_passed') === 'true';
+  let selectedAnswer = null;
+  
+  // The correct answer is Option A (index 0) - but students don't know this
+  const CORRECT_OPTION = 'option1';
+
+  function startTimer() {
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+      timeSpent++;
+      localStorage.setItem('lesson_{{ lesson.id }}_time', timeSpent);
+      updateTimerDisplay();
+    }, 1000);
+  }
+
+  function updateTimerDisplay() {
+    const minutes = Math.floor(timeSpent / 60);
+    const seconds = timeSpent % 60;
+    document.getElementById('timer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  function updateAttemptsDisplay() {
+    document.getElementById('attemptsLeft').textContent = quizAttempts;
+  }
+
+  function goToStep(step) {
+    document.getElementById('step1Content').style.display = 'none';
+    document.getElementById('step2Content').style.display = 'none';
+    document.getElementById('step3Content').style.display = 'none';
+    document.getElementById(`step${step}Content`).style.display = 'block';
+    
+    for (let i = 1; i <= 3; i++) {
+      const indicator = document.getElementById(`step${i}Indicator`);
+      if (i < step || (i === 3 && quizPassed)) {
+        indicator.classList.add('completed');
+        indicator.classList.remove('active');
+      } else if (i === step) {
+        indicator.classList.add('active');
+        indicator.classList.remove('completed');
+      } else {
+        indicator.classList.remove('completed', 'active');
+      }
+    }
+    currentStep = step;
+  }
+
+  function toggleVerification(element, step) {
+    element.classList.toggle('checked');
+    stepsCompleted[step] = element.classList.contains('checked');
+    
+    if (stepsCompleted[step] && step < 3) {
+      setTimeout(() => {
+        goToStep(step + 1);
+        showToast(`✅ Step ${step} completed!`);
+      }, 500);
+    }
+    
+    checkStepCompletion();
+    saveProgress();
+  }
+
+  function selectQuizOption(element, option) {
+    document.querySelectorAll('.quiz-option').forEach(opt => {
+      opt.classList.remove('selected');
+    });
+    element.classList.add('selected');
+    selectedAnswer = option;
+    // Hide any previous feedback
+    document.getElementById('quizFeedback').style.display = 'none';
+    document.getElementById('quizResultMessage').style.display = 'none';
+  }
+
+  function submitQuizAnswer() {
+    if (!selectedAnswer) {
+      showToast('⚠️ Please select an answer first');
+      return;
+    }
+    
+    // Check if the selected answer is correct
+    if (selectedAnswer === CORRECT_OPTION) {
+      // PASSED!
+      quizPassed = true;
+      localStorage.setItem('lesson_{{ lesson.id }}_passed', 'true');
+      localStorage.setItem('lesson_{{ lesson.id }}_attempts', quizAttempts);
+      stepsCompleted[3] = true;
+      document.querySelector('#step3Content .verification-card').classList.add('checked');
+      
+      // Show success message
+      const resultDiv = document.getElementById('quizResultMessage');
+      resultDiv.style.display = 'block';
+      resultDiv.style.background = '#d1fae5';
+      resultDiv.style.borderLeft = '4px solid #10b981';
+      resultDiv.style.color = '#065f46';
+      resultDiv.innerHTML = '<i class="fas fa-check-circle"></i> ✅ Excellent! You have passed the quiz and demonstrated understanding of the lesson!';
+      
+      showToast('🎉 Correct! You passed the quiz!');
+      checkStepCompletion();
+      goToStep(3);
+    } else {
+      // WRONG ANSWER - Don't reveal the correct answer!
+      quizAttempts--;
+      localStorage.setItem('lesson_{{ lesson.id }}_attempts', quizAttempts);
+      updateAttemptsDisplay();
+      
+      if (quizAttempts <= 0) {
+        showFailAndReset();
+      } else {
+        // Show wrong answer message WITHOUT revealing correct answer
+        const resultDiv = document.getElementById('quizResultMessage');
+        resultDiv.style.display = 'block';
+        resultDiv.style.background = '#fee2e2';
+        resultDiv.style.borderLeft = '4px solid #ef4444';
+        resultDiv.style.color = '#991b1b';
+        resultDiv.innerHTML = `<i class="fas fa-times-circle"></i> ❌ That's not correct. You have ${quizAttempts} attempt${quizAttempts !== 1 ? 's' : ''} left. Please review the lesson carefully and try again.`;
+        
+        document.getElementById('quizFeedback').style.display = 'block';
+        document.getElementById('quizFeedback').className = 'fail-message';
+        document.getElementById('quizFeedback').innerHTML = `
+          <i class="fas fa-book-open"></i> 
+          <strong>Not quite right!</strong> You have ${quizAttempts} attempt${quizAttempts !== 1 ? 's' : ''} remaining.
+          <br><small>Please re-read the lesson content and try again.</small>
+        `;
+        
+        // Clear selection so student must choose again
+        selectedAnswer = null;
+        document.querySelectorAll('.quiz-option').forEach(opt => {
+          opt.classList.remove('selected');
+        });
+        showToast(`❌ Incorrect. ${quizAttempts} attempts remaining`);
+      }
+    }
+  }
+
+  function showFailAndReset() {
+    showToast('❌ You have used all 3 attempts. Going back to review the lesson...');
+    
+    // Reset quiz state
+    quizAttempts = 3;
+    quizPassed = false;
+    selectedAnswer = null;
+    stepsCompleted[3] = false;
+    localStorage.setItem('lesson_{{ lesson.id }}_attempts', 3);
+    localStorage.setItem('lesson_{{ lesson.id }}_passed', 'false');
+    localStorage.setItem('lesson_{{ lesson.id }}_quiz', 'false');
+    
+    // Uncheck quiz verification
+    document.querySelector('#step3Content .verification-card').classList.remove('checked');
+    
+    // Go back to step 1 (reading)
+    goToStep(1);
+    updateAttemptsDisplay();
+    
+    // Clear any selected quiz options
+    document.querySelectorAll('.quiz-option').forEach(opt => {
+      opt.classList.remove('selected');
+    });
+    
+    // Clear result messages
+    document.getElementById('quizResultMessage').style.display = 'none';
+    document.getElementById('quizFeedback').style.display = 'none';
+    
+    // Add review message to step 1
+    const step1Content = document.getElementById('step1Content');
+    const failMessage = document.createElement('div');
+    failMessage.className = 'fail-message';
+    failMessage.id = 'reviewMessage';
+    failMessage.innerHTML = `
+      <i class="fas fa-exclamation-triangle"></i>
+      <strong>Time to Review!</strong> You didn't pass the quiz. Please re-read the lesson carefully and focus on understanding the key concepts.
+      <br><small>You have 3 new attempts. Take your time to understand the material.</small>
+    `;
+    
+    // Remove existing message if present
+    const existingMsg = document.querySelector('#step1Content .fail-message');
+    if (existingMsg) existingMsg.remove();
+    
+    step1Content.querySelector('.card-body').insertBefore(failMessage, step1Content.querySelector('.verification-grid'));
+    
+    setTimeout(() => {
+      const msg = document.getElementById('reviewMessage');
+      if (msg) msg.remove();
+    }, 8000);
+  }
+
+  function checkStepCompletion() {
+    const allCompleted = stepsCompleted[1] && stepsCompleted[2] && quizPassed;
+    const completeBtn = document.getElementById('completeBtn');
+    
+    if (allCompleted) {
+      completeBtn.disabled = false;
+      completeBtn.innerHTML = '<i class="fas fa-trophy"></i> Complete Lesson & Earn 100 XP!';
+    } else {
+      completeBtn.disabled = true;
+      const missing = [];
+      if (!stepsCompleted[1]) missing.push('Read');
+      if (!stepsCompleted[2]) missing.push('Watch');
+      if (!quizPassed) missing.push('Pass Quiz');
+      completeBtn.innerHTML = `<i class="fas fa-lock"></i> Need: ${missing.join(' + ')}`;
+    }
+  }
+
+  function submitLessonCompletion() {
+    if (timeSpent < 120) {
+      showToast('⚠️ Please spend at least 2 minutes on this lesson');
+      return;
+    }
+    
+    if (!quizPassed) {
+      showToast('⚠️ You must pass the quiz first!');
+      return;
+    }
+    
+    const form = document.getElementById('completeForm');
+    showToast('🎉 Great job! Completing lesson...');
+    form.submit();
+  }
+
+  function showToast(message) {
+    const existing = document.querySelector('.toast-modern');
+    if (existing) existing.remove();
+    
+    const toast = document.createElement('div');
+    toast.className = 'toast-modern';
+    toast.innerHTML = `<i class="fas fa-check-circle" style="color: #10b981;"></i> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function saveProgress() {
+    localStorage.setItem('lesson_{{ lesson.id }}_read', stepsCompleted[1]);
+    localStorage.setItem('lesson_{{ lesson.id }}_video', stepsCompleted[2]);
+    localStorage.setItem('lesson_{{ lesson.id }}_quiz', quizPassed);
+  }
+
+  function loadProgress() {
+    stepsCompleted[1] = localStorage.getItem('lesson_{{ lesson.id }}_read') === 'true';
+    stepsCompleted[2] = localStorage.getItem('lesson_{{ lesson.id }}_video') === 'true';
+    quizPassed = localStorage.getItem('lesson_{{ lesson.id }}_passed') === 'true';
+    
+    if (stepsCompleted[1]) {
+      document.querySelector('#step1Content .verification-card').classList.add('checked');
+    }
+    if (stepsCompleted[2]) {
+      document.querySelector('#step2Content .verification-card').classList.add('checked');
+    }
+    if (quizPassed) {
+      document.querySelector('#step3Content .verification-card').classList.add('checked');
+      stepsCompleted[3] = true;
+    }
+    
+    updateAttemptsDisplay();
+    checkStepCompletion();
+    
+    if (!stepsCompleted[1]) goToStep(1);
+    else if (!stepsCompleted[2]) goToStep(2);
+    else if (!quizPassed) goToStep(3);
+    else goToStep(3);
+  }
+
+  // Initialize
+  startTimer();
+  loadProgress();
+  
+  {% if lesson in progress.completed_lessons.all %}
+    document.getElementById('completeBtn').disabled = true;
+    document.getElementById('completeBtn').innerHTML = '<i class="fas fa-check-circle"></i> Lesson Completed! ✓';
+  {% endif %}
+</script>
 {% endblock %}

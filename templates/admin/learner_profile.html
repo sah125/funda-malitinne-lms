@@ -1,0 +1,496 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ learner.get_full_name|default:learner.username }} - Learner Profile{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary: #9f7734;
+        --primary-dark: #7a5828;
+        --success: #10b981;
+        --info: #3b82f6;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+    }
+    
+    .profile-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    .profile-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        border-radius: 1rem;
+        padding: 2rem;
+        color: white;
+        margin-bottom: 2rem;
+    }
+    
+    .profile-section {
+        background: white;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--primary);
+        color: var(--primary-dark);
+    }
+    
+    .document-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background: #f8fafc;
+        border-radius: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .logbook-item {
+        padding: 0.75rem;
+        background: #f8fafc;
+        border-radius: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .btn-action {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        transition: all 0.3s;
+    }
+    
+    .btn-action:hover {
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="profile-container">
+    <!-- Header -->
+    <div class="profile-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="fas fa-user-graduate me-2"></i> Learner Profile</h2>
+                <p class="mb-0">{{ learner.get_full_name|default:learner.username }}</p>
+                <small>{{ learner.email }} • {{ learner.get_role_display }}</small>
+            </div>
+            <div>
+                <button onclick="window.history.back()" class="btn btn-light me-2">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+                <button onclick="exportPDF()" class="btn btn-info">
+                    <i class="fas fa-file-pdf"></i> Export PDF
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Personal Information Section -->
+    <div class="profile-section">
+        <h4 class="section-title"><i class="fas fa-user me-2"></i> Section A: Personal & Contact Information</h4>
+        <form id="personalForm">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label>Full Name *</label>
+                    <input type="text" name="full_name" class="form-control" value="{{ learner.get_full_name|default:'' }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>ID Number / Passport</label>
+                    <input type="text" name="id_number" class="form-control" value="{{ learner.id_number|default:'' }}">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label>Date of Birth</label>
+                    <input type="date" name="date_of_birth" class="form-control" value="{{ learner.date_of_birth|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label>Gender</label>
+                    <select name="gender" class="form-control">
+                        <option value="">Select...</option>
+                        <option value="male" {% if learner.gender == 'male' %}selected{% endif %}>Male</option>
+                        <option value="female" {% if learner.gender == 'female' %}selected{% endif %}>Female</option>
+                        <option value="other" {% if learner.gender == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label>Nationality</label>
+                    <input type="text" name="nationality" class="form-control" value="{{ learner.nationality|default:'' }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Email *</label>
+                    <input type="email" name="email" class="form-control" value="{{ learner.email }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Phone Number</label>
+                    <input type="tel" name="phone_number" class="form-control" value="{{ learner.contact_number|default:'' }}">
+                </div>
+                <div class="col-12 mb-3">
+                    <label>Physical Address</label>
+                    <textarea name="physical_address" class="form-control" rows="2">{{ profile.physical_address|default:'' }}</textarea>
+                </div>
+                <div class="col-12 mb-3">
+                    <label>Disability (if any)</label>
+                    <textarea name="disability" class="form-control" rows="2">{{ learner.disability|default:'' }}</textarea>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Preferred Language</label>
+                    <input type="text" name="preferred_language" class="form-control" value="{{ learner.preferred_language|default:'English' }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Emergency Contact Name</label>
+                    <input type="text" name="emergency_contact_name" class="form-control" value="{{ profile.emergency_contact_name|default:'' }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Emergency Contact Phone</label>
+                    <input type="text" name="emergency_contact_phone" class="form-control" value="{{ profile.emergency_contact_phone|default:'' }}">
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="saveProfile()">
+                <i class="fas fa-save"></i> Save Personal Info
+            </button>
+        </form>
+    </div>
+    
+    <!-- Academic Tracking Section -->
+    <div class="profile-section">
+        <h4 class="section-title"><i class="fas fa-graduation-cap me-2"></i> Section D: Academic Tracking</h4>
+        <form id="academicForm">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label>Current Course</label>
+                    <select name="course_id" class="form-control">
+                        <option value="">Select course...</option>
+                        {% for course in courses %}
+                        <option value="{{ course.id }}" {% if profile.current_course_id == course.id %}selected{% endif %}>
+                            {{ course.title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Enrollment Date</label>
+                    <input type="date" name="enrollment_date" class="form-control" value="{{ profile.enrollment_date|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Expected Completion Date</label>
+                    <input type="date" name="expected_completion_date" class="form-control" value="{{ profile.expected_completion_date|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-12 mb-3">
+                    <label>Assessment Notes / Comments</label>
+                    <textarea name="assessment_notes" class="form-control" rows="3">{{ profile.assessment_notes|default:'' }}</textarea>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Certificate Issued?</label>
+                    <select name="certificate_issued" class="form-control">
+                        <option value="false" {% if not profile.certificate_issued %}selected{% endif %}>No</option>
+                        <option value="true" {% if profile.certificate_issued %}selected{% endif %}>Yes</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Certificate Issue Date</label>
+                    <input type="date" name="certificate_issued_date" class="form-control" value="{{ profile.certificate_issued_date|date:'Y-m-d'|default:'' }}">
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="saveProfile()">
+                <i class="fas fa-save"></i> Save Academic Info
+            </button>
+        </form>
+    </div>
+    
+    <!-- Internship Section -->
+    <div class="profile-section">
+        <h4 class="section-title"><i class="fas fa-briefcase me-2"></i> Section C: Internship / Workplace Experience</h4>
+        <form id="internshipForm">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label>Host Company Name</label>
+                    <input type="text" name="host_company" class="form-control" value="{{ profile.host_company_name|default:'' }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>MoU Start Date</label>
+                    <input type="date" name="mou_start_date" class="form-control" value="{{ profile.mou_start_date|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>MoU End Date</label>
+                    <input type="date" name="mou_end_date" class="form-control" value="{{ profile.mou_end_date|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label>Supervisor Name</label>
+                    <input type="text" name="supervisor_name" class="form-control" value="{{ profile.supervisor_name|default:'' }}">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label>Supervisor Phone</label>
+                    <input type="text" name="supervisor_phone" class="form-control" value="{{ profile.supervisor_phone|default:'' }}">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label>Supervisor Email</label>
+                    <input type="email" name="supervisor_email" class="form-control" value="{{ profile.supervisor_email|default:'' }}">
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="saveProfile()">
+                <i class="fas fa-save"></i> Save Internship Info
+            </button>
+        </form>
+    </div>
+    
+    <!-- Documents Section -->
+    <div class="profile-section">
+        <h4 class="section-title"><i class="fas fa-file-upload me-2"></i> Section B: Uploaded Documents</h4>
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <select id="docType" class="form-control">
+                    <option value="id_copy">Certified ID Copy</option>
+                    <option value="qualification">Highest Qualification</option>
+                    <option value="cv">Curriculum Vitae</option>
+                    <option value="learner_agreement">Signed Learner Agreement</option>
+                    <option value="proof_of_residence">Proof of Residence</option>
+                    <option value="other">Other Document</option>
+                </select>
+            </div>
+            <div class="col-md-5">
+                <input type="file" id="docFile" class="form-control" accept=".pdf,.jpg,.png,.doc,.docx">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary w-100" onclick="uploadDocument()">
+                    <i class="fas fa-upload"></i> Upload
+                </button>
+            </div>
+        </div>
+        <div id="documentsList">
+            {% for doc in documents %}
+            <div class="document-item" id="doc-{{ doc.id }}">
+                <div>
+                    <i class="fas fa-file-pdf text-danger"></i>
+                    <strong>{{ doc.get_document_type_display }}</strong><br>
+                    <small>{{ doc.file_name }} • {{ doc.upload_date|date:"Y-m-d" }} • {{ doc.file_size|filesizeformat }}</small>
+                </div>
+                <div>
+                    <a href="{% url 'download_learner_document' doc.id %}" class="btn btn-sm btn-info">
+                        <i class="fas fa-download"></i>
+                    </a>
+                    <button class="btn btn-sm btn-danger" onclick="deleteDocument({{ doc.id }})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted">No documents uploaded yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Logbook Section -->
+    <div class="profile-section">
+        <h4 class="section-title"><i class="fas fa-book me-2"></i> Logbook Entries</h4>
+        <button class="btn btn-sm btn-success mb-3" onclick="addLogbookEntry()">
+            <i class="fas fa-plus"></i> Add Entry
+        </button>
+        <div id="logbookList">
+            {% for entry in logbooks %}
+            <div class="logbook-item" id="logbook-{{ entry.id }}">
+                <div>
+                    <strong>{{ entry.entry_date|date:"Y-m-d" }}</strong>
+                    <div>{{ entry.description|truncatewords:20 }}</div>
+                    <small>{{ entry.hours_spent }} hours • {{ entry.skills_learned|truncatewords:10 }}</small>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted">No logbook entries yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- POPIA Compliance Section -->
+    <div class="profile-section">
+        <h4 class="section-title"><i class="fas fa-shield-alt me-2"></i> POPIA Compliance (QCTO 5.6)</h4>
+        <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" id="popiaConsent" {% if profile.popia_consent %}checked{% endif %}>
+            <label class="form-check-label">
+                I consent to my personal information being stored and processed according to the Protection of Personal Information Act (POPIA) No. 4 of 2013.
+            </label>
+        </div>
+        {% if profile.popia_consent_date %}
+        <p class="text-muted small">Consent given on: {{ profile.popia_consent_date|date:"Y-m-d H:i" }}</p>
+        {% endif %}
+        <button class="btn btn-sm btn-info" onclick="saveProfile()">
+            <i class="fas fa-save"></i> Save Consent
+        </button>
+        <button class="btn btn-sm btn-secondary" onclick="showPrivacyPolicy()">
+            <i class="fas fa-file-alt"></i> View Privacy Policy
+        </button>
+    </div>
+</div>
+
+<!-- Privacy Policy Modal -->
+<div id="privacyModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Privacy Policy (POPIA Compliant)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Funda Malitinne Privacy Policy</strong></p>
+                <p>In compliance with the Protection of Personal Information Act (POPIA) No. 4 of 2013:</p>
+                <ul>
+                    <li>Your personal information is collected for educational and QCTO reporting purposes only.</li>
+                    <li>Data is stored securely with encryption and access controls.</li>
+                    <li>You have the right to access, correct, or request deletion of your data.</li>
+                    <li>Information will not be shared with third parties without consent.</li>
+                    <li>Data retention period: 5 years as per SAQA requirements.</li>
+                </ul>
+                <p><strong>Information Officer:</strong> privacy@fundamalitinne.co.za</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Understand</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function saveProfile() {
+        const data = {
+            full_name: document.querySelector('input[name="full_name"]').value,
+            id_number: document.querySelector('input[name="id_number"]').value,
+            date_of_birth: document.querySelector('input[name="date_of_birth"]').value,
+            gender: document.querySelector('select[name="gender"]').value,
+            nationality: document.querySelector('input[name="nationality"]').value,
+            email: document.querySelector('input[name="email"]').value,
+            phone_number: document.querySelector('input[name="phone_number"]').value,
+            physical_address: document.querySelector('textarea[name="physical_address"]').value,
+            disability: document.querySelector('textarea[name="disability"]').value,
+            preferred_language: document.querySelector('input[name="preferred_language"]').value,
+            emergency_contact_name: document.querySelector('input[name="emergency_contact_name"]').value,
+            emergency_contact_phone: document.querySelector('input[name="emergency_contact_phone"]').value,
+            course_id: document.querySelector('select[name="course_id"]').value,
+            enrollment_date: document.querySelector('input[name="enrollment_date"]').value,
+            expected_completion_date: document.querySelector('input[name="expected_completion_date"]').value,
+            assessment_notes: document.querySelector('textarea[name="assessment_notes"]').value,
+            certificate_issued: document.querySelector('select[name="certificate_issued"]').value === 'true',
+            certificate_issued_date: document.querySelector('input[name="certificate_issued_date"]').value,
+            host_company: document.querySelector('input[name="host_company"]').value,
+            mou_start_date: document.querySelector('input[name="mou_start_date"]').value,
+            mou_end_date: document.querySelector('input[name="mou_end_date"]').value,
+            supervisor_name: document.querySelector('input[name="supervisor_name"]').value,
+            supervisor_phone: document.querySelector('input[name="supervisor_phone"]').value,
+            supervisor_email: document.querySelector('input[name="supervisor_email"]').value,
+            popia_consent: document.getElementById('popiaConsent').checked
+        };
+        
+        fetch(`/api/learner/{{ learner.id }}/profile/save/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert('Profile saved successfully!');
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+    }
+    
+    function uploadDocument() {
+        const formData = new FormData();
+        formData.append('document_type', document.getElementById('docType').value);
+        formData.append('document', document.getElementById('docFile').files[0]);
+        
+        fetch(`/api/learner/{{ learner.id }}/document/upload/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert('Document uploaded successfully!');
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+    }
+    
+    function deleteDocument(docId) {
+        if (confirm('Are you sure you want to delete this document?')) {
+            fetch(`/api/learner/document/${docId}/delete/`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`doc-${docId}`).remove();
+                } else {
+                    alert('Error deleting document');
+                }
+            });
+        }
+    }
+    
+    function addLogbookEntry() {
+        const date = prompt('Enter date (YYYY-MM-DD):');
+        const hours = prompt('Enter hours spent:');
+        const description = prompt('Enter description:');
+        const skills = prompt('Enter skills learned:');
+        
+        if (date && description) {
+            fetch(`/api/learner/{{ learner.id }}/logbook/add/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({
+                    entry_date: date,
+                    hours_spent: hours || 0,
+                    description: description,
+                    skills_learned: skills || ''
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error adding logbook entry');
+                }
+            });
+        }
+    }
+    
+    function exportPDF() {
+        window.open(`/api/learner/{{ learner.id }}/export-pdf/`, '_blank');
+    }
+    
+    function showPrivacyPolicy() {
+        $('#privacyModal').modal('show');
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}
