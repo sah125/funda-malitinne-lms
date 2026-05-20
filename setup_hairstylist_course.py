@@ -1,896 +1,324 @@
+# core/management/commands/load_qcto_course.py
 import os
-import django
-from datetime import datetime, timedelta
+from django.core.management.base import BaseCommand
+from django.contrib.auth import get_user_model
 from django.utils import timezone
+from core.models import Course, Lesson, Quiz, QuizQuestion, Assignment
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'lms.settings')
-django.setup()
+User = get_user_model()
 
-from core.models import User, Course, Lesson, Quiz, QuizQuestion, Assignment, Progress
+class Command(BaseCommand):
+    help = 'Load QCTO Management Assistant course structure into the LMS'
 
-# Get instructor
-instructor = User.objects.filter(username='Phumlani').first()
-if not instructor:
-    instructor = User.objects.filter(role='instructor').first()
+    def handle(self, *args, **options):
+        self.stdout.write("Starting QCTO course creation...")
 
-if not instructor:
-    print("❌ No instructor found! Creating default instructor...")
-    instructor = User.objects.create_user(
-        username='hairstylist_instructor',
-        email='hairstylist@malitinne.co.za',
-        password='Mal@@@123',
-        role='instructor',
-        first_name='Hairstylist',
-        last_name='Trainer'
-    )
-    print(f"✅ Created instructor: {instructor.username}")
-
-print(f"✅ Using instructor: {instructor.username}")
-
-# ==================== CREATE COURSE ====================
-course, created = Course.objects.get_or_create(
-    title="Hairstylist Skills Programme - SP-230305 (NQF Level 3)",
-    defaults={
-        'description': """This Skills Programme is designed for aspiring hairstylists who want to develop professional hairdressing skills.
-
-QUALIFICATION INFORMATION:
-• SAQA QUAL ID: 230305
-• NQF Level: 3
-• Credits: 56
-• Curriculum Code: SP-230305 Hairstylist
-
-What you will learn:
-• Professional conduct and ethics in hairdressing
-• Principles of working with hair and skin
-• Hairstyling techniques (dreadlocks, braiding, extensions, thermal styling, up-styles)
-• Salon safety and hygiene
-• Client consultation and communication
-
-This programme combines knowledge, practical skills, and workplace application for real-world success.""",
-        'instructor': instructor,
-        'level': 'intermediate',
-        'status': 'published',
-        'price': 0
-    }
-)
-
-if created:
-    print(f"✅ Created course: {course.title}")
-else:
-    print(f"📚 Course already exists: {course.title}")
-
-# ==================== KNOWLEDGE MODULE 1: PROFESSIONAL CONDUCT AND ETHICS ====================
-# KM-01: Professional conduct and ethics (NQF Level 2, Credits 9)
-
-km01_lessons = [
-    {
-        'order': 1,
-        'title': 'KM-01-KT01: Introduction to the Hairdressing Industry',
-        'content': """# Introduction to the Hairdressing Industry
-
-## What is Hairdressing?
-
-Hairdressing is the profession of cutting, styling, coloring, and treating hair. It is a creative and technical field that requires both artistic vision and scientific knowledge.
-
-## Career Opportunities for Qualified Hairdressers:
-
-### 1. Salon Owner
-- Run your own salon business
-- Manage staff and operations
-- Create your brand identity
-
-### 2. Technical Advisor
-- Work with product companies
-- Train other stylists
-- Develop new techniques
-
-### 3. Product Consultant
-- Advise salons on product usage
-- Demonstrate new products
-- Build client relationships
-
-### 4. Competition Judge
-- Judge hairdressing competitions
-- Set industry standards
-- Recognize talent
-
-### 5. Film and Theatre Stylist
-- Work on movie sets
-- Create period hairstyles
-- Collaborate with costume departments
-
-### 6. Educator/Facilitator
-- Train new hairdressers
-- Develop curriculum
-- Assess student work
-
-## Industry Trends:
-
-### Post-COVID-19 Industry Recovery
-- 16.9% growth expected in 2022
-- Increased demand for salon services
-- New safety protocols
-
-### Technology in Hairdressing
-- Online booking systems
-- Digital consultation tools
-- Social media marketing
-
-### Natural & Organic Products
-- Growing demand for eco-friendly products
-- Chemical-free alternatives
-- Sustainable packaging
-
-### Expanded Service Offerings
-- Keratin treatments
-- Makeup services
-- Bridal packages
-
-## Employment Outlook
-- Projected growth: 20% faster than average
-- 349,210 jobs in the industry
-- Many self-employed opportunities""",
-        'duration': 60
-    },
-    {
-        'order': 2,
-        'title': 'KM-01-KT02: Hazards, Risks, Safety, Health and Environmental Protection',
-        'content': """# Safety, Health and Environmental Protection in the Salon
-
-## Common Safety and Health Risks in a Salon:
-
-### 1. Poor Cleanliness
-- Cross-contamination risks
-- Germ spread between clients
-- Prevention: Regular disinfection of all surfaces
-
-### 2. Hazardous Chemicals
-- Hair dyes, bleaches, chemical peels
-- Risks: Dermatitis, asthma, eye irritation
-- Prevention: Use gloves, proper ventilation
-
-### 3. Trips and Falls
-- Wet floors from shampooing
-- Spilled products
-- Prevention: Clean spills immediately, secure electrical leads
-
-### 4. Unqualified Staff
-- Risk of injuries and poor service
-- Prevention: Verify qualifications and experience
-
-### 5. Fire Hazards
-- Overloaded electrical sockets
-- Chemical storage
-- Prevention: Regular safety checks, proper storage
-
-## Types of Safety Signs:
-
-### Emergency Signs
-- Exit signs (green, photoluminescent)
-- Fire equipment location
-
-### Warning Signs
-- Yellow triangles with black pictograms
-- "Slippery surface", "High voltage"
-
-### Mandatory Safety Signs
-- "Safety goggles must be worn"
-- "Gloves required"
-
-## Safe Handling of Hazardous Substances:
-
-### Storage Requirements:
-- Cool, well-ventilated areas
-- Away from heat and sunlight
-- Separate incompatible chemicals
-
-### Personal Protective Equipment (PPE):
-- Gloves for chemical handling
-- Safety goggles
-- Aprons
-
-## Cleaning, Sanitation and Disinfection:
-
-### Sanitation:
-- Removing visible debris
-- Washing with soap and water
-
-### Disinfection:
-- Killing microorganisms on surfaces
-- Using approved disinfectants
-
-### Sterilization:
-- Complete elimination of all microorganisms
-- For tools that may cause bleeding
-
-## Waste Management:
-
-### Types of Salon Waste:
-- Chemical waste (hair dyes, cleaning products)
-- Metal waste (scissors, aerosol cans)
-- Plastic recycling (bottles)
-- Clinical waste (wax strips, cotton wool)
-- Sanitary waste
-
-### Proper Disposal:
-- Separate hazardous waste
-- Use approved disposal services
-- Follow environmental regulations""",
-        'duration': 75
-    },
-    {
-        'order': 3,
-        'title': 'KM-01-KT03: Basic Principles of Firefighting',
-        'content': """# Basic Principles of Firefighting
-
-## Causes of Fire in the Workplace:
-
-### 1. Faulty Electrical Equipment
-- Loose wires
-- Overloaded plugs
-- Damaged connections
-
-### 2. Flammable and Combustible Materials
-- Hairsprays, alcohol-based products
-- Improper storage of chemicals
-
-### 3. Lack of Staff Training
-- Not knowing fire procedures
-- Improper use of equipment
-
-### 4. Lack of Resources
-- No fire extinguishers
-- Non-functional smoke detectors
-
-## The Fire Triangle:
-
-Fire requires three elements:
-1. **Heat** - ignition source
-2. **Fuel** - combustible material
-3. **Oxygen** - from the air
-
-Remove any one element to extinguish the fire.
-
-## Classes of Fire and Firefighting Equipment:
-
-### Class A (Ordinary combustibles)
-- Wood, paper, textiles, plastic
-- **Equipment**: Water extinguisher, hose, sand bucket
-
-### Class B (Flammable liquids)
-- Petrol, diesel, oils, solvents, propane
-- **Equipment**: Fire blanket, foam extinguisher, CO2 extinguisher, Dry Chemical Powder
-
-### Class C (Electrical fires)
-- Electrical equipment, wiring
-- **Equipment**: CO2 extinguisher, Dry Chemical Powder (DCP)
-
-### Class D (Metal fires)
-- Specialized extinguishers
-
-### Class F (Cooking oils and fats)
-- Deep fat fryers
-- **Equipment**: Wet chemical extinguisher
-
-## Fire Extinguisher Types:
-
-### Water Fire Extinguisher (9L)
-- For Class A fires only
-- NOT for electrical or liquid fires
-
-### CO2 Fire Extinguisher (2kg, 5kg)
-- For Class B and electrical fires
-- Leaves no residue
-
-### Dry Chemical Powder (DCP) (1kg, 1.5kg, 2.5kg, 4.5kg, 9kg)
-- Multipurpose for A, B, C fires
-- Most common type
-
-### Foam Fire Extinguisher (9L)
-- For Class A and B fires
-- Smothers flames
-
-### Wet Chemical Extinguisher (6L)
-- For Class F fires (cooking oils)
-- For restaurant kitchens
-
-## Fire Blanket:
-- Smothers small fires
-- For pan fires, clothing fires
-
-## Emergency Procedures:
-
-### R.A.C.E. Protocol:
-- **R**escue anyone in danger
-- **A**larm - activate the fire alarm
-- **C**ontain the fire (close doors)
-- **E**vacuate / Extinguish
-
-### P.A.S.S. for Fire Extinguishers:
-- **P**ull the pin
-- **A**im at the base of the fire
-- **S**queeze the handle
-- **S**weep side to side
-
-## First Aid for Burns:
-1. Cool the burn with cool running water for 20 minutes
-2. Remove jewelry and clothing from the area
-3. Cover with a clean, non-stick dressing
-4. Seek medical attention for severe burns""",
-        'duration': 60
-    },
-    {
-        'order': 4,
-        'title': 'KM-01-KT04: Basic Concepts of First Aid and Emergencies',
-        'content': """# Basic Concepts of First Aid and Emergencies
-
-## Legal Requirements for a First Aid Box:
-
-Under the Occupational Health and Safety Act, first aid boxes are required when more than 5 people are employed.
-
-### Minimum Contents:
-- Wound cleaner / antiseptic (100ml)
-- Swabs for cleaning wounds
-- Cotton wool for padding (100g)
-- Sterile gauze (minimum 10)
-- Forceps (for splinters)
-- Scissors (minimum 100mm)
-- Safety pins
-- 4 triangular bandages
-- 4 roller bandages (75mm x 5m)
-- 4 roller bandages (100mm x 5m)
-- Elastic adhesive (25mm x 3m)
-- Non-allergenic adhesive strip
-- Adhesive dressing strips (minimum 10)
-- 4 First aid dressings (75mm x 100mm)
-- 4 First aid dressings (150mm x 200mm)
-- 2 Straight splints
-- 2 Large and 2 medium disposable latex gloves
-- 2 CPR mouth pieces
-
-## DRSABCD Action Plan:
-
-### D - Danger
-Check for danger to yourself, bystanders, and the casualty
-
-### R - Response
-Is the person conscious?
-- Squeeze shoulders
-- Ask "Are you okay?"
-
-### S - Send for help
-Call emergency services (10177 or 112)
-
-### A - Airway
-Open the mouth and check for obstructions
-
-### B - Breathing
-Look, listen, and feel for breathing (10 seconds)
-
-### C - CPR (Cardiopulmonary Resuscitation)
-If not breathing normally:
-- 30 chest compressions (rate 100-120 per minute)
-- 2 rescue breaths
-- Continue until help arrives or person responds
-
-### D - Defibrillator
-Apply AED if available
-
-## Basic First Aid for Common Injuries:
-
-### Cuts and Abrasions:
-1. Clean the wound
-2. Apply pressure to stop bleeding
-3. Cover with sterile dressing
-
-### Burns and Scalds:
-1. Cool under running water for 20 minutes
-2. Remove jewelry from the area
-3. Cover with non-stick dressing
-4. DO NOT apply creams or ice
-
-### Electrical Shock:
-1. Turn off power source
-2. If unsafe, use non-conductive object to separate
-3. Check for responsiveness
-4. Call emergency services
-
-### Chemical Ingestion:
-1. Do NOT induce vomiting
-2. Identify the chemical
-3. Call poison control
-4. Give water if advised
-
-### Choking (Heimlich Maneuver):
-1. Stand behind the person
-2. Make a fist above the navel
-3. Grasp fist with other hand
-4. Give quick upward thrusts
-5. Repeat until object is expelled
-
-## Infection Control:
-- Use gloves when dealing with blood/body fluids
-- Use CPR mask for rescue breaths
-- Wash hands before and after treatment""",
-        'duration': 60
-    },
-    {
-        'order': 5,
-        'title': 'KM-01-KT05: Business Etiquette',
-        'content': """# Business Etiquette
-
-## What is Etiquette?
-
-Etiquette is the intricate network of rules that govern good behavior and our social interactions. It reflects society's customs, history, ethical codes, and group rules.
-
-## Benefits of Proper Etiquette:
-
-### 1. First Impressions Count
-- First 5-7 seconds are crucial
-- Positive impression leads to trust
-
-### 2. Confidence Boost
-- Knowing correct etiquette reduces anxiety
-- More comfortable in social situations
-
-### 3. Stronger Friendships
-- Treating people with kindness builds relationships
-- Respect creates loyalty
-
-### 4. Career Opportunities
-- Good manners give you an advantage
-- Professionals with etiquette stand out
-
-## Positive Attitude at Work:
-
-### Characteristics:
-- Cheerful and optimistic
-- Resilient
-- Encouraging to others
-
-### How to Demonstrate:
-- Avoid negativity and gossip
-- Practice gratitude
-- Set and achieve goals
-- Make friends with colleagues
-- Give yourself breaks
-- Focus on positives
-- Prioritize wellbeing
-- Show kindness
-- Stay organized
-- Smile!
-
-## Professional Image - The 3 Key Elements:
-
-### 1. Appearance
-- What you wear and how you look
-- First thing people judge
-- Online image matters too
-
-### 2. Professional Behavior
-- Respectful communication
-- Courteous conduct
-- Proper workplace etiquette
-
-### 3. Professional Conduct
-- Ethics and morals
-- Integrity and reputation
-- Standards of behavior
-
-## Dress Code:
-
-### Formal Business Attire
-- Suits, dress shirts/blouses
-- Professional shoes
-- No casual clothing
-
-### Business Casual
-- Less formal than business attire
-- No shorts, torn jeans, tank tops
-- Clean and neat
-
-### Salon Dress Code:
-- Clean uniforms
-- Professional appearance
-- Proper hygiene
-- Neat hairstyle
-
-## Email Etiquette Rules:
-
-1. Use clear, professional subject lines
-2. Proofread every email
-3. Write before entering recipient address
-4. Double-check recipient
-5. CC all relevant recipients
-6. Don't always "reply all"
-7. Reply to your emails
-8. Include a signature block
-9. Use appropriate formality
-10. Keep emails brief and to the point
-
-## Telephone Etiquette:
-
-1. Always speak clearly
-2. Do not yell
-3. Don't use slang
-4. Never eat or drink
-5. Always listen actively
-6. Use proper titles (Mr., Mrs., Dr.)
-7. Have patience with difficult callers
-8. Focus on the task
-9. Ask permission before placing on hold
-
-## Closing an Interaction:
-
-### Types of Customer Interactions:
-1. **Requests** - Be helpful and efficient
-2. **Questions** - Provide accurate information
-3. **Complaints** - Listen actively, apologize, solve
-4. **Compliments** - Thank sincerely
-
-### Tips for Successful Closures:
-- Use customer's name
-- Empathize with their needs
-- Anticipate other needs
-- Keep protocols consistent
-- Personalize every interaction""",
-        'duration': 75
-    },
-    {
-        'order': 6,
-        'title': 'KM-01-KT06: Customer Service and Communication',
-        'content': """# Customer Service and Communication
-
-## Effective Listening Skills:
-
-### Benefits of Effective Listening:
-- Better problem solving
-- Improved accuracy
-- Stronger relationships
-- Ensured understanding
-- Less wasted time
-- Fewer errors
-
-### Barriers to Effective Listening:
-
-#### Physical and Environmental
-- Noise, distance, obstructions
-- Temperature, lighting
-
-#### Cultural Barriers
-- Different backgrounds
-- Different communication styles
-
-#### Emotional and Psychological
-- Mood and energy level
-- Prejudgments and assumptions
-
-#### Language Barriers
-- Different native languages
-- Accents and expressions
-
-## Verbal Communication:
-
-### Functions of Verbal Communication:
-1. **Define reality** - Label and describe experiences
-2. **Organize ideas** - Create meaningful categories
-3. **Enable thinking** - Reflect on past, present, future
-4. **Shape attitudes** - Language influences worldview
-
-## Non-Verbal Communication:
-
-### Types of Non-Verbal Communication:
-
-1. **Facial Expressions**
-   - Smile, frown, surprise
-   - Universal across cultures
-
-2. **Gestures**
-   - Waving, pointing, thumbs up
-   - Can vary by culture
-
-3. **Paralinguistics**
-   - Tone of voice
-   - Loudness, inflection, pitch
-
-4. **Body Language and Posture**
-   - Open vs closed positions
-   - Leaning forward shows interest
-
-5. **Proxemics (Personal Space)**
-   - Casual conversation: 18 inches - 4 feet
-   - Public speaking: 10-12 feet
-
-6. **Eye Gaze**
-   - Eye contact shows honesty
-   - Blinking rate indicates interest
-
-7. **Haptics (Touch)**
-   - Conveys affection, familiarity, sympathy
-   - Communicates status and power
-
-8. **Appearance**
-   - Clothing, hairstyle
-   - First impressions matter
-
-## Internal vs External Customers:
-
-### Internal Customers
-- Employees within your organization
-- Coworkers, other departments
-- Happy employees = happy external customers
-
-### External Customers
-- Pay for products/services
-- The end user
-- Revenue source
-
-## Dealing with Difficult Customers:
-
-### The Contentious Customer
-- Ready to argue
-- Solution: Understand what's bothering them
-
-### The Challenging Customer
-- Doesn't trust your suggestions
-- Solution: Show you value their insights
-
-### The Impatient Customer
-- Wants immediate solution
-- Solution: Communicate often and clearly
-
-### The Vague Customer
-- Doesn't know what they need
-- Solution: Ask clarifying questions
-
-### The Demanding Customer
-- Hard to please
-- Solution: Identify concerns early, set boundaries
-
-## The Psychology of Selling:
-
-### Cialdini's 6 Principles of Persuasion:
-
-1. **Reciprocity** - People feel obliged to give back
-2. **Scarcity** - Desire for limited availability
-3. **Authority** - Follow credible experts
-4. **Consistency** - Drive to be consistent
-5. **Liking** - Say "yes" to people we like
-6. **Consensus** - Follow others' actions
-
-## Ethical Selling:
-- Understand your leads better
-- Build connections
-- Strengthen through positive influence
-- Focus on solving problems, not manipulating""",
-        'duration': 90
-    },
-    {
-        'order': 7,
-        'title': 'KM-01-KT07: Principles of Numeracy',
-        'content': """# Principles of Numeracy
-
-## Reading a Payslip:
-
-### Key Terms:
-- **Basic Pay** - Agreed set pay without bonuses
-- **Gross Pay** - Amount earned before deductions
-- **Net Pay** - Amount paid into bank account (take-home)
-- **Cost to Company** - Total package including benefits
-- **PAYE** - Pay As You Earn (income tax)
-- **UIF** - Unemployment Insurance Fund (1% employee + 1% employer)
-- **IRP5** - Tax certificate at end of tax year
-
-## Basic Calculations:
-
-### 1. Net Income Formula
-Example: R25,000 revenue - R30,000 expenses = -R5,000 (net loss)
-
-### 2. Accounting Equation
-
-### 3. Cost of Goods Sold (COGS)
-Example: R2,500 ÷ (R2.95 - R1.40) = 1,613 cups of coffee
-
-### 5. Return on Investment (ROI)
-
-### 6. Profit Margin
-
-### 7. Current Ratio
-Should be greater than 1
-
-### 8. Markup Formula
-OR
-
-## Financial Ratios:
-
-### Leverage Ratios:
-- **Debt-to-Equity** = Total liabilities ÷ Shareholders' equity
-- **Debt-to-Asset** = Total liabilities ÷ Total assets
-
-### Liquidity Ratios:
-- **Working Capital Ratio** = Current assets ÷ Current liabilities
-- **Cash Ratio** = Liquid assets ÷ Current liabilities
-
-### Profitability Ratios:
-- **Net Profit Margin** = After tax net profit ÷ Net sales
-- **Return on Equity** = Net income ÷ Shareholders' equity
-
-### Operations Ratios:
-- **Accounts Receivable Turnover** = Net sales ÷ Average accounts receivable
-- **Inventory Turnover** = Cost of goods sold ÷ Average inventory
-
-## Percentages:
-
-To calculate percentage change:
-
-Example: Sales increased from 25 to 35 units
-Difference = 10, Original = 25
-(10 ÷ 25) × 100 = 40% increase
-
-## VAT (Value Added Tax):
-
-### Current VAT Rate in South Africa: 15%
-
-### Adding VAT:
-
-### Removing VAT:
-
-### Example:
-Product costs R100
-VAT = R100 × 0.15 = R15
-Total including VAT = R115
-
-## VAT Registration:
-- Register if taxable turnover > R1 million per year
-- Can voluntarily register if turnover < R1 million
-
-### VAT Responsibilities:
-- Include VAT at correct rate
-- Keep VAT records
-- Submit VAT returns (usually every 2 months)
-- Pay VAT owed to SARS""",
-        'duration': 60
-    }
-]
-
-# Create lessons for KM-01
-for lesson_data in km01_lessons:
-    lesson, created = Lesson.objects.get_or_create(
-        course=course,
-        title=lesson_data['title'],
-        defaults={
-            'content': lesson_data['content'],
-            'order': lesson_data['order'],
-            'duration': lesson_data['duration']
-        }
-    )
-    if created:
-        print(f"  ✅ Added lesson {lesson_data['order']}: {lesson_data['title']}")
-    else:
-        print(f"  📖 Lesson exists: {lesson_data['title']}")
-
-# ==================== QUIZZES FOR KM-01 (FIXED VERSION) ====================
-
-km01_quizzes = [
-    {
-        'lesson_title': 'KM-01-KT01: Introduction to the Hairdressing Industry',
-        'questions': [
-            ('What percentage growth is expected for the hair salon industry in 2022?', 'multiple_choice', 10, 'B', 'A) 10%|B) 16.9%|C) 25%|D) 50%'),
-            ('Which of the following is a career opportunity for qualified hairdressers?', 'multiple_choice', 10, 'A', 'A) Salon Owner|B) Accountant|C) Lawyer|D) Engineer'),
-            ('True or False: Social media marketing is NOT important for hair salons.', 'true_false', 5, 'False', ''),
-            ('How many jobs are in the hairdressing industry in the US?', 'multiple_choice', 10, 'C', 'A) 100,000|B) 200,000|C) 349,210|D) 500,000'),
-            ('What is the projected growth rate for hairdressing employment?', 'multiple_choice', 10, 'A', 'A) 20% faster than average|B) 5% slower|C) No growth|D) 50% decline'),
-        ]
-    },
-    {
-        'lesson_title': 'KM-01-KT02: Hazards, Risks, Safety, Health and Environmental Protection',
-        'questions': [
-            ('What is the first step in preventing cross-contamination in a salon?', 'multiple_choice', 10, 'A', 'A) Regular disinfection|B) Wearing gloves only|C) Using air freshener|D) Opening windows'),
-            ('Which type of safety sign uses yellow triangles with black pictograms?', 'multiple_choice', 10, 'B', 'A) Emergency signs|B) Warning signs|C) Mandatory signs|D) Information signs'),
-            ('What does PPE stand for?', 'multiple_choice', 10, 'A', 'A) Personal Protective Equipment|B) Public Protection Equipment|C) Private Protective Equipment|D) Professional Personal Equipment'),
-            ('True or False: Chemical waste can be disposed of in regular trash bins.', 'true_false', 5, 'False', ''),
-            ('Which of the following is NOT a hazardous chemical found in salons?', 'multiple_choice', 10, 'D', 'A) Hair dyes|B) Bleaches|C) Chemical peels|D) Water'),
-        ]
-    },
-    {
-        'lesson_title': 'KM-01-KT03: Basic Principles of Firefighting',
-        'questions': [
-            ('What are the three elements of the fire triangle?', 'multiple_choice', 15, 'A', 'A) Heat, fuel, oxygen|B) Heat, water, oxygen|C) Fuel, smoke, oxygen|D) Heat, carbon, oxygen'),
-            ('Which fire extinguisher is best for electrical fires?', 'multiple_choice', 10, 'A', 'A) CO2 extinguisher|B) Water extinguisher|C) Foam extinguisher|D) Wet chemical'),
-            ('What does P.A.S.S. stand for in fire extinguisher use?', 'multiple_choice', 15, 'A', 'A) Pull, Aim, Squeeze, Sweep|B) Press, Aim, Spray, Sweep|C) Pull, Activate, Squeeze, Spray|D) Push, Aim, Squeeze, Swirl'),
-            ('Class A fires involve which materials?', 'multiple_choice', 10, 'A', 'A) Wood, paper, textiles|B) Flammable liquids|C) Electrical equipment|D) Cooking oils'),
-            ('True or False: Water extinguishers can be used on electrical fires.', 'true_false', 5, 'False', ''),
-        ]
-    },
-    {
-        'lesson_title': 'KM-01-KT04: Basic Concepts of First Aid and Emergencies',
-        'questions': [
-            ('What does D stand for in DRSABCD?', 'multiple_choice', 10, 'A', 'A) Danger|B) Doctor|C) Dressing|D) Defibrillator'),
-            ('How long should you cool a burn with running water?', 'multiple_choice', 10, 'B', 'A) 5 minutes|B) 20 minutes|C) 1 hour|D) Until pain stops'),
-            ('What is the correct compression to breath ratio in CPR for adults?', 'multiple_choice', 10, 'A', 'A) 30:2|B) 15:2|C) 5:1|D) 100:1'),
-            ('True or False: You should induce vomiting if someone swallows chemicals.', 'true_false', 5, 'False', ''),
-            ('What should you use to protect yourself when giving CPR?', 'multiple_choice', 10, 'A', 'A) CPR mask|B) Bandage|C) Gloves only|D) No protection needed'),
-        ]
-    },
-    {
-        'lesson_title': 'KM-01-KT05: Business Etiquette',
-        'questions': [
-            ('How many seconds does it take to form a first impression?', 'multiple_choice', 10, 'B', 'A) 30 seconds|B) 5-7 seconds|C) 1 minute|D) 10 seconds'),
-            ('Which of the following is NOT a benefit of proper etiquette?', 'multiple_choice', 10, 'D', 'A) Confidence boost|B) Stronger friendships|C) Career opportunities|D) Lower salary'),
-            ('What are the three key elements of a professional image?', 'multiple_choice', 15, 'A', 'A) Appearance, professional behavior, professional conduct|B) Attitude, behavior, communication|C) Appearance, attitude, ethics|D) Skills, knowledge, experience'),
-            ('True or False: Email subject lines are not important.', 'true_false', 5, 'False', ''),
-            ('Which of the following demonstrates a positive attitude at work?', 'multiple_choice', 10, 'A', 'A) Smiling|B) Gossiping|C) Being late|D) Complaining'),
-        ]
-    },
-    {
-        'lesson_title': 'KM-01-KT06: Customer Service and Communication',
-        'questions': [
-            ('What percentage of communication is non-verbal according to some researchers?', 'multiple_choice', 10, 'B', 'A) 20%|B) 80%|C) 50%|D) 100%'),
-            ('Which is NOT a type of non-verbal communication?', 'multiple_choice', 10, 'D', 'A) Facial expressions|B) Gestures|C) Eye gaze|D) Written words'),
-            ('What is the recommended distance for casual conversation?', 'multiple_choice', 10, 'A', 'A) 18 inches - 4 feet|B) 10-12 feet|C) 6 inches|D) 20 feet'),
-            ('True or False: Internal customers are employees within your organization.', 'true_false', 5, 'True', ''),
-            ('Which principle of persuasion involves people feeling obliged to give back?', 'multiple_choice', 10, 'A', 'A) Reciprocity|B) Scarcity|C) Authority|D) Consistency'),
-        ]
-    },
-    {
-        'lesson_title': 'KM-01-KT07: Principles of Numeracy',
-        'questions': [
-            ('What is the current VAT rate in South Africa?', 'multiple_choice', 10, 'B', 'A) 10%|B) 15%|C) 20%|D) 25%'),
-            ('If a product costs R100 excluding VAT, what is the price including VAT?', 'short_answer', 15, 'R115', ''),
-            ('Calculate net income if revenue is R50,000 and expenses are R35,000.', 'short_answer', 15, 'R15,000', ''),
-            ('What does PAYE stand for?', 'multiple_choice', 10, 'A', 'A) Pay As You Earn|B) Pay After Year End|C) Pre-Annual Yield Estimate|D) Post-Annual Year End'),
-            ('True or False: Net pay is the amount before deductions.', 'true_false', 5, 'False', ''),
-        ]
-    }
-]
-
-# Create quizzes for KM-01
-for quiz_data in km01_quizzes:
-    lesson = Lesson.objects.filter(course=course, title=quiz_data['lesson_title']).first()
-    if lesson:
-        quiz, created = Quiz.objects.get_or_create(
-            lesson=lesson,
+        # Create or get instructor (assume 'phumlani' exists, or create one)
+        instructor, created = User.objects.get_or_create(
+            username='phumlani',
             defaults={
-                'title': f'Quiz: {lesson.title}',
-                'description': f'Test your knowledge on {lesson.title}',
-                'passing_score': 70
+                'email': 'phumlani@malitinne.co.za',
+                'first_name': 'Phumlani',
+                'last_name': 'Phakathi',
+                'role': 'instructor',
+                'is_approved': True
             }
         )
         if created:
-            print(f"  ✅ Created quiz for: {lesson.title}")
-        
-        for q in quiz_data['questions']:
-            question_text, q_type, points, correct, options = q[0], q[1], q[2], q[3], q[4] if len(q) > 4 else ''
-            
-            option_a = option_b = option_c = option_d = ''
-            if q_type == 'multiple_choice' and '|' in options:
-                parts = options.split('|')
-                if len(parts) >= 1: option_a = parts[0]
-                if len(parts) >= 2: option_b = parts[1]
-                if len(parts) >= 3: option_c = parts[2]
-                if len(parts) >= 4: option_d = parts[3]
-            
-            QuizQuestion.objects.get_or_create(
-                quiz=quiz,
-                question_text=question_text,
+            instructor.set_password('Phumlani@123')
+            instructor.save()
+            self.stdout.write(self.style.SUCCESS(f"Created instructor {instructor.username}"))
+
+        # Create main qualification course
+        course, created = Course.objects.get_or_create(
+            title='Occupational Certificate: Management Assistant (SAQA ID 101876)',
+            defaults={
+                'description': """This qualification is designed for learners pursuing a career as a Management Assistant. 
+It covers document management, computerised information processing, resource and procurement management, 
+social media and digital literacy, office protocol, business communication, work-readiness, 
+basic business calculations, introductory project management, and meeting administration.
+
+The qualification consists of 12 knowledge modules, 8 practical modules, and 8 workplace modules.
+Total credits: 316, NQF Level 5.""",
+                'instructor': instructor,
+                'level': 'intermediate',
+                'price': 0,
+                'status': 'published'
+            }
+        )
+        self.stdout.write(self.style.SUCCESS(f"Course created/updated: {course.title}"))
+
+        # Define knowledge modules (KM)
+        # Each KM is a lesson, but we can also group them into sections.
+        # Here we create a lesson for each knowledge module.
+        knowledge_modules = [
+            {
+                'order': 1,
+                'code': 'KM-01',
+                'title': 'Document management and record-keeping',
+                'content': """This module covers:
+- Origination of documents (10%)
+- Creation of a filing system (15%)
+- Distribution of documents (15%)
+- Filing categories (15%)
+- Storage of documentation (15%)
+- Archiving of documents (15%)
+- Disposal of outdated documentation (15%)
+
+Key learning outcomes:
+- Understand types of document origination
+- Create and maintain filing systems
+- Distribute documents correctly
+- Categorise and store documents properly
+- Archive and dispose of records according to legislation""",
+                'duration': 45,  # placeholder
+            },
+            {
+                'order': 2,
+                'code': 'KM-02',
+                'title': 'Computerised Information Processing',
+                'content': """This module covers:
+- Concise communication documents (10%)
+- Meeting documents (10%)
+- Display documents (10%)
+- Function documents (10%)
+- Presentation documents (10%)
+- Marketing documentation (10%)
+- Report documents (10%)
+- Financial documents (10%)
+- Research document (10%)
+- Formatting large documents (10%)
+
+Learners will be able to create, design and produce organisational documents using complex technical features.""",
+                'duration': 45,
+            },
+            {
+                'order': 3,
+                'code': 'KM-03',
+                'title': 'Resource and procurement management',
+                'content': """This module covers:
+- Principles of financial and supply chain management (20%)
+- Budgeting and expenditure (20%)
+- Procurement (20%)
+- Asset management and stocktaking (20%)
+- Disposal management (20%)
+
+Focus on obtaining goods and services efficiently and allocating resources.""",
+                'duration': 45,
+            },
+            {
+                'order': 4,
+                'code': 'KM-04',
+                'title': 'Social media and digital literacy',
+                'content': """This module covers:
+- Introduction to different social media platforms (50%)
+- Social media as a communication tool (50%)
+
+Learners will understand how to access, scan and evaluate online environments and use digital technology for networking and communication.""",
+                'duration': 45,
+            },
+            {
+                'order': 5,
+                'code': 'KM-05',
+                'title': 'Office protocol, deportment and etiquette',
+                'content': """This module covers:
+- International protocol (25%)
+- Cultural diversity (25%)
+- Multi-cultural communication (25%)
+- Grooming and deportment (25%)
+
+Develop professional image, etiquette, and cross-cultural communication skills.""",
+                'duration': 45,
+            },
+            {
+                'order': 6,
+                'code': 'KM-06',
+                'title': 'Business communication and customer services',
+                'content': """This module covers:
+- Concise business communication media (13%)
+- Organisational communication (13%)
+- Multi-cultural communication (13%)
+- Oral communication and listening skills (13%)
+- Conflict and stress (13%)
+- Problem solving and decision making (13%)
+- Business letters (13%)
+- Report writing (9%)
+
+Build effective communication and customer service skills.""",
+                'duration': 45,
+            },
+            {
+                'order': 7,
+                'code': 'KM-07',
+                'title': 'Ready for work standards',
+                'content': """This module covers:
+- Rules of professional conduct and ethics (20%)
+- Interpersonal management (20%)
+- Work-readiness (office orientation, etiquette, dress code) (40%)
+- Legislation governing employment (20%)
+
+Prepare learners for professional workplace standards and legal compliance.""",
+                'duration': 45,
+            },
+            {
+                'order': 8,
+                'code': 'KM-08',
+                'title': 'Basic business calculations',
+                'content': """This module covers:
+- Perform financial calculations (20%)
+- Select appropriate methods and carry out financial calculations (20%)
+- Check calculations and record outcomes (20%)
+- Prepare and process banking and petty cash documents (20%)
+- Prepare and process invoices for payment to creditors and for debtors (20%)
+
+Develop numeracy skills for routine financial transactions.""",
+                'duration': 45,
+            },
+            {
+                'order': 9,
+                'code': 'KM-09',
+                'title': 'Apply End User Computing',
+                'content': """This module covers:
+- Understand keyboard functions (5%)
+- Create, edit and format word documents (20%)
+- Understand and use presentation software (20%)
+- Understand and apply GUI based spreadsheet (20%)
+- Create, send and receive e-mail messages (20%)
+- Demonstrate ability to use the World Wide Web (10%)
+- Safety and security of ICT (5%)
+
+Essential computer literacy for office administration.""",
+                'duration': 45,
+            },
+            {
+                'order': 10,
+                'code': 'KM-10',
+                'title': 'Business documentation and design',
+                'content': """This module covers:
+- Establishing documentation standards (20%)
+- Managing template design and development (20%)
+- Developing standardised text for documents (20%)
+- Developing and implementing strategies to ensure the use of standard documentation (20%)
+- Develop and implement strategies for maintenance and continuous improvement of standard documentation (20%)
+
+Learn to create, manage and improve organisational documentation.""",
+                'duration': 45,
+            },
+            {
+                'order': 11,
+                'code': 'KM-11',
+                'title': 'Meeting Administration',
+                'content': """This module covers:
+- Overview of meetings (20%)
+- Pre-meeting logistics and procurement (20%)
+- During meeting procedures (20%)
+- How to write the minutes (20%)
+- Post meeting activities (20%)
+
+Master the complete cycle of meeting preparation, execution, and follow-up.""",
+                'duration': 45,
+            },
+            {
+                'order': 12,
+                'code': 'KM-12',
+                'title': 'Introductory project management',
+                'content': """This module covers:
+- Project management and the operating environment (10%)
+- Project Life cycle (10%)
+- Management structures (10%)
+- Project management planning (10%)
+- Scope management (10%)
+- Scheduling and resource management (10%)
+- Risk management and issue management (10%)
+- Project quality management (10%)
+- Communication (10%)
+- Leadership and teamwork (10%)
+
+Introduction to the key elements of the project management life-cycle.""",
+                'duration': 45,
+            },
+        ]
+
+        # Create lessons for each KM
+        for km in knowledge_modules:
+            lesson, created = Lesson.objects.get_or_create(
+                course=course,
+                title=km['title'],
                 defaults={
-                    'question_type': q_type,
-                    'points': points,
-                    'correct_answer': correct,
-                    'option_a': option_a,
-                    'option_b': option_b,
-                    'option_c': option_c,
-                    'option_d': option_d,
-                    'order': quiz.questions.count() + 1
+                    'content': km['content'],
+                    'duration': km['duration'],
+                    'order': km['order']
                 }
             )
-        print(f"     📝 Added {len(quiz_data['questions'])} questions to quiz")
+            if created:
+                self.stdout.write(self.style.SUCCESS(f"  Created lesson: {lesson.title}"))
+            else:
+                self.stdout.write(f"  Lesson already exists: {lesson.title}")
 
-print("\n" + "="*60)
-print("🎉 HAIRSTYLIST COURSE SETUP COMPLETE!")
-print("="*60)
-print(f"\n📚 Course: {course.title}")
-print(f"📖 Lessons: {course.lessons.count()}")
-print(f"❓ Quizzes: {Quiz.objects.filter(lesson__course=course).count()}")
-print(f"\n🔗 View course at: http://127.0.0.1:8000/course/{course.id}/")    
-print("\n✅ Ready for students to enroll and learn!")
+        # Optional: Add quizzes (formative assessments) for each KM
+        # Example: Quiz for KM-01 (Document management)
+        km01_lesson = Lesson.objects.filter(course=course, title='Document management and record-keeping').first()
+        if km01_lesson:
+            quiz, created = Quiz.objects.get_or_create(
+                lesson=km01_lesson,
+                defaults={
+                    'title': 'Formative Assessment - Document Management',
+                    'description': 'Test your understanding of document origination, filing, storage, archiving and disposal.',
+                    'passing_score': 70,
+                }
+            )
+            if created:
+                self.stdout.write(self.style.SUCCESS(f"  Created quiz for {km01_lesson.title}"))
+                # Add sample questions from the formative assessment workbook
+                # Example questions (you can expand with full set)
+                QuizQuestion.objects.get_or_create(
+                    quiz=quiz,
+                    order=1,
+                    defaults={
+                        'question_text': 'Define the term **document origination** in the context of document management and record-keeping.',
+                        'question_type': 'multiple_choice',
+                        'points': 10,
+                        'option_a': 'The process of destroying old documents',
+                        'option_b': 'The creation or generation of documents, whether by verbal, written or electronic instruction',
+                        'option_c': 'Filing documents alphabetically',
+                        'option_d': 'Storing documents offsite',
+                        'correct_answer': 'B'
+                    }
+                )
+                QuizQuestion.objects.get_or_create(
+                    quiz=quiz,
+                    order=2,
+                    defaults={
+                        'question_text': 'List three types of document origination.',
+                        'question_type': 'multiple_choice',
+                        'points': 10,
+                        'option_a': 'Verbal, written, electronic instruction',
+                        'option_b': 'Fax, email, memo',
+                        'option_c': 'Circulars, letters, reports',
+                        'option_d': 'Archiving, filing, disposal',
+                        'correct_answer': 'A'
+                    }
+                )
+                # Add more questions as needed...
+
+        # Create assignments for practical modules (example)
+        # Practical Module 1: Create a trip itinerary
+        Assignment.objects.get_or_create(
+            course=course,
+            title='Practical Assignment: Create a trip itinerary',
+            defaults={
+                'description': """Prepare a detailed travel itinerary for a business trip. Include:
+- Destination(s), dates, travel times
+- Accommodation details
+- Meeting schedule
+- Transportation arrangements
+- Budget summary
+Submit a professional document following organisational standards.""",
+                'due_date': timezone.now() + timezone.timedelta(days=30),
+                'total_points': 100
+            }
+        )
+        self.stdout.write(self.style.SUCCESS("Added assignment: Create a trip itinerary"))
+
+        self.stdout.write(self.style.SUCCESS("\n✅ QCTO course structure loaded successfully!"))
+        self.stdout.write(f"🔗 Course URL: /course/{course.id}/")
