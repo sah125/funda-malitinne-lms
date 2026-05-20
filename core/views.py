@@ -25,7 +25,8 @@ from .models import (
     Quiz, QuizQuestion, QuizAttempt, Certificate, Notification,
     Announcement, CourseGroup, Attendance, LearningModule,
     LearnerProfile, LearnerDocument, LogbookEntry, BackupLog, AuditLog,
-    LessonModule, UserModuleProgress, LessonInteraction, DailyStreak, Badge, UserBadge
+    LessonModule, UserModuleProgress, LessonInteraction, DailyStreak, Badge, UserBadge,
+    ForumThread, ForumPost   # <-- ADD THESE
 )
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
@@ -346,6 +347,13 @@ def lesson_detail(request, lesson_id):
     if request.user not in course.students.all():
         messages.warning(request, 'You need to enroll in this course first.')
         return redirect('course_detail', course_id=course.id)
+    
+    # SEQUENTIAL LEARNING - Check all previous lessons in the course (global order)
+    previous_lessons = course.lessons.filter(order__lt=lesson.order)
+    for prev in previous_lessons:
+        if not Progress.objects.filter(student=request.user, course=course, completed_lessons=prev).exists():
+            messages.error(request, f'You must complete "{prev.title}" before accessing this lesson.')
+            return redirect('course_detail', course_id=course.id)
     
     progress, created = Progress.objects.get_or_create(student=request.user, course=course)
     
@@ -2294,3 +2302,139 @@ def export_learner_report(request, user_id):
     response = HttpResponse(html_content, content_type='text/html')
     response['Content-Disposition'] = f'attachment; filename="learner_report_{learner.username}_{timezone.now().strftime("%Y%m%d_%H%M%S")}.html"'
     return response
+
+
+# ==================== DISCUSSION FORUM VIEWS ====================
+
+@login_required
+def forum_thread_list(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    
+    if request.user.role == 'student' and request.user not in course.students.all():
+        messages.error(request, 'You must be enrolled to access the forum.')
+        return redirect('student_dashboard')
+    if request.user.role == 'instructor' and course.instructor != request.user and request.user.role != 'admin':
+        messages.error(request, 'Access denied.')
+        return redirect('instructor_dashboard')
+    
+    threads = course.forum_threads.all()
+    return render(request, 'forum/thread_list.html', {'course': course, 'threads': threads})
+
+
+@login_required
+def forum_new_thread(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    
+    if request.user.role == 'student' and request.user not in course.students.all():
+        messages.error(request, 'You must be enrolled to start a thread.')
+        return redirect('student_dashboard')
+    
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        content = request.POST.get('content')
+        
+        if title and content:
+            thread = ForumThread.objects.create(
+                course=course,
+                title=title,
+                author=request.user
+            )
+            ForumPost.objects.create(
+                thread=thread,
+                author=request.user,
+                content=content
+            )
+            messages.success(request, 'Thread created successfully!')
+            return redirect('forum_thread_list', course_id=course.id)
+        else:
+            messages.error(request, 'Title and content are required.')
+    
+    return render(request, 'forum/new_thread.html', {'course': course})
+
+
+@login_required
+def forum_thread_detail(request, course_id, thread_id):
+    thread = get_object_or_404(ForumThread, id=thread_id, course_id=course_id)
+    course = thread.course
+    
+    if request.user.role == 'student' and request.user not in course.students.all():
+        messages.error(request, 'You must be enrolled to view this thread.')
+        return redirect('student_dashboard')
+    
+    if request.method == 'POST' and not thread.is_locked:
+        content = request.POST.get('content')
+        if content:
+            ForumPost.objects.create(
+                thread=thread,
+                author=request.user,
+                content=content
+            )
+            messages.success(request, 'Reply posted!')
+            return redirect('forum_thread_detail', course_id=course.id, thread_id=thread.id)
+        else:
+            messages.error(request, 'Reply cannot be empty.')
+    
+    posts = thread.posts.all()
+    return render(request, 'forum/thread_detail.html', {'course': course, 'thread': thread, 'posts': posts})
+
+
+@login_required
+def forum_delete_thread(request, course_id, thread_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    thread = get_object_or_404(ForumThread, id=thread_id, course_id=course_id)
+    course = thread.course
+    
+    if request.user.role == 'instructor' and course.instructor == request.user:
+        thread.delete()
+        messages.success(request, 'Thread deleted.')
+    elif thread.author == request.user:
+        thread.delete()
+        messages.success(request, 'Your thread has been deleted.')
+    else:
+        messages.error(request, 'Permission denied.')
+    
+    return redirect('forum_thread_list', course_id=course.id)
+
+
+# ==================== DIGITAL LIBRARY VIEWS ====================
+
+@login_required
+def digital_library(request):
+    if request.user.role == 'student':
+        resources = DigitalResource.objects.filter(is_published=True)
+    else:
+        resources = DigitalResource.objects.all()
+    
+    return render(request, 'digital_library.html', {'resources': resources})
+
+
+@login_required
+@user_passes_test(is_admin)
+def add_digital_resource(request):
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+        category = request.POST.get('category')
+        external_url = request.POST.get('external_url')
+        file = request.FILES.get('file')
+        
+        if not title:
+            messages.error(request, 'Title is required.')
+            return redirect('add_digital_resource')
+        
+        resource = DigitalResource(
+            title=title,
+            description=description,
+            category=category,
+            external_url=external_url,
+            uploaded_by=request.user
+        )
+        if file:
+            resource.file = file
+        resource.save()
+        messages.success(request, 'Resource added to Digital Library.')
+        return redirect('digital_library')
+    
+    return render(request, 'add_digital_resource.html', {'categories': DigitalResource.CATEGORY_CHOICES})

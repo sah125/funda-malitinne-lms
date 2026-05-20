@@ -124,6 +124,16 @@ urlpatterns = [
     # Course Management
     path('course/<int:course_id>/roster/', views.course_roster, name='course_roster'),
     
+    # Forum URLs
+    path('course/<int:course_id>/forum/', views.forum_thread_list, name='forum_thread_list'),
+    path('course/<int:course_id>/forum/new/', views.forum_new_thread, name='forum_new_thread'),
+    path('course/<int:course_id>/forum/<int:thread_id>/', views.forum_thread_detail, name='forum_thread_detail'),
+    path('course/<int:course_id>/forum/<int:thread_id>/delete/', views.forum_delete_thread, name='forum_delete_thread'),
+    
+    # Digital Library URLs
+    path('digital-library/', views.digital_library, name='digital_library'),
+    path('digital-library/add/', views.add_digital_resource, name='add_digital_resource'),
+    
     # Attendance Tracking
     path('course/<int:course_id>/attendance/', views.course_attendance, name='course_attendance'),
     path('api/attendance/mark/', views.mark_attendance, name='mark_attendance'),

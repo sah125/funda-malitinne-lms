@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Add Digital Resource</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label class="form-label">Title *</label>
+            <input type="text" name="title" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Category</label>
+            <select name="category" class="form-select">
+                {% for value, label in categories %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Upload File (PDF, DOC, etc.)</label>
+            <input type="file" name="file" class="form-control">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">OR External URL</label>
+            <input type="url" name="external_url" class="form-control" placeholder="https://...">
+        </div>
+        <button type="submit" class="btn btn-primary">Save Resource</button>
+        <a href="{% url 'digital_library' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

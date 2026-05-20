@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ quiz.title }}</h2>
+    <p class="text-muted">{{ quiz.description }}</p>
+    <p>Passing score: {{ quiz.passing_score }}%</p>
+    
+    <form method="post">
+        {% csrf_token %}
+        {% for question in questions %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Q{{ forloop.counter }}. {{ question.question_text }}</h5>
+                    {% if question.question_type == 'multiple_choice' %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="A" id="q{{ question.id }}_a">
+                            <label class="form-check-label" for="q{{ question.id }}_a">{{ question.option_a }}</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="B" id="q{{ question.id }}_b">
+                            <label class="form-check-label" for="q{{ question.id }}_b">{{ question.option_b }}</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="C" id="q{{ question.id }}_c">
+                            <label class="form-check-label" for="q{{ question.id }}_c">{{ question.option_c }}</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="D" id="q{{ question.id }}_d">
+                            <label class="form-check-label" for="q{{ question.id }}_d">{{ question.option_d }}</label>
+                        </div>
+                    {% elif question.question_type == 'true_false' %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="True" id="q{{ question.id }}_true">
+                            <label class="form-check-label" for="q{{ question.id }}_true">True</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="False" id="q{{ question.id }}_false">
+                            <label class="form-check-label" for="q{{ question.id }}_false">False</label>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Submit Quiz</button>
+        <a href="{% url 'course_detail' lesson.course.id %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

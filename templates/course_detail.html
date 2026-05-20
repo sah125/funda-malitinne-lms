@@ -97,6 +97,9 @@
                         <i class="fas fa-users"></i> {{ course.students.count }} students
                     </span>
                 </div>
+                <a href="{% url 'forum_thread_list' course.id %}" class="btn btn-outline-primary mt-3">
+                    <i class="fas fa-comments"></i> Course Forum
+                </a>
             </div>
         </div>
         

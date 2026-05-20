@@ -1,0 +1,46 @@
+﻿{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2>{{ thread.title }}</h2>
+        {% if user.role == 'instructor' or user.role == 'admin' %}
+            <form method="post" action="{% url 'forum_delete_thread' course.id thread.id %}" onsubmit="return confirm('Delete this thread?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">Delete Thread</button>
+            </form>
+        {% endif %}
+    </div>
+    <p class="text-muted">Course: {{ course.title }} · Started by {{ thread.author.get_full_name|default:thread.author.username }} on {{ thread.created_at|date:"M d, Y" }}</p>
+    
+    <hr>
+    
+    {% for post in posts %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong>{{ post.author.get_full_name|default:post.author.username }}</strong>
+                <span class="text-muted float-end">{{ post.created_at|date:"M d, Y H:i" }}</span>
+            </div>
+            <div class="card-body">
+                {{ post.content|linebreaks }}
+            </div>
+        </div>
+    {% endfor %}
+    
+    {% if not thread.is_locked %}
+        <div class="card mt-4">
+            <div class="card-header">Post a Reply</div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <textarea class="form-control" name="content" rows="4" required></textarea>
+                    <button type="submit" class="btn btn-primary mt-2">Submit Reply</button>
+                </form>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-warning">This thread is locked. No new replies allowed.</div>
+    {% endif %}
+    
+    <a href="{% url 'forum_thread_list' course.id %}" class="btn btn-secondary mt-3">← Back to Forum</a>
+</div>
+{% endblock %}

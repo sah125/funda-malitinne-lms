@@ -417,6 +417,7 @@ class LearningModule(models.Model):
     description = models.TextField(blank=True)
     order = models.IntegerField(default=0)
     is_visible = models.BooleanField(default=True)
+    prerequisite_module = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='next_modules')
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -580,3 +581,72 @@ class AuditLog(models.Model):
     
     def __str__(self):
         return f"{self.user} - {self.action} - {self.resource_type} - {self.timestamp}"
+    
+
+    # ==================== DISCUSSION FORUM MODELS ====================
+
+class ForumThread(models.Model):
+    course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='forum_threads')
+    title = models.CharField(max_length=200)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='forum_threads')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_pinned = models.BooleanField(default=False)
+    is_locked = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-is_pinned', '-created_at']
+    
+    def __str__(self):
+        return self.title
+    
+    @property
+    def reply_count(self):
+        return self.posts.count()
+    
+    @property
+    def last_post(self):
+        return self.posts.first()
+
+
+class ForumPost(models.Model):
+    thread = models.ForeignKey(ForumThread, on_delete=models.CASCADE, related_name='posts')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='forum_posts')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['created_at']
+    
+    def __str__(self):
+        return f"Re: {self.thread.title} - {self.author.username}"
+
+
+# ==================== DIGITAL LIBRARY MODEL ====================
+
+class DigitalResource(models.Model):
+    CATEGORY_CHOICES = (
+        ('guide', 'Study Guide'),
+        ('video', 'Video'),
+        ('article', 'Article'),
+        ('tool', 'Tool/Template'),
+        ('presentation', 'Presentation'),
+        ('other', 'Other'),
+    )
+    
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    file = models.FileField(upload_to='digital_library/', blank=True, null=True)
+    external_url = models.URLField(blank=True, null=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='uploaded_resources')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_published = models.BooleanField(default=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return self.title

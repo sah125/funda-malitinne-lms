@@ -1,0 +1,40 @@
+﻿{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="fas fa-comments"></i> Forum: {{ course.title }}</h2>
+        <a href="{% url 'forum_new_thread' course.id %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Thread
+        </a>
+    </div>
+    
+    {% if threads %}
+        <div class="list-group">
+            {% for thread in threads %}
+                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="mb-1">
+                            {% if thread.is_pinned %}<i class="fas fa-thumbtack text-warning"></i> {% endif %}
+                            <a href="{% url 'forum_thread_detail' course.id thread.id %}">{{ thread.title }}</a>
+                            {% if thread.is_locked %}<span class="badge bg-secondary ms-2">Locked</span>{% endif %}
+                        </h5>
+                        <small class="text-muted">
+                            By {{ thread.author.get_full_name|default:thread.author.username }} · {{ thread.created_at|date:"M d, Y" }} · {{ thread.reply_count }} replies
+                        </small>
+                    </div>
+                    {% if user == thread.author or user.role == 'instructor' or user.role == 'admin' %}
+                        <form method="post" action="{% url 'forum_delete_thread' course.id thread.id %}" onsubmit="return confirm('Delete this thread?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">No threads yet. Start the discussion!</div>
+    {% endif %}
+    
+    <a href="{% url 'course_detail' course.id %}" class="btn btn-secondary mt-3">← Back to Course</a>
+</div>
+{% endblock %}
