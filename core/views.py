@@ -25,11 +25,21 @@ from .models import (
     Quiz, QuizQuestion, QuizAttempt, Certificate, Notification,
     Announcement, CourseGroup, Attendance, LearningModule,
     LearnerProfile, LearnerDocument, LogbookEntry, BackupLog, AuditLog,
-    LessonModule, UserModuleProgress, LessonInteraction, DailyStreak, Badge, UserBadge
+    LessonModule, UserModuleProgress, LessonInteraction, DailyStreak, Badge, UserBadge,
+    ForumTopic, ForumPost
 )
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from io import BytesIO
+from django.shortcuts import render, get_object_or_404
+from .models import Lesson
+
+def lesson_discussions(request, lesson_id):
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+
+    return render(request, 'lesson_discussions.html', {
+        'lesson': lesson
+    })
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -84,6 +94,107 @@ def programmes_page(request):
 def clients_page(request):
     """Display clients and testimonials page"""
     return render(request, 'malitinne/clients.html')
+
+# Add these functions to your views.py (near your other discussion views)
+
+@login_required
+def delete_reply(request, reply_id):
+    """Delete a reply (instructor or admin only)"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        reply = get_object_or_404(ForumPost, id=reply_id)
+        topic = reply.topic
+        lesson = topic.lesson
+        
+        # Check permissions - only instructor of the course or admin can delete
+        if request.user.role == 'instructor':
+            if lesson.course.instructor != request.user:
+                return JsonResponse({'error': 'You do not have permission to delete this reply'}, status=403)
+        elif request.user.role != 'admin':
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        # Delete the reply
+        reply.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Reply deleted successfully'
+        })
+        
+    except ForumPost.DoesNotExist:
+        return JsonResponse({'error': 'Reply not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def like_reply(request, reply_id):
+    """Like or unlike a reply"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        reply = get_object_or_404(ForumPost, id=reply_id)
+        
+        # Toggle like
+        if request.user in reply.likes.all():
+            reply.likes.remove(request.user)
+            liked = False
+        else:
+            reply.likes.add(request.user)
+            liked = True
+        
+        return JsonResponse({
+            'success': True,
+            'liked': liked,
+            'likes_count': reply.likes.count()
+        })
+        
+    except ForumPost.DoesNotExist:
+        return JsonResponse({'error': 'Reply not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# Also add toggle_discussion_close if you haven't already
+@login_required
+def toggle_discussion_close(request, discussion_id):
+    """Toggle close/lock status of a discussion (instructor only)"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        topic = get_object_or_404(ForumTopic, id=discussion_id)
+        
+        # Check if user has permission
+        if request.user.role == 'instructor':
+            if topic.lesson.course.instructor != request.user:
+                return JsonResponse({'error': 'You do not own this course'}, status=403)
+        elif request.user.role != 'admin':
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        # Toggle the is_locked status (or is_closed if you prefer)
+        # Make sure your ForumTopic model has an 'is_locked' field
+        if hasattr(topic, 'is_locked'):
+            topic.is_locked = not topic.is_locked
+            topic.save()
+            is_closed = topic.is_locked
+        else:
+            # If is_locked doesn't exist, you might need to add it to your model
+            return JsonResponse({'error': 'Discussion locking not implemented'}, status=501)
+        
+        return JsonResponse({
+            'success': True,
+            'is_closed': is_closed,
+            'message': f'Discussion {"closed" if is_closed else "reopened"} successfully'
+        })
+        
+    except ForumTopic.DoesNotExist:
+        return JsonResponse({'error': 'Discussion not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 # ==================== AUTHENTICATION VIEWS ====================
 
@@ -1178,6 +1289,160 @@ def delete_announcement(request, announcement_id):
     announcement.delete()
     
     return JsonResponse({'success': True})
+
+# ==================== FORUM SYSTEM ====================
+
+@login_required
+def discussion_detail(request, topic_id):
+    """View a single discussion topic and its replies"""
+    topic = get_object_or_404(ForumTopic, id=topic_id)
+    lesson = topic.lesson
+    
+    # Check permissions
+    if request.user.role == 'student':
+        if request.user not in lesson.course.students.all():
+            messages.warning(request, 'You need to be enrolled in this course to view discussions.')
+            return redirect('course_detail', course_id=lesson.course.id)
+    elif request.user.role == 'instructor':
+        if lesson.course.instructor != request.user and request.user.role != 'admin':
+            messages.error(request, 'You do not have permission to view this discussion.')
+            return redirect('instructor_dashboard')
+    
+    # Get all posts (replies) for this topic
+    posts = topic.posts.filter(parent=None).order_by('created_at')
+    
+    # Handle new reply
+    if request.method == 'POST' and 'add_reply' in request.POST:
+        content = request.POST.get('content')
+        parent_id = request.POST.get('parent_reply_id')
+        
+        if content:
+            parent = None
+            if parent_id:
+                parent = get_object_or_404(ForumPost, id=parent_id)
+            
+            ForumPost.objects.create(
+                topic=topic,
+                author=request.user,
+                content=content,
+                parent=parent
+            )
+            messages.success(request, 'Your reply has been posted.')
+        else:
+            messages.error(request, 'Please enter some content for your reply.')
+        
+        return redirect('discussion_detail', topic_id=topic.id)
+    
+    # Handle delete reply (instructor only)
+    if request.method == 'POST' and 'delete_reply' in request.POST:
+        if request.user.role == 'instructor' and lesson.course.instructor == request.user:
+            reply_id = request.POST.get('reply_id')
+            try:
+                reply = ForumPost.objects.get(id=reply_id)
+                reply.delete()
+                messages.success(request, 'Reply deleted successfully.')
+            except ForumPost.DoesNotExist:
+                messages.error(request, 'Reply not found.')
+        else:
+            messages.error(request, 'You do not have permission to delete this reply.')
+        
+        return redirect('discussion_detail', topic_id=topic.id)
+    
+    # Prepare replies with nested structure
+    reply_list = []
+    for post in posts:
+        reply_data = {
+            'id': post.id,
+            'author': post.author,
+            'content': post.content,
+            'created_at': post.created_at,
+            'likes_count': post.likes.count(),
+            'replies': post.replies.all().order_by('created_at'),
+            'can_delete': request.user.role == 'instructor' and lesson.course.instructor == request.user
+        }
+        reply_list.append(reply_data)
+    
+    context = {
+        'discussion': topic,
+        'lesson': lesson,
+        'posts': reply_list,
+        'can_delete_discussion': request.user.role == 'instructor' and lesson.course.instructor == request.user
+    }
+    
+    return render(request, 'discussion/discussion_detail.html', context)
+
+
+
+@login_required
+def toggle_discussion_pin(request, discussion_id):
+    """Toggle pin status of a discussion (instructor only)"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        topic = get_object_or_404(ForumTopic, id=discussion_id)
+        
+        if request.user.role != 'instructor' or topic.lesson.course.instructor != request.user:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        topic.is_pinned = not topic.is_pinned
+        topic.save()
+        
+        return JsonResponse({'success': True, 'is_pinned': topic.is_pinned})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def toggle_discussion_lock(request, discussion_id):
+    """Toggle lock status of a discussion (instructor only)"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        topic = get_object_or_404(ForumTopic, id=discussion_id)
+        
+        if request.user.role != 'instructor' or topic.lesson.course.instructor != request.user:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        topic.is_locked = not topic.is_locked
+        topic.save()
+        
+        return JsonResponse({'success': True, 'is_locked': topic.is_locked})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+
+
+
+
+# Add this function near your other discussion-related views (around the lesson_discussions function)
+
+@login_required
+def delete_discussion(request, discussion_id):
+    """Delete a discussion topic (instructor only)"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        topic = get_object_or_404(ForumTopic, id=discussion_id)
+        lesson = topic.lesson
+        
+        # Check if user is instructor of this course
+        if request.user.role != 'instructor' or lesson.course.instructor != request.user:
+            return JsonResponse({'error': 'You do not have permission to delete this discussion'}, status=403)
+        
+        # Delete all posts first (cascade should handle this, but to be safe)
+        topic.posts.all().delete()
+        topic.delete()
+        
+        return JsonResponse({'success': True, 'message': 'Discussion deleted successfully'})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 # ==================== COURSE ROSTER ====================
 

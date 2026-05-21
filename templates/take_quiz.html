@@ -1,0 +1,338 @@
+<!-- templates/take_quiz.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ quiz.title }} - Funda Malitinne{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --primary: #9f7734;
+    --primary-dark: #7a5828;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --gray-100: #f3f4f6;
+    --gray-600: #6b7280;
+    --gray-800: #1f2937;
+    --white: #ffffff;
+  }
+
+  body {
+    background: linear-gradient(135deg, #f5f5f0 0%, #e8e8e3 100%);
+  }
+
+  .quiz-container {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+  }
+
+  .quiz-card {
+    background: var(--white);
+    border-radius: 1.5rem;
+    overflow: hidden;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+
+  .quiz-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    padding: 2rem;
+    color: white;
+  }
+
+  .quiz-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .quiz-header p {
+    opacity: 0.9;
+  }
+
+  .quiz-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+  }
+
+  .stat-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.75rem;
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .quiz-body {
+    padding: 2rem;
+  }
+
+  .question-card {
+    background: var(--gray-100);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid var(--primary);
+  }
+
+  .question-text {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: var(--gray-800);
+  }
+
+  .question-points {
+    font-size: 0.75rem;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .option:hover {
+    border-color: var(--primary);
+    background: #fffbeb;
+  }
+
+  .option.selected {
+    border-color: var(--primary);
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  }
+
+  .option input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .option label {
+    flex: 1;
+    cursor: pointer;
+    margin: 0;
+  }
+
+  .submit-btn {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    border: none;
+    border-radius: 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 1rem;
+  }
+
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(159, 119, 52, 0.3);
+  }
+
+  .submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .progress-tracker {
+    background: var(--gray-100);
+    border-radius: 1rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .progress-bar-container {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+    border-radius: 4px;
+    transition: width 0.3s;
+  }
+
+  .timer {
+    background: var(--warning);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .quiz-header {
+      padding: 1.5rem;
+    }
+    .quiz-body {
+      padding: 1rem;
+    }
+  }
+</style>
+
+<div class="quiz-container">
+  <div class="quiz-card">
+    <div class="quiz-header">
+      <h2><i class="fas fa-question-circle me-2"></i> {{ quiz.title }}</h2>
+      <p>{{ quiz.description }}</p>
+      <div class="quiz-stats">
+        <span class="stat-badge"><i class="fas fa-star"></i> {{ quiz.passing_score }}% to pass</span>
+        <span class="stat-badge"><i class="fas fa-clock"></i> 
+          {% if quiz.time_limit > 0 %}{{ quiz.time_limit }} minutes{% else %}No time limit{% endif %}
+        </span>
+        <span class="stat-badge"><i class="fas fa-question"></i> {{ questions|length }} questions</span>
+      </div>
+    </div>
+
+    <div class="quiz-body">
+      <div class="progress-tracker">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span>Your progress</span>
+          <span id="answered-count">0</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-fill" id="quiz-progress" style="width: 0%"></div>
+        </div>
+        {% if quiz.time_limit > 0 %}
+        <div class="timer mt-2" id="timer">
+          <i class="fas fa-hourglass-half"></i> Time left: <span id="time-left">{{ quiz.time_limit }}:00</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <form method="POST" id="quiz-form">
+        {% csrf_token %}
+        {% for question in questions %}
+        <div class="question-card" data-question-id="{{ question.id }}">
+          <div class="question-points">{{ question.points }} points</div>
+          <div class="question-text">{{ forloop.counter }}. {{ question.question_text }}</div>
+          <div class="options-list">
+            {% if question.question_type == 'multiple_choice' %}
+              <label class="option" onclick="selectOption(this, '{{ question.id }}', 'A')">
+                <input type="radio" name="question_{{ question.id }}" value="A" hidden>
+                <span>A. {{ question.option_a }}</span>
+              </label>
+              <label class="option" onclick="selectOption(this, '{{ question.id }}', 'B')">
+                <input type="radio" name="question_{{ question.id }}" value="B" hidden>
+                <span>B. {{ question.option_b }}</span>
+              </label>
+              {% if question.option_c %}
+              <label class="option" onclick="selectOption(this, '{{ question.id }}', 'C')">
+                <input type="radio" name="question_{{ question.id }}" value="C" hidden>
+                <span>C. {{ question.option_c }}</span>
+              </label>
+              {% endif %}
+              {% if question.option_d %}
+              <label class="option" onclick="selectOption(this, '{{ question.id }}', 'D')">
+                <input type="radio" name="question_{{ question.id }}" value="D" hidden>
+                <span>D. {{ question.option_d }}</span>
+              </label>
+              {% endif %}
+            {% elif question.question_type == 'true_false' %}
+              <label class="option" onclick="selectOption(this, '{{ question.id }}', 'True')">
+                <input type="radio" name="question_{{ question.id }}" value="True" hidden>
+                <span>True</span>
+              </label>
+              <label class="option" onclick="selectOption(this, '{{ question.id }}', 'False')">
+                <input type="radio" name="question_{{ question.id }}" value="False" hidden>
+                <span>False</span>
+              </label>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+
+        <button type="submit" class="submit-btn" id="submit-btn">
+          <i class="fas fa-check-circle"></i> Submit Quiz
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Track answered questions
+  let answered = new Set();
+  const totalQuestions = {{ questions|length }};
+  const timeLimit = {{ quiz.time_limit|default:0 }};
+
+  function selectOption(element, questionId, value) {
+    // Remove selected class from siblings
+    const parent = element.parentElement;
+    const options = parent.querySelectorAll('.option');
+    options.forEach(opt => opt.classList.remove('selected'));
+    element.classList.add('selected');
+    
+    // Set the radio button
+    const radio = element.querySelector('input');
+    if (radio) radio.checked = true;
+    
+    // Mark as answered
+    answered.add(questionId);
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const count = answered.size;
+    const percent = (count / totalQuestions) * 100;
+    document.getElementById('answered-count').textContent = count;
+    document.getElementById('quiz-progress').style.width = percent + '%';
+  }
+
+  // Timer functionality
+  if (timeLimit > 0) {
+    let timeLeft = timeLimit * 60; // in seconds
+    const timerElement = document.getElementById('time-left');
+    
+    const timerInterval = setInterval(() => {
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        document.getElementById('quiz-form').submit();
+      } else {
+        timeLeft--;
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      }
+    }, 1000);
+  }
+
+  // Form validation before submit
+  document.getElementById('quiz-form').addEventListener('submit', function(e) {
+    if (answered.size < totalQuestions) {
+      e.preventDefault();
+      alert(`Please answer all questions. You have answered ${answered.size} of ${totalQuestions}.`);
+    }
+  });
+</script>
+{% endblock %}
