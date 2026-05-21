@@ -580,3 +580,48 @@ class AuditLog(models.Model):
     
     def __str__(self):
         return f"{self.user} - {self.action} - {self.resource_type} - {self.timestamp}"
+
+
+# ==================== FORUM SYSTEM ====================
+
+class ForumTopic(models.Model):
+    """Main forum topic/discussion post for a lesson"""
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='forum_topics')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='forum_topics')
+    title = models.CharField(max_length=300)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Forum Topic'
+        verbose_name_plural = 'Forum Topics'
+    
+    def __str__(self):
+        return f"{self.lesson.title} - {self.title}"
+
+
+class ForumPost(models.Model):
+    """Forum post/reply to a topic"""
+    topic = models.ForeignKey(ForumTopic, on_delete=models.CASCADE, related_name='posts')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='forum_posts')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='posts'
+    )
+    likes_count = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = 'Forum Post'
+        verbose_name_plural = 'Forum Posts'
+    
+    def __str__(self):
+        return f"Post by {self.author.username} on {self.topic.title}"

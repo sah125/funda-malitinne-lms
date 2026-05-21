@@ -16,6 +16,8 @@ urlpatterns = [
     # ============================================================
     path('', views.company_home, name='company_home'),
     path('lms/', views.lms_portal, name='lms_portal'),
+    path('programmes/', views.programmes_page, name='programmes'),
+    path('clients/', views.clients_page, name='clients'),
     
     # ============================================================
     # AUTHENTICATION
@@ -52,6 +54,7 @@ urlpatterns = [
     # ============================================================
     # Dashboard
     path('instructor/', views.instructor_dashboard, name='instructor_dashboard'),
+    path('instructor/student/<int:user_id>/', views.instructor_student_view, name='instructor_student_view'),
     
     # Course Management
     path('instructor/create-course/', views.create_course, name='create_course'),
@@ -85,7 +88,6 @@ urlpatterns = [
     
     # ============================================================
     # LEARNER PROFILE MANAGEMENT (QCTO COMPLIANT)
-    # BOTH URL PATTERNS INCLUDED FOR COMPATIBILITY
     # ============================================================
     # Primary URL pattern (without admin/ prefix)
     path('learner-profile/<int:user_id>/', views.learner_profile_view, name='learner_profile'),
@@ -121,14 +123,34 @@ urlpatterns = [
     path('api/announcements/<int:announcement_id>/toggle-pin/', views.toggle_announcement_pin, name='toggle_announcement_pin'),
     path('api/announcements/<int:announcement_id>/delete/', views.delete_announcement, name='delete_announcement'),
     
-    # Course Management
-    path('course/<int:course_id>/roster/', views.course_roster, name='course_roster'),
+    # ============================================================
+    # DISCUSSION & FORUM SYSTEM
+    # ============================================================
+    # Lesson discussions
+    path('lesson/<int:lesson_id>/discussions/', views.lesson_discussions, name='lesson_discussions'),
     
-    # Attendance Tracking
+    # Discussion detail
+    path('discussion/<int:topic_id>/', views.discussion_detail, name='discussion_detail'),
+    
+    # Discussion API endpoints
+    path('api/discussion/<int:discussion_id>/delete/', views.delete_discussion, name='delete_discussion'),
+    path('api/discussion/<int:discussion_id>/pin/', views.toggle_discussion_pin, name='toggle_discussion_pin'),
+    path('api/discussion/<int:discussion_id>/lock/', views.toggle_discussion_lock, name='toggle_discussion_lock'),
+    path('api/discussion/<int:discussion_id>/toggle-close/', views.toggle_discussion_lock, name='toggle_discussion_close'),
+    # Reply API endpoints
+    path('api/reply/<int:reply_id>/delete/', views.delete_reply, name='delete_reply'),
+    path('api/reply/<int:reply_id>/like/', views.like_reply, name='like_reply'),
+    
+    # ============================================================
+    # COURSE MANAGEMENT & ATTENDANCE
+    # ============================================================
+    path('course/<int:course_id>/roster/', views.course_roster, name='course_roster'),
     path('course/<int:course_id>/attendance/', views.course_attendance, name='course_attendance'),
     path('api/attendance/mark/', views.mark_attendance, name='mark_attendance'),
-
-    # Modern Lesson APIs
+    
+    # ============================================================
+    # MODERN LESSON APIs
+    # ============================================================
     path('api/module/<int:module_id>/content/', views.api_module_content, name='api_module_content'),
     path('api/module/<int:module_id>/complete/', views.api_module_complete, name='api_module_complete'),
     path('api/module/<int:module_id>/quiz/', views.api_module_quiz, name='api_module_quiz'),
@@ -140,13 +162,6 @@ urlpatterns = [
     # DJANGO ADMIN - MUST BE LAST!
     # ============================================================
     path('admin/', admin.site.urls),
-
-    # In the ADMIN & COMPANY WEBSITE section
-    path('programmes/', views.programmes_page, name='programmes'),
-    path('clients/', views.clients_page, name='clients'),
-
-    # In INSTRUCTOR PORTAL section
-    path('instructor/student/<int:user_id>/', views.instructor_student_view, name='instructor_student_view'),
 ]
 
 # ============================================================

@@ -1,0 +1,375 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ lesson.title }} - Discussions - Funda Malitinne{% endblock %}
+
+{% block content %}
+<style>
+  .discussions-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .discussions-header {
+    background: linear-gradient(135deg, #9f7734 0%, #7a5828 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .discussions-header h1 {
+    font-size: 2rem;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .discussions-header p {
+    margin: 0;
+    opacity: 0.9;
+  }
+
+  .create-discussion-btn {
+    background: #10b981;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+    margin-bottom: 2rem;
+  }
+
+  .create-discussion-btn:hover {
+    background: #059669;
+    transform: translateY(-2px);
+  }
+
+  .discussion-form {
+    background: white;
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: none;
+  }
+
+  .discussion-form.active {
+    display: block;
+  }
+
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #2d2d2d;
+  }
+
+  .form-group input[type="text"],
+  .form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #e8e8e3;
+    border-radius: 0.5rem;
+    font-family: inherit;
+    font-size: 1rem;
+    box-sizing: border-box;
+  }
+
+  .form-group textarea {
+    resize: vertical;
+    min-height: 150px;
+  }
+
+  .form-group input:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: #9f7734;
+    box-shadow: 0 0 0 3px rgba(159, 119, 52, 0.1);
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+
+  .btn-primary {
+    background: #9f7734;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #7a5828;
+  }
+
+  .btn-secondary {
+    background: #e8e8e3;
+    color: #2d2d2d;
+  }
+
+  .btn-secondary:hover {
+    background: #d4d4cf;
+  }
+
+  .discussions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .discussion-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+    border-left: 4px solid #9f7734;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+
+  .discussion-card:hover {
+    transform: translateX(5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+
+  .discussion-card.pinned {
+    border-left-color: #f59e0b;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 10%, white 100%);
+  }
+
+  .discussion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+  }
+
+  .discussion-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2d2d2d;
+    margin: 0;
+    flex: 1;
+  }
+
+  .discussion-meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    font-size: 0.875rem;
+    color: #666;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .discussion-author {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .discussion-stats {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .discussion-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .discussion-stat i {
+    color: #9f7734;
+  }
+
+  .discussion-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-pinned {
+    background: #fef3c7;
+    color: #b45309;
+  }
+
+  .badge-closed {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+  }
+
+  .empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #9f7734;
+    text-decoration: none;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+
+  .back-link:hover {
+    text-decoration: underline;
+  }
+
+  .alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.5rem;
+  }
+
+  .alert-success {
+    background: #f0fdf4;
+    color: #065f46;
+    border-left: 4px solid #10b981;
+  }
+
+  .alert-error {
+    background: #fef3c7;
+    color: #b45309;
+    border-left: 4px solid #f59e0b;
+  }
+</style>
+
+<div class="discussions-container">
+  <a href="{% url 'lesson_detail' lesson.id %}" class="back-link">
+    <i class="fas fa-arrow-left"></i> Back to Lesson
+  </a>
+
+  <div class="discussions-header">
+    <h1>{{ lesson.title }} - Discussions</h1>
+    <p>Ask questions, share ideas, and collaborate with classmates</p>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags|default:'error' }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <button class="create-discussion-btn" onclick="toggleForm()">
+    <i class="fas fa-plus"></i> Start New Discussion
+  </button>
+
+  <div class="discussion-form" id="discussionForm">
+    <h3>Start a New Discussion</h3>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="title">Discussion Title *</label>
+        <input type="text" id="title" name="title" placeholder="What's your question or topic?" required>
+      </div>
+
+      <div class="form-group">
+        <label for="content">Description *</label>
+        <textarea id="content" name="content" placeholder="Provide details to help others understand your question or topic..." required></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" name="create_discussion" value="yes" class="btn btn-primary">
+          <i class="fas fa-send"></i> Post Discussion
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="toggleForm()">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="discussions-list">
+    {% if discussions %}
+      {% for discussion in discussions %}
+        <a href="{% url 'discussion_detail' discussion.id %}" class="discussion-card {% if discussion.is_pinned %}pinned{% endif %}">
+          <div class="discussion-header">
+            <h2 class="discussion-title">{{ discussion.title }}</h2>
+            <div style="display: flex; gap: 0.5rem;">
+              {% if discussion.is_pinned %}
+                <span class="discussion-badge badge-pinned">
+                  <i class="fas fa-thumbtack"></i> Pinned
+                </span>
+              {% endif %}
+              {% if discussion.is_closed %}
+                <span class="discussion-badge badge-closed">
+                  <i class="fas fa-lock"></i> Closed
+                </span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="discussion-meta">
+            <div class="discussion-author">
+              <i class="fas fa-user-circle"></i>
+              <span>{{ discussion.author.first_name|default:discussion.author.username }}</span>
+            </div>
+            <div>{{ discussion.created_at|date:"M d, Y H:i" }}</div>
+          </div>
+
+          <div style="margin-top: 1rem; color: #666; line-height: 1.6;">
+            {{ discussion.content|truncatewords:30 }}
+          </div>
+
+          <div class="discussion-stats">
+            <div class="discussion-stat">
+              <i class="fas fa-comments"></i>
+              <span>{{ discussion.reply_count }} {% if discussion.reply_count == 1 %}reply{% else %}replies{% endif %}</span>
+            </div>
+            <div class="discussion-stat">
+              <i class="fas fa-eye"></i>
+              <span>{{ discussion.views_count }} views</span>
+            </div>
+          </div>
+        </a>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="fas fa-comments"></i>
+        <h3>No discussions yet</h3>
+        <p>Be the first to start a discussion about this lesson!</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  function toggleForm() {
+    const form = document.getElementById('discussionForm');
+    form.classList.toggle('active');
+    if (form.classList.contains('active')) {
+      document.getElementById('title').focus();
+    }
+  }
+</script>
+{% endblock %}
