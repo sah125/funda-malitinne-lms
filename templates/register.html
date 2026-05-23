@@ -4,144 +4,560 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - Funda Malitinne LMS</title>
-    <!-- Malitinne Logo Favicon -->
     <link rel="icon" type="image/x-icon" href="/static/Malitinne-logo-v.ico">
-    <link rel="shortcut icon" type="image/x-icon" href="/static/Malitinne-logo-v.ico">
-    <link rel="apple-touch-icon" href="/static/Malitinne-logo.png">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="icon" type="image/x-icon" href="/static/Malitinne-logo-v.ico">
     <style>
+        :root {
+            --gold: #9f7734;
+            --gold-light: #c9a96e;
+            --gold-dark: #7a5828;
+            --cream: #fbf3e4;
+            --navy: #1a1a2e;
+            --white: #ffffff;
+            --text: #2c2c2c;
+            --text-muted: #888;
+            --border: #e8e8e8;
+            --error: #e74c3c;
+            --success: #27ae60;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            background: linear-gradient(135deg, #fbf3a9 0%, #9f7734 100%);
+            font-family: 'DM Sans', sans-serif;
+            background: linear-gradient(135deg, #f8f4ee 0%, #ede4d3 100%);
             min-height: 100vh;
+            padding: 40px 20px;
         }
-        .register-container {
-            max-width: 800px;
-            margin: auto;
-            padding: 40px 0;
+
+        .page-wrapper {
+            max-width: 860px;
+            margin: 0 auto;
         }
+
+        /* Header */
+        .page-header {
+            text-align: center;
+            margin-bottom: 35px;
+            animation: fadeDown 0.6s ease forwards;
+        }
+
+        .page-header img {
+            height: 70px;
+            margin-bottom: 16px;
+        }
+
+        .page-header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            color: var(--navy);
+            margin-bottom: 6px;
+        }
+
+        .page-header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* Progress Steps */
+        .steps {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 35px;
+            animation: fadeDown 0.6s ease 0.1s forwards;
+            opacity: 0;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .step-circle {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+
+        .step.active .step-circle {
+            background: var(--gold);
+            color: white;
+            box-shadow: 0 4px 15px rgba(159,119,52,0.4);
+        }
+
+        .step.inactive .step-circle {
+            background: #e8e8e8;
+            color: #aaa;
+        }
+
+        .step-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .step.active .step-label { color: var(--gold); }
+        .step.inactive .step-label { color: #bbb; }
+
+        .step-line {
+            width: 60px;
+            height: 2px;
+            background: #e0e0e0;
+            margin: 0 8px;
+            margin-bottom: 22px;
+        }
+
+        /* Card */
         .card {
+            background: var(--white);
             border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            overflow: hidden;
+            animation: fadeUp 0.6s ease 0.2s forwards;
+            opacity: 0;
+        }
+
+        .card-top {
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+            padding: 20px 35px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-top i {
+            color: rgba(255,255,255,0.8);
+            font-size: 1.1rem;
+        }
+
+        .card-top h3 {
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 35px;
+        }
+
+        /* Section Title */
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--cream);
+        }
+
+        .section-title i {
+            color: var(--gold);
+            font-size: 1rem;
+        }
+
+        .section-title h4 {
+            color: var(--navy);
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Form Grid */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 25px;
+        }
+
+        .form-grid.full { grid-template-columns: 1fr; }
+
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group.span-2 { grid-column: span 2; }
+
+        .form-group label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: 0.3px;
+        }
+
+        .required::after {
+            content: ' *';
+            color: var(--error);
+        }
+
+        .input-wrapper { position: relative; }
+
+        .input-wrapper i.field-icon {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ccc;
+            font-size: 0.85rem;
+            transition: color 0.3s;
+            pointer-events: none;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 11px 13px 11px 38px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text);
+            background: #fafafa;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        textarea.form-control {
+            padding: 11px 13px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        select.form-control { padding: 11px 13px 11px 38px; cursor: pointer; }
+
+        .form-control:focus {
+            border-color: var(--gold);
+            background: var(--white);
+            box-shadow: 0 0 0 4px rgba(159,119,52,0.08);
+        }
+
+        .form-control:focus ~ i.field-icon { color: var(--gold); }
+
+        .form-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Password Strength */
+        .password-strength {
+            margin-top: 6px;
+        }
+
+        .strength-bar {
+            height: 4px;
+            border-radius: 2px;
+            background: #e8e8e8;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+
+        .strength-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: all 0.3s;
+            width: 0%;
+        }
+
+        .strength-text {
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        /* Divider between sections */
+        .section-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 30px 0;
+        }
+
+        /* Info Box */
+        .info-box {
+            background: linear-gradient(135deg, #fffbf0, #fff8e6);
+            border: 1px solid #f0d98a;
+            border-left: 4px solid var(--gold);
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-bottom: 25px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .info-box i {
+            color: var(--gold);
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .info-box p {
+            font-size: 0.85rem;
+            color: #7a5828;
+            line-height: 1.5;
+        }
+
+        .info-box strong { font-weight: 700; }
+
+        /* Alert */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alert-error, .alert-danger {
+            background: #fef2f2;
+            color: var(--error);
+            border-left: 4px solid var(--error);
+        }
+
+        .alert-success {
+            background: #f0fdf4;
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        /* Submit Button */
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 0.5px;
+            position: relative;
             overflow: hidden;
         }
-        .card-header {
-            background: linear-gradient(135deg, #fbf3a9 0%, #f5e894 100%);
-            color: #5a421e;
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(159,119,52,0.4);
+        }
+
+        .btn-submit:active { transform: translateY(0); }
+
+        /* Login Prompt */
+        .login-prompt {
             text-align: center;
-            padding: 30px;
+            margin-top: 20px;
+            font-size: 0.875rem;
+            color: var(--text-muted);
         }
-        .card-header img {
-            height: 60px;
-            margin-bottom: 15px;
-        }
-        .btn-register {
-            background: linear-gradient(135deg, #9f7734 0%, #8b6630 100%);
-            border: none;
-            border-radius: 10px;
-            padding: 12px;
+
+        .login-prompt a {
+            color: var(--gold);
             font-weight: 600;
-            width: 100%;
-            color: white;
+            text-decoration: none;
         }
-        .btn-register:hover {
-            background: linear-gradient(135deg, #8b6630 0%, #7a5828 100%);
+
+        .login-prompt a:hover { color: var(--gold-dark); }
+
+        /* Animations */
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .section-title {
-            color: #9f7734;
-            border-bottom-color: #9f7734;
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .form-group.span-2 { grid-column: span 1; }
+            .card-body { padding: 25px 20px; }
+            .steps { gap: 0; }
+            .step-line { width: 30px; }
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="register-container">
-        <div class="card">
-            <div class="card-header">
-                <img src="/static/Malitinne-logo.png" alt="Funda Malitinne Logo">
-                <h3>Student Registration</h3>
-                <p>Join Funda Malitinne Learning Management System</p>
-            </div>
-            <div class="card-body">
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
-                            <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-                
-                <form method="POST" id="registerForm">
-                    {% csrf_token %}
-                    
-                    <!-- Account Information Section -->
-                    <div class="section-title">
-                        <i class="fas fa-user-circle me-2"></i> Account Information
+
+<div class="page-wrapper">
+
+    <!-- Header -->
+    <div class="page-header">
+        <img src="/static/Malitinne-logo.png" alt="Malitinne Logo">
+        <h1>Create Your Account</h1>
+        <p>Join thousands of learners on the Funda Malitinne LMS</p>
+    </div>
+
+    <!-- Steps -->
+    <div class="steps">
+        <div class="step active">
+            <div class="step-circle">1</div>
+            <span class="step-label">Account</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step active">
+            <div class="step-circle">2</div>
+            <span class="step-label">Personal</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step inactive">
+            <div class="step-circle">3</div>
+            <span class="step-label">Review</span>
+        </div>
+    </div>
+
+    <!-- Card -->
+    <div class="card">
+        <div class="card-top">
+            <i class="fas fa-user-plus"></i>
+            <h3>Student Registration Form</h3>
+        </div>
+
+        <div class="card-body">
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        <i class="fas fa-{% if 'error' in message.tags %}exclamation-circle{% else %}check-circle{% endif %}"></i>
+                        {{ message }}
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label required-field">Username</label>
-                            <input type="text" name="username" class="form-control" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label required-field">Email Address</label>
-                            <input type="email" name="email" class="form-control" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label required-field">Password</label>
-                            <input type="password" name="password" class="form-control" required>
-                            <small class="text-muted">Minimum 8 characters</small>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label required-field">Confirm Password</label>
-                            <input type="password" name="password2" class="form-control" required>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST" id="registerForm">
+                {% csrf_token %}
+
+                <!-- Account Information -->
+                <div class="section-title">
+                    <i class="fas fa-lock"></i>
+                    <h4>Account Information</h4>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="required">Username</label>
+                        <div class="input-wrapper">
+                            <input type="text" name="username" class="form-control" placeholder="Choose a username" required autocomplete="username">
+                            <i class="fas fa-at field-icon"></i>
                         </div>
                     </div>
-                    
-                    <!-- Personal Details Section -->
-                    <div class="section-title mt-4">
-                        <i class="fas fa-id-card me-2"></i> Learner Personal Details
+
+                    <div class="form-group">
+                        <label class="required">Email Address</label>
+                        <div class="input-wrapper">
+                            <input type="email" name="email" class="form-control" placeholder="your@email.com" required autocomplete="email">
+                            <i class="fas fa-envelope field-icon"></i>
+                        </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label required-field">Full Name</label>
-                            <input type="text" name="full_name" class="form-control" required placeholder="First and Last Name">
+
+                    <div class="form-group">
+                        <label class="required">Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" name="password" class="form-control" id="passwordField" placeholder="Min. 8 characters" required oninput="checkStrength(this.value)">
+                            <i class="fas fa-lock field-icon"></i>
+                            <button type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#aaa;" onclick="togglePass('passwordField', this)">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label required-field">ID Number / Passport Number</label>
-                            <input type="text" name="id_number" class="form-control" required>
+                        <div class="password-strength">
+                            <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+                            <span class="strength-text" id="strengthText"></span>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label required-field">Date of Birth</label>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="required">Confirm Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" name="password2" class="form-control" id="password2Field" placeholder="Repeat your password" required>
+                            <i class="fas fa-lock field-icon"></i>
+                            <button type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#aaa;" onclick="togglePass('password2Field', this)">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <span class="form-hint" id="matchHint"></span>
+                    </div>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <!-- Personal Details -->
+                <div class="section-title">
+                    <i class="fas fa-id-card"></i>
+                    <h4>Learner Personal Details</h4>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group span-2">
+                        <label class="required">Full Name</label>
+                        <div class="input-wrapper">
+                            <input type="text" name="full_name" class="form-control" placeholder="First and Last Name" required>
+                            <i class="fas fa-user field-icon"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="required">ID / Passport Number</label>
+                        <div class="input-wrapper">
+                            <input type="text" name="id_number" class="form-control" placeholder="SA ID or Passport" required>
+                            <i class="fas fa-id-badge field-icon"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="required">Date of Birth</label>
+                        <div class="input-wrapper">
                             <input type="date" name="date_of_birth" class="form-control" required>
+                            <i class="fas fa-calendar field-icon"></i>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label required-field">Gender</label>
-                            <select name="gender" class="form-select" required>
-                                <option value="">Select Gender</option>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="required">Gender</label>
+                        <div class="input-wrapper">
+                            <select name="gender" class="form-control" required>
+                                <option value="">Select gender</option>
                                 <option value="male">Male</option>
                                 <option value="female">Female</option>
                                 <option value="other">Other</option>
                             </select>
+                            <i class="fas fa-venus-mars field-icon"></i>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label required-field">Nationality</label>
-                            <input type="text" name="nationality" class="form-control" required placeholder="e.g., South African">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="required">Nationality</label>
+                        <div class="input-wrapper">
+                            <input type="text" name="nationality" class="form-control" placeholder="e.g. South African" required>
+                            <i class="fas fa-flag field-icon"></i>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label required-field">Contact Number</label>
-                            <input type="tel" name="contact_number" class="form-control" required placeholder="e.g., 071 234 5678">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="required">Contact Number</label>
+                        <div class="input-wrapper">
+                            <input type="tel" name="contact_number" class="form-control" placeholder="e.g. 071 234 5678" required>
+                            <i class="fas fa-phone field-icon"></i>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Disability (if any)</label>
-                            <textarea name="disability" class="form-control" rows="2" placeholder="Please specify any disability or leave blank"></textarea>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label required-field">Preferred Language</label>
-                            <select name="preferred_language" class="form-select" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="required">Preferred Language</label>
+                        <div class="input-wrapper">
+                            <select name="preferred_language" class="form-control" required>
                                 <option value="English">English</option>
                                 <option value="Afrikaans">Afrikaans</option>
                                 <option value="isiZulu">isiZulu</option>
@@ -154,46 +570,96 @@
                                 <option value="Tshivenda">Tshivenda</option>
                                 <option value="isiNdebele">isiNdebele</option>
                             </select>
+                            <i class="fas fa-language field-icon"></i>
                         </div>
                     </div>
-                    
-                    <div class="alert alert-info mt-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Registration Approval Required:</strong> Your account will be reviewed by an administrator. You will receive an email notification once your registration is approved.
+
+                    <div class="form-group span-2">
+                        <label>Disability (if any)</label>
+                        <textarea name="disability" class="form-control" placeholder="Please describe any disability, or leave blank if not applicable"></textarea>
                     </div>
-                    
-                    <button type="submit" class="btn-register mt-3">
-                        <i class="fas fa-paper-plane me-2"></i> Submit Registration
-                    </button>
-                </form>
-                
-                <div class="login-link">
-                    <p class="mb-0">Already have an account? <a href="{% url 'login' %}">Login here</a></p>
                 </div>
+
+                <div class="section-divider"></div>
+
+                <!-- Info Box -->
+                <div class="info-box">
+                    <i class="fas fa-shield-alt"></i>
+                    <p>
+                        <strong>Registration Approval Required:</strong> Your account will be reviewed by an administrator before you can access courses. You will receive an email notification at the address provided once your registration has been approved. Your personal information is protected under <strong>POPIA</strong>.
+                    </p>
+                </div>
+
+                <button type="submit" class="btn-submit">
+                    <i class="fas fa-paper-plane"></i> &nbsp; Submit Registration
+                </button>
+
+            </form>
+
+            <div class="login-prompt">
+                Already have an account? <a href="{% url 'login' %}">Sign in here</a>
             </div>
+
         </div>
     </div>
+
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Form validation
-    document.getElementById('registerForm').addEventListener('submit', function(e) {
-        const password = document.querySelector('input[name="password"]').value;
-        const password2 = document.querySelector('input[name="password2"]').value;
-        
-        if (password !== password2) {
-            e.preventDefault();
-            alert('Passwords do not match!');
-            return false;
-        }
-        
-        if (password.length < 8) {
-            e.preventDefault();
-            alert('Password must be at least 8 characters long!');
-            return false;
-        }
-    });
+function togglePass(fieldId, btn) {
+    const field = document.getElementById(fieldId);
+    const icon = btn.querySelector('i');
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+        field.type = 'password';
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+}
+
+function checkStrength(val) {
+    const fill = document.getElementById('strengthFill');
+    const text = document.getElementById('strengthText');
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+
+    const levels = [
+        { pct: '0%', color: '', label: '' },
+        { pct: '25%', color: '#e74c3c', label: '⚠ Weak' },
+        { pct: '50%', color: '#f39c12', label: '▲ Fair' },
+        { pct: '75%', color: '#3498db', label: '✓ Good' },
+        { pct: '100%', color: '#27ae60', label: '✓ Strong' },
+    ];
+
+    fill.style.width = levels[score].pct;
+    fill.style.background = levels[score].color;
+    text.textContent = levels[score].label;
+    text.style.color = levels[score].color;
+}
+
+document.getElementById('password2Field').addEventListener('input', function() {
+    const p1 = document.getElementById('passwordField').value;
+    const hint = document.getElementById('matchHint');
+    if (this.value === '') { hint.textContent = ''; return; }
+    if (this.value === p1) {
+        hint.textContent = '✓ Passwords match';
+        hint.style.color = '#27ae60';
+    } else {
+        hint.textContent = '✗ Passwords do not match';
+        hint.style.color = '#e74c3c';
+    }
+});
+
+document.getElementById('registerForm').addEventListener('submit', function(e) {
+    const p1 = document.getElementById('passwordField').value;
+    const p2 = document.getElementById('password2Field').value;
+    if (p1 !== p2) { e.preventDefault(); alert('Passwords do not match!'); return; }
+    if (p1.length < 8) { e.preventDefault(); alert('Password must be at least 8 characters!'); return; }
+});
 </script>
 </body>
 </html>
