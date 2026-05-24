@@ -2383,7 +2383,7 @@ def contact_form_submit(request):
             # Validate required fields
             if not first_name or not last_name or not email or not message:
                 messages.error(request, 'Please fill in all required fields.')
-                return redirect('company_home') + '#contact'
+                return redirect('company_home')  # Remove the +#contact part
             
             # Prepare email content
             full_name = f"{first_name} {last_name}"
@@ -2423,7 +2423,7 @@ def contact_form_submit(request):
                 subject=subject,
                 message=plain_message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=['sah.sakhile@gmail.com'],  # Your email address
+                recipient_list=['sah.sakhile@gmail.com'],
                 html_message=html_message,
                 fail_silently=False
             )
@@ -2439,7 +2439,7 @@ def contact_form_submit(request):
                 <p style="background: #f5f5f5; padding: 15px; border-left: 4px solid #9f7734;">{message[:200]}{'...' if len(message) > 200 else ''}</p>
                 <p>In the meantime, you can:</p>
                 <ul>
-                    <li>Visit our <a href="https://yourdomain.com/lms/">LMS Portal</a> to explore available courses</li>
+                    <li>Visit our <a href="https://www.malitinne.co.za/lms/">LMS Portal</a> to explore available courses</li>
                     <li>Call us directly at 073 931 7923</li>
                 </ul>
                 <p>Best regards,<br>
@@ -2456,15 +2456,20 @@ def contact_form_submit(request):
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],
                 html_message=auto_reply_html,
-                fail_silently=True  # Don't break if auto-reply fails
+                fail_silently=True
             )
             
             messages.success(request, 'Thank you! Your message has been sent. We will contact you soon.')
             
         except Exception as e:
-            messages.error(request, f'An error occurred: {str(e)}')
+            # Log the error for debugging
+            print(f"Contact form error: {str(e)}")
+            messages.error(request, 'An error occurred. Please try again or call us directly at 073 931 7923.')
         
-        return redirect('company_home') + '#contact'
+        # Redirect with anchor to contact section
+        response = redirect('company_home')
+        response['Location'] += '#contact'
+        return response
     
     return redirect('company_home')
 
