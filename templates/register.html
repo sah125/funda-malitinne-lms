@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - Funda Malitinne LMS | Pending Approval</title>
+    <title>Register - Funda Malitinne LMS</title>
     <link rel="icon" type="image/x-icon" href="/static/Malitinne-logo-v.ico">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -20,7 +20,6 @@
             --border: #e8e8e8;
             --error: #e74c3c;
             --success: #27ae60;
-            --warning: #f39c12;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -316,7 +315,6 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            animation: slideDown 0.4s ease;
         }
 
         .alert-error, .alert-danger {
@@ -329,12 +327,6 @@
             background: #f0fdf4;
             color: var(--success);
             border-left: 4px solid var(--success);
-        }
-        
-        .alert-warning {
-            background: #fffbeb;
-            color: var(--warning);
-            border-left: 4px solid var(--warning);
         }
 
         /* Submit Button */
@@ -378,67 +370,6 @@
 
         .login-prompt a:hover { color: var(--gold-dark); }
 
-        /* Modal for verification / pending message */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(4px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            visibility: hidden;
-            opacity: 0;
-            transition: all 0.3s ease;
-        }
-        .modal-overlay.active {
-            visibility: visible;
-            opacity: 1;
-        }
-        .modal-card {
-            background: white;
-            max-width: 450px;
-            width: 90%;
-            border-radius: 24px;
-            padding: 28px;
-            text-align: center;
-            box-shadow: 0 30px 40px rgba(0,0,0,0.2);
-            transform: scale(0.95);
-            transition: transform 0.25s ease;
-        }
-        .modal-overlay.active .modal-card {
-            transform: scale(1);
-        }
-        .modal-icon {
-            font-size: 58px;
-            color: var(--gold);
-            margin-bottom: 16px;
-        }
-        .modal-card h3 {
-            font-family: 'Playfair Display', serif;
-            margin-bottom: 12px;
-            color: var(--navy);
-        }
-        .modal-card p {
-            color: var(--text);
-            line-height: 1.5;
-            margin-bottom: 20px;
-        }
-        .modal-btn {
-            background: var(--gold);
-            border: none;
-            padding: 10px 24px;
-            border-radius: 40px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            font-family: inherit;
-        }
-
         /* Animations */
         @keyframes fadeDown {
             from { opacity: 0; transform: translateY(-20px); }
@@ -447,11 +378,6 @@
 
         @keyframes fadeUp {
             from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -463,13 +389,6 @@
             .steps { gap: 0; }
             .step-line { width: 30px; }
         }
-        
-        .live-feedback {
-            font-size: 0.72rem;
-            margin-top: 4px;
-        }
-        .valid-email { color: var(--success); }
-        .invalid-email { color: var(--error); }
     </style>
 </head>
 <body>
@@ -478,7 +397,7 @@
 
     <!-- Header -->
     <div class="page-header">
-        <img src="/static/Malitinne-logo.png" alt="Malitinne Logo" onerror="this.src='https://via.placeholder.com/70x70?text=ML'">
+        <img src="/static/Malitinne-logo.png" alt="Malitinne Logo">
         <h1>Create Your Account</h1>
         <p>Join thousands of learners on the Funda Malitinne LMS</p>
     </div>
@@ -504,19 +423,24 @@
     <!-- Card -->
     <div class="card">
         <div class="card-top">
-            <i class="fas fa-user-shield"></i>
-            <h3>Admin Approval Required</h3>
+            <i class="fas fa-user-plus"></i>
+            <h3>Student Registration Form</h3>
         </div>
 
         <div class="card-body">
 
-            <!-- Live Message placeholder (simulated server side would be here but we use JS simulation) -->
-            <div id="dynamicAlert" style="display: none;"></div>
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        <i class="fas fa-{% if 'error' in message.tags %}exclamation-circle{% else %}check-circle{% endif %}"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
 
             <form method="POST" id="registerForm">
-                <!-- CSRF token placeholder for demonstration (static) -->
-                <input type="hidden" name="csrfmiddlewaretoken" value="simulated_token_for_demo">
-                
+                {% csrf_token %}
+
                 <!-- Account Information -->
                 <div class="section-title">
                     <i class="fas fa-lock"></i>
@@ -527,20 +451,17 @@
                     <div class="form-group">
                         <label class="required">Username</label>
                         <div class="input-wrapper">
-                            <input type="text" name="username" id="username" class="form-control" placeholder="Choose a username" required autocomplete="username">
+                            <input type="text" name="username" class="form-control" placeholder="Choose a username" required autocomplete="username">
                             <i class="fas fa-at field-icon"></i>
                         </div>
-                        <div class="live-feedback" id="usernameFeedback"></div>
                     </div>
 
                     <div class="form-group">
-                        <label class="required">Email Address (Working Email Only)</label>
+                        <label class="required">Email Address</label>
                         <div class="input-wrapper">
-                            <input type="email" name="email" id="emailField" class="form-control" placeholder="your@working-domain.com" required autocomplete="email">
+                            <input type="email" name="email" class="form-control" placeholder="your@email.com" required autocomplete="email">
                             <i class="fas fa-envelope field-icon"></i>
                         </div>
-                        <div class="live-feedback" id="emailFeedback"></div>
-                        <span class="form-hint">We only accept valid, reachable email addresses. A verification code will be sent.</span>
                     </div>
 
                     <div class="form-group">
@@ -583,7 +504,7 @@
                     <div class="form-group span-2">
                         <label class="required">Full Name</label>
                         <div class="input-wrapper">
-                            <input type="text" name="full_name" id="fullName" class="form-control" placeholder="First and Last Name" required>
+                            <input type="text" name="full_name" class="form-control" placeholder="First and Last Name" required>
                             <i class="fas fa-user field-icon"></i>
                         </div>
                     </div>
@@ -661,22 +582,22 @@
 
                 <div class="section-divider"></div>
 
-                <!-- Enhanced Info Box explaining approval & email verification -->
+                <!-- Info Box -->
                 <div class="info-box">
                     <i class="fas fa-shield-alt"></i>
                     <p>
-                        <strong>🔐 Admin Approval & Email Verification:</strong> Your account will be <strong>inactive until approved</strong> by an administrator. Additionally, we verify working emails: a <strong>confirmation link</strong> will be sent to your email. Both email verification and admin approval are required before you can log in. Your data is protected under <strong>POPIA</strong>.
+                        <strong>Registration Approval Required:</strong> Your account will be reviewed by an administrator before you can access courses. You will receive an email notification at the address provided once your registration has been approved. Your personal information is protected under <strong>POPIA</strong>.
                     </p>
                 </div>
 
                 <button type="submit" class="btn-submit">
-                    <i class="fas fa-paper-plane"></i> &nbsp; Request Approval & Register
+                    <i class="fas fa-paper-plane"></i> &nbsp; Submit Registration
                 </button>
 
             </form>
 
             <div class="login-prompt">
-                Already have an approved account? <a href="{% url 'login' %}" onclick="return false;">Sign in here</a> (demo link)
+                Already have an account? <a href="{% url 'login' %}">Sign in here</a>
             </div>
 
         </div>
@@ -684,227 +605,61 @@
 
 </div>
 
-<!-- Modal for registration success + pending approval message -->
-<div id="approvalModal" class="modal-overlay">
-    <div class="modal-card">
-        <div class="modal-icon"><i class="fas fa-clock"></i></div>
-        <h3>Registration Received — Awaiting Approval</h3>
-        <p>Thank you for registering! <strong>Your account is pending administrator approval.</strong> You will receive an email notification at your <strong>working email address</strong> once verified and approved. Meanwhile, you cannot log in.</p>
-        <button class="modal-btn" id="closeModalBtn">Got it, thank you</button>
-    </div>
-</div>
-
 <script>
-    // ---------- UTILITY ----------
-    function togglePass(fieldId, btn) {
-        const field = document.getElementById(fieldId);
-        const icon = btn.querySelector('i');
-        if (field.type === 'password') {
-            field.type = 'text';
-            icon.classList.replace('fa-eye', 'fa-eye-slash');
-        } else {
-            field.type = 'password';
-            icon.classList.replace('fa-eye-slash', 'fa-eye');
-        }
+function togglePass(fieldId, btn) {
+    const field = document.getElementById(fieldId);
+    const icon = btn.querySelector('i');
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+        field.type = 'password';
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
     }
+}
 
-    function checkStrength(val) {
-        const fill = document.getElementById('strengthFill');
-        const text = document.getElementById('strengthText');
-        let score = 0;
-        if (val.length >= 8) score++;
-        if (/[A-Z]/.test(val)) score++;
-        if (/[0-9]/.test(val)) score++;
-        if (/[^A-Za-z0-9]/.test(val)) score++;
+function checkStrength(val) {
+    const fill = document.getElementById('strengthFill');
+    const text = document.getElementById('strengthText');
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
 
-        const levels = [
-            { pct: '0%', color: '', label: '' },
-            { pct: '25%', color: '#e74c3c', label: '⚠ Weak' },
-            { pct: '50%', color: '#f39c12', label: '▲ Fair' },
-            { pct: '75%', color: '#3498db', label: '✓ Good' },
-            { pct: '100%', color: '#27ae60', label: '✓ Strong' },
-        ];
+    const levels = [
+        { pct: '0%', color: '', label: '' },
+        { pct: '25%', color: '#e74c3c', label: '⚠ Weak' },
+        { pct: '50%', color: '#f39c12', label: '▲ Fair' },
+        { pct: '75%', color: '#3498db', label: '✓ Good' },
+        { pct: '100%', color: '#27ae60', label: '✓ Strong' },
+    ];
 
-        fill.style.width = levels[score].pct;
-        fill.style.background = levels[score].color;
-        text.textContent = levels[score].label;
-        text.style.color = levels[score].color;
+    fill.style.width = levels[score].pct;
+    fill.style.background = levels[score].color;
+    text.textContent = levels[score].label;
+    text.style.color = levels[score].color;
+}
+
+document.getElementById('password2Field').addEventListener('input', function() {
+    const p1 = document.getElementById('passwordField').value;
+    const hint = document.getElementById('matchHint');
+    if (this.value === '') { hint.textContent = ''; return; }
+    if (this.value === p1) {
+        hint.textContent = '✓ Passwords match';
+        hint.style.color = '#27ae60';
+    } else {
+        hint.textContent = '✗ Passwords do not match';
+        hint.style.color = '#e74c3c';
     }
+});
 
-    // ----- Email domain validation for "working emails only" (realistic filter) -----
-    function isValidWorkingEmail(email) {
-        if (!email) return false;
-        // Basic regex for email format
-        const emailRegex = /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/;
-        if (!emailRegex.test(email)) return false;
-        
-        // Disallow common disposable/temporary email domains to ensure "working emails only"
-        const disposableDomains = [
-            'mailinator.com', 'guerrillamail.com', 'guerrillamail.net', 'guerrillamail.org',
-            'tempmail.com', '10minutemail.com', 'throwawaymail.com', 'yopmail.com',
-            'sharklasers.com', 'temp-mail.org', 'mail-temp.com', 'fakeinbox.com',
-            'getnada.com', 'mintemail.com', 'trashmail.com', 'spam4.me', 'tempinbox.co'
-        ];
-        const domain = email.split('@')[1].toLowerCase();
-        if (disposableDomains.includes(domain)) return false;
-        
-        // Also reject obvious invalid or test-like domains often not working
-        if (domain.includes('test') || domain.includes('example') || domain === 'localhost') return false;
-        
-        return true;
-    }
-
-    // Real-time email feedback
-    const emailInput = document.getElementById('emailField');
-    const emailFeedback = document.getElementById('emailFeedback');
-    
-    function updateEmailFeedback() {
-        const email = emailInput.value.trim();
-        if (email === "") {
-            emailFeedback.innerHTML = "";
-            return;
-        }
-        if (isValidWorkingEmail(email)) {
-            emailFeedback.innerHTML = '<i class="fas fa-check-circle"></i> <span class="valid-email">✓ Valid working email (non-disposable)</span>';
-        } else {
-            emailFeedback.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span class="invalid-email">✗ Invalid or disposable email. Use a real working email.</span>';
-        }
-    }
-    
-    emailInput.addEventListener('input', updateEmailFeedback);
-    
-    // Username availability simulation (frontend uniqueness check)
-    const usernameInput = document.getElementById('username');
-    const usernameFeedback = document.getElementById('usernameFeedback');
-    const existingUsernames = ['admin', 'testuser', 'john_doe']; // mock existing
-    function checkUsername() {
-        const val = usernameInput.value.trim();
-        if (val.length < 3 && val.length > 0) {
-            usernameFeedback.innerHTML = '<span style="color:#e74c3c;">⚠ Username too short (min 3 chars)</span>';
-            return false;
-        }
-        if (existingUsernames.includes(val.toLowerCase())) {
-            usernameFeedback.innerHTML = '<span style="color:#e74c3c;"><i class="fas fa-user-slash"></i> Username already taken</span>';
-            return false;
-        }
-        if (val.length >= 3) {
-            usernameFeedback.innerHTML = '<span style="color:#27ae60;"><i class="fas fa-check"></i> Username available</span>';
-            return true;
-        }
-        usernameFeedback.innerHTML = '';
-        return false;
-    }
-    usernameInput.addEventListener('input', checkUsername);
-    
-    // Password match confirmation
-    document.getElementById('password2Field').addEventListener('input', function() {
-        const p1 = document.getElementById('passwordField').value;
-        const hint = document.getElementById('matchHint');
-        if (this.value === '') { hint.textContent = ''; return; }
-        if (this.value === p1) {
-            hint.textContent = '✓ Passwords match';
-            hint.style.color = '#27ae60';
-        } else {
-            hint.textContent = '✗ Passwords do not match';
-            hint.style.color = '#e74c3c';
-        }
-    });
-    
-    // Form submission - prevent default, simulate backend with approval + email validation + pending state
-    const form = document.getElementById('registerForm');
-    const modal = document.getElementById('approvalModal');
-    const closeModal = document.getElementById('closeModalBtn');
-    
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Gather fields
-        const username = usernameInput.value.trim();
-        const email = emailInput.value.trim();
-        const password = document.getElementById('passwordField').value;
-        const password2 = document.getElementById('password2Field').value;
-        const fullName = document.getElementById('fullName').value.trim();
-        const idNumber = document.querySelector('input[name="id_number"]').value.trim();
-        const dob = document.querySelector('input[name="date_of_birth"]').value;
-        const gender = document.querySelector('select[name="gender"]').value;
-        const nationality = document.querySelector('input[name="nationality"]').value.trim();
-        const contact = document.querySelector('input[name="contact_number"]').value.trim();
-        
-        // Validation rules: working email, password match, length, required fields
-        if (!username || username.length < 3) {
-            alert("Username must be at least 3 characters.");
-            return;
-        }
-        if (existingUsernames.includes(username.toLowerCase())) {
-            alert("Username already taken. Please choose another.");
-            return;
-        }
-        
-        if (!isValidWorkingEmail(email)) {
-            alert("Please provide a valid working email address. Disposable/temporary emails are not accepted.");
-            return;
-        }
-        
-        if (password.length < 8) {
-            alert("Password must be at least 8 characters.");
-            return;
-        }
-        if (password !== password2) {
-            alert("Passwords do not match.");
-            return;
-        }
-        
-        if (!fullName || !idNumber || !dob || !gender || !nationality || !contact) {
-            alert("Please fill all required personal details.");
-            return;
-        }
-        
-        // --- Simulate registration with approval requirement & email verification queue ---
-        // Here we would typically send a POST request to Django backend.
-        // For demo purposes: simulate saving to localStorage pending users (to mimic approval lock)
-        const pendingUser = {
-            username: username,
-            email: email,
-            fullName: fullName,
-            registeredAt: new Date().toISOString(),
-            approved: false,
-            emailVerified: false  // second layer of security
-        };
-        
-        // Store in localStorage to mimic pending approval list (so they cannot login)
-        let pendingDB = JSON.parse(localStorage.getItem('lms_pending_approvals') || '[]');
-        const alreadyExists = pendingDB.some(u => u.email === email || u.username === username);
-        if (alreadyExists) {
-            alert("A registration with this email or username is already pending approval. Please wait.");
-            return;
-        }
-        pendingDB.push(pendingUser);
-        localStorage.setItem('lms_pending_approvals', JSON.stringify(pendingDB));
-        
-        // Additionally block login simulation: we would have a flag in the main user table.
-        // Show modal: Inform user that account requires admin approval and working email verification.
-        modal.classList.add('active');
-        
-        // Reset form (optional)
-        form.reset();
-        document.getElementById('strengthFill').style.width = '0%';
-        document.getElementById('strengthText').textContent = '';
-        document.getElementById('matchHint').textContent = '';
-        emailFeedback.innerHTML = '';
-        usernameFeedback.innerHTML = '';
-    });
-    
-    closeModal.addEventListener('click', function() {
-        modal.classList.remove('active');
-        // optional redirect to login page simulation
-        // window.location.href = "/login";
-    });
-    
-    // Additional: If the user tries to login they'd be blocked because we store pending without approval flag.
-    // Clean and robust demonstration
-    
-    // Also add minor extra: prefill existing test simulation
-    console.log("Registration approval system active. Users cannot login without admin approval AND working email verification (blocked by disposable email check).");
+document.getElementById('registerForm').addEventListener('submit', function(e) {
+    const p1 = document.getElementById('passwordField').value;
+    const p2 = document.getElementById('password2Field').value;
+    if (p1 !== p2) { e.preventDefault(); alert('Passwords do not match!'); return; }
+    if (p1.length < 8) { e.preventDefault(); alert('Password must be at least 8 characters!'); return; }
+});
 </script>
 </body>
 </html>
