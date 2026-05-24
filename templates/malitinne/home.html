@@ -1,70 +1,775 @@
 {% extends 'malitinne/base.html' %}
 
 {% block content %}
-<!-- Hero Section -->
-<section id="home" class="hero">
+<style>
+    /* ===== HERO ===== */
+    .hero {
+        min-height: 100vh;
+        background: #0D1B2A;
+        display: flex;
+        align-items: center;
+        padding-top: 80px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(circle at 65% 50%, rgba(159,119,52,0.2) 0%, transparent 55%),
+            radial-gradient(circle at 10% 80%, rgba(159,119,52,0.1) 0%, transparent 45%);
+    }
+
+    .hero-grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+            linear-gradient(rgba(159,119,52,0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(159,119,52,0.05) 1px, transparent 1px);
+        background-size: 55px 55px;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(159,119,52,0.15);
+        border: 1px solid rgba(159,119,52,0.4);
+        color: #C49A2A;
+        padding: 8px 18px;
+        border-radius: 100px;
+        font-size: 13px;
+        font-weight: 500;
+        margin-bottom: 24px;
+    }
+
+    .hero-badge-dot {
+        width: 7px; height: 7px;
+        background: #C49A2A;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(1.4); }
+    }
+
+    .hero h1 {
+        font-size: clamp(2.2rem, 5vw, 4rem);
+        font-weight: 800;
+        color: #ffffff;
+        line-height: 1.1;
+        margin-bottom: 20px;
+    }
+
+    .hero h1 span { color: #C49A2A; display: block; }
+
+    .hero-desc {
+        font-size: 1.1rem;
+        color: rgba(255,255,255,0.7);
+        line-height: 1.8;
+        margin-bottom: 36px;
+        max-width: 520px;
+    }
+
+    .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+
+    .btn-hero-primary {
+        background: #9f7734;
+        color: white;
+        padding: 14px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 15px;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: inline-block;
+    }
+
+    .btn-hero-primary:hover {
+        background: #C49A2A;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .btn-hero-outline {
+        border: 1.5px solid rgba(159,119,52,0.5);
+        color: rgba(255,255,255,0.85);
+        padding: 14px 30px;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 15px;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: inline-block;
+    }
+
+    .btn-hero-outline:hover {
+        border-color: #C49A2A;
+        color: #C49A2A;
+    }
+
+    /* Hero stat cards */
+    .hero-stats-col {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        align-items: center;
+    }
+
+    .hero-stat-card {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(159,119,52,0.25);
+        border-radius: 14px;
+        padding: 22px 28px;
+        text-align: center;
+        width: 100%;
+        max-width: 200px;
+        backdrop-filter: blur(4px);
+    }
+
+    .hero-stat-num {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #C49A2A;
+        line-height: 1;
+    }
+
+    .hero-stat-label {
+        font-size: 11px;
+        color: rgba(255,255,255,0.55);
+        margin-top: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+    }
+
+    /* ===== SECTION BASE ===== */
+    .m-section { padding: 90px 0; }
+
+    .m-label {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 2.5px;
+        text-transform: uppercase;
+        color: #9f7734;
+        margin-bottom: 12px;
+    }
+
+    .m-title {
+        font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+        font-weight: 800;
+        color: #0D1B2A;
+        line-height: 1.2;
+        margin-bottom: 16px;
+    }
+
+    .m-subtitle {
+        font-size: 16px;
+        color: #555;
+        line-height: 1.75;
+        max-width: 540px;
+    }
+
+    /* ===== ABOUT ===== */
+    .about-dark-card {
+        background: #0D1B2A;
+        border-radius: 18px;
+        padding: 44px 40px;
+        color: white;
+        height: 100%;
+    }
+
+    .about-dark-card h3 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #C49A2A;
+        margin-bottom: 16px;
+    }
+
+    .about-dark-card p {
+        font-size: 15px;
+        line-height: 1.8;
+        color: rgba(255,255,255,0.72);
+        margin-bottom: 14px;
+    }
+
+    .value-item {
+        background: white;
+        border-radius: 10px;
+        padding: 18px 20px;
+        border-left: 3px solid #9f7734;
+        margin-bottom: 14px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+
+    .value-item h5 {
+        font-size: 14px;
+        font-weight: 700;
+        color: #0D1B2A;
+        margin-bottom: 4px;
+    }
+
+    .value-item p {
+        font-size: 13px;
+        color: #666;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    /* ===== VISION/MISSION ===== */
+    .vm-section { background: white; padding: 80px 0; }
+
+    .vm-card {
+        border-radius: 18px;
+        padding: 40px 36px;
+        height: 100%;
+    }
+
+    .vm-vision {
+        background: #0D1B2A;
+        color: white;
+    }
+
+    .vm-mission {
+        background: #FBF3E8;
+        border: 1px solid rgba(159,119,52,0.2);
+    }
+
+    .vm-type {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 14px;
+    }
+
+    .vm-vision .vm-type { color: #C49A2A; }
+    .vm-mission .vm-type { color: #9f7734; }
+
+    .vm-card h3 {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin-bottom: 14px;
+    }
+
+    .vm-vision h3 { color: white; }
+    .vm-mission h3 { color: #0D1B2A; }
+
+    .vm-card p { font-size: 15px; line-height: 1.8; }
+    .vm-vision p { color: rgba(255,255,255,0.72); }
+    .vm-mission p { color: #555; }
+
+    /* ===== SERVICES ===== */
+    .services-section { background: #f8f9fa; padding: 90px 0; }
+
+    .service-card-new {
+        background: white;
+        border-radius: 16px;
+        padding: 32px 28px;
+        border: 1px solid rgba(159,119,52,0.12);
+        transition: all 0.25s;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .service-card-new::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #9f7734, #C49A2A);
+        opacity: 0;
+        transition: opacity 0.25s;
+    }
+
+    .service-card-new:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        border-color: rgba(159,119,52,0.3);
+    }
+
+    .service-card-new:hover::before { opacity: 1; }
+
+    .service-icon-new {
+        width: 56px; height: 56px;
+        background: #FBF3E8;
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 20px;
+        font-size: 22px;
+        color: #9f7734;
+    }
+
+    .service-card-new h4 {
+        font-size: 17px;
+        font-weight: 700;
+        color: #0D1B2A;
+        margin-bottom: 10px;
+    }
+
+    .service-card-new p {
+        font-size: 14px;
+        color: #666;
+        line-height: 1.7;
+        margin-bottom: 14px;
+    }
+
+    .service-card-new ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .service-card-new ul li {
+        font-size: 13px;
+        color: #666;
+        padding: 4px 0 4px 16px;
+        position: relative;
+    }
+
+    .service-card-new ul li::before {
+        content: '›';
+        position: absolute;
+        left: 0;
+        color: #9f7734;
+        font-weight: 700;
+        font-size: 15px;
+    }
+
+    /* ===== STATS ===== */
+    .stats-dark { background: #0D1B2A; padding: 70px 0; }
+
+    .stat-item { text-align: center; }
+
+    .stat-big-num {
+        font-size: 2.8rem;
+        font-weight: 800;
+        color: #C49A2A;
+        line-height: 1;
+        margin-bottom: 8px;
+    }
+
+    .stat-big-label {
+        font-size: 14px;
+        color: rgba(255,255,255,0.6);
+    }
+
+    /* ===== ACCREDITATIONS ===== */
+    .accred-section { background: white; padding: 90px 0; }
+
+    .accred-card {
+        background: #0D1B2A;
+        border: 1px solid rgba(159,119,52,0.25);
+        border-radius: 14px;
+        padding: 24px 20px;
+        text-align: center;
+        transition: transform 0.2s;
+    }
+
+    .accred-card:hover { transform: translateY(-3px); }
+
+    .accred-name {
+        font-size: 17px;
+        font-weight: 700;
+        color: #C49A2A;
+        margin-bottom: 8px;
+    }
+
+    .accred-desc {
+        font-size: 12px;
+        color: rgba(255,255,255,0.5);
+        line-height: 1.5;
+    }
+
+    /* ===== IMPACT ===== */
+    .impact-section { background: #f8f9fa; padding: 90px 0; }
+
+    .impact-num-card {
+        background: white;
+        border-radius: 14px;
+        padding: 28px 24px;
+        border: 1px solid rgba(159,119,52,0.1);
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .impact-num-card .big { 
+        font-size: 2.4rem; 
+        font-weight: 800; 
+        color: #9f7734; 
+        line-height: 1; 
+        margin-bottom: 8px;
+    }
+
+    .impact-num-card .lbl {
+        font-size: 13px;
+        color: #666;
+        line-height: 1.4;
+    }
+
+    .outcome-card {
+        background: white;
+        border-radius: 14px;
+        padding: 26px 22px;
+        border: 1px solid rgba(0,0,0,0.06);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        transition: transform 0.2s;
+    }
+
+    .outcome-card:hover { transform: translateY(-3px); }
+
+    .outcome-icon { font-size: 26px; margin-bottom: 12px; }
+
+    .outcome-card h5 {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0D1B2A;
+        margin-bottom: 8px;
+    }
+
+    .outcome-card p {
+        font-size: 13px;
+        color: #666;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    /* ===== CLIENTS ===== */
+    .clients-section { background: white; padding: 90px 0; }
+
+    .client-pill {
+        background: #f8f9fa;
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 12px;
+        padding: 18px 14px;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 600;
+        color: #0D1B2A;
+        transition: all 0.2s;
+        cursor: default;
+    }
+
+    .client-pill:hover {
+        border-color: #9f7734;
+        background: #FBF3E8;
+    }
+
+    .client-pill small {
+        display: block;
+        font-weight: 400;
+        font-size: 11px;
+        color: #888;
+        margin-top: 5px;
+    }
+
+    /* ===== GOLD BANNER ===== */
+    .gold-banner {
+        background: #9f7734;
+        padding: 56px 0;
+    }
+
+    .gold-banner h2 {
+        font-size: clamp(1.4rem, 3vw, 2rem);
+        font-weight: 800;
+        color: white;
+    }
+
+    .gold-banner p {
+        color: rgba(255,255,255,0.85);
+        font-size: 15px;
+        margin-top: 8px;
+    }
+
+    .btn-white {
+        background: white;
+        color: #7a5828;
+        padding: 14px 30px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 15px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .btn-white:hover {
+        background: #FBF3E8;
+        color: #7a5828;
+        transform: translateY(-2px);
+    }
+
+    /* ===== FOUNDER ===== */
+    .founder-section { background: #0D1B2A; padding: 90px 0; }
+
+    .founder-card {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(159,119,52,0.3);
+        border-radius: 20px;
+        padding: 40px 32px;
+        text-align: center;
+    }
+
+    .founder-avatar {
+        width: 110px; height: 110px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #9f7734, #C49A2A);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 36px;
+        font-weight: 800;
+        color: white;
+        margin: 0 auto 18px;
+    }
+
+    .founder-card h3 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 4px;
+    }
+
+    .founder-title { font-size: 13px; color: #C49A2A; margin-bottom: 18px; }
+
+    .founder-quote {
+        font-size: 14px;
+        color: rgba(255,255,255,0.62);
+        line-height: 1.7;
+        font-style: italic;
+    }
+
+    .founder-text { color: rgba(255,255,255,0.72); font-size: 15px; line-height: 1.8; }
+
+    .founder-highlight {
+        background: rgba(159,119,52,0.12);
+        border-left: 3px solid #C49A2A;
+        padding: 20px 22px;
+        border-radius: 0 10px 10px 0;
+        margin-top: 24px;
+    }
+
+    .founder-highlight p {
+        font-size: 14px;
+        color: rgba(255,255,255,0.8);
+        font-style: italic;
+        margin: 0;
+        line-height: 1.7;
+    }
+
+    /* ===== CONTACT ===== */
+    .contact-section { background: #f8f9fa; padding: 90px 0; }
+
+    .contact-icon-box {
+        width: 46px; height: 46px;
+        background: #9f7734;
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        color: white;
+        flex-shrink: 0;
+        font-size: 18px;
+    }
+
+    .contact-form-card {
+        background: white;
+        border-radius: 18px;
+        padding: 40px 36px;
+        box-shadow: 0 5px 30px rgba(0,0,0,0.08);
+    }
+
+    .contact-form-card h4 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #0D1B2A;
+        margin-bottom: 26px;
+    }
+
+    .form-control, .form-select {
+        border: 1px solid rgba(0,0,0,0.12);
+        border-radius: 8px;
+        padding: 11px 14px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #9f7734;
+        box-shadow: none;
+    }
+
+    .btn-form-submit {
+        width: 100%;
+        background: #9f7734;
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 15px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-form-submit:hover { background: #7a5828; }
+
+    /* ===== LMS COURSES ===== */
+    .courses-section { background: white; padding: 90px 0; }
+
+    .course-card-new {
+        background: #f8f9fa;
+        border-radius: 14px;
+        padding: 0;
+        overflow: hidden;
+        border: 1px solid rgba(0,0,0,0.07);
+        transition: all 0.25s;
+        height: 100%;
+    }
+
+    .course-card-new:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    }
+
+    .course-card-img {
+        height: 150px;
+        background: linear-gradient(135deg, #FBF3E8 0%, rgba(159,119,52,0.25) 100%);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 3rem;
+        color: #9f7734;
+    }
+
+    .course-card-body { padding: 22px 20px; }
+
+    .course-card-body h5 {
+        font-size: 16px;
+        font-weight: 700;
+        color: #0D1B2A;
+        margin-bottom: 8px;
+    }
+
+    .course-card-body p {
+        font-size: 13px;
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 14px;
+    }
+
+    .course-card-footer {
+        padding: 14px 20px;
+        border-top: 1px solid rgba(0,0,0,0.07);
+        background: white;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 991px) {
+        .hero-stats-col { display: none !important; }
+        .hero { padding-bottom: 60px; }
+    }
+
+    @media (max-width: 768px) {
+        .m-section, .services-section, .accred-section,
+        .impact-section, .clients-section, .founder-section,
+        .contact-section, .courses-section, .vm-section { padding: 60px 0; }
+    }
+</style>
+
+<!-- ====== HERO ====== -->
+<section class="hero">
+    <div class="hero-grid"></div>
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-lg-6">
-                <h1>Empowering South Africa Through Skills Development</h1>
-                <p>Malitinne is a black-women owned Human Capital Development company providing holistic turnkey skills development and training solutions.</p>
-                <a href="/lms/" class="btn btn-lms btn-lg">Access LMS Portal →</a>
+            <div class="col-lg-7 hero-content">
+                <div class="hero-badge">
+                    <span class="hero-badge-dot"></span>
+                    Black-Women Owned · Durban, South Africa
+                </div>
+                <h1>
+                    Empowering South Africa
+                    <span>Through Skills Development</span>
+                </h1>
+                <p class="hero-desc">
+                    Malitinne is a Human Capital Development company providing holistic turnkey skills development, training, placements and project management — grooming human capital for the workplace.
+                </p>
+                <div class="hero-actions">
+                    <a href="{% url 'lms_portal' %}" class="btn-hero-primary">Access LMS Portal →</a>
+                    <a href="#contact" class="btn-hero-outline">Partner With Us</a>
+                </div>
             </div>
-            <div class="col-lg-6">
-                <div class="text-center">
-                    <i class="fas fa-chalkboard-user fa-5x" style="color: #9f7734;"></i>
+            <div class="col-lg-5 d-none d-lg-flex justify-content-center">
+                <div class="hero-stats-col">
+                    <div class="hero-stat-card">
+                        <div class="hero-stat-num">10,000+</div>
+                        <div class="hero-stat-label">Graduates Placed</div>
+                    </div>
+                    <div class="hero-stat-card">
+                        <div class="hero-stat-num">2,850+</div>
+                        <div class="hero-stat-label">Workplace Partners</div>
+                    </div>
+                    <div class="hero-stat-card">
+                        <div class="hero-stat-num">8+</div>
+                        <div class="hero-stat-label">SETA Accreditations</div>
+                    </div>
+                    <div class="hero-stat-card">
+                        <div class="hero-stat-num">10+</div>
+                        <div class="hero-stat-label">Years Experience</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- About Section -->
-<section id="about" class="section">
+<!-- ====== ABOUT ====== -->
+<section id="about" class="m-section" style="background: #FAF8F3;">
     <div class="container">
-        <div class="row">
-            <div class="col-lg-6 mb-4">
-                <h2>About Malitinne</h2>
-                <p>Malitinne is a South African black-women owned Human Capital Development company. Our roots are in placement of learners in apprenticeship programmes. However, we have grown to offer holistic turnkey skills development and training solutions.</p>
-                <p>We are accredited with several SETAs for learnerships and short-skills programmes. Malitinne also offers non-accredited training programmes such as workplace readiness, etiquette and emotional intelligence.</p>
-                <a href="#" class="btn btn-outline-primary mt-3">Learn More</a>
+        <div class="row g-5 align-items-center">
+            <div class="col-lg-5">
+                <div class="about-dark-card">
+                    <h3>A Consulting Partner That Pays Attention to Your Exact Needs</h3>
+                    <p>Malitinne is a South African black-women owned Human Capital Development company. We provide holistic turnkey skills development and training solutions, accredited with several SETAs for learnerships and short-skills programmes.</p>
+                    <p>We embed ourselves to become part of our client's business — helping people improve their productivity and contributing to economic growth across South Africa.</p>
+                </div>
             </div>
-            <div class="col-lg-6">
-                <div class="row">
-                    <div class="col-6 mb-4">
-                        <div class="service-card">
-                            <div class="service-icon mx-auto">
-                                <i class="fas fa-graduation-cap"></i>
-                            </div>
-                            <h5>10,000+</h5>
-                            <p>Graduates Placed</p>
+            <div class="col-lg-7">
+                <div class="m-label">Who We Are</div>
+                <div class="m-title">Grooming Human Capital for the Workplace</div>
+                <p class="m-subtitle">Solution-driven with customised programs to address human capital development, equipping your employees with the right tools to perform optimally.</p>
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="value-item">
+                            <h5><i class="fas fa-heart me-2" style="color:#9f7734;"></i>Compassion</h5>
+                            <p>We care and express this through every stakeholder interaction.</p>
+                        </div>
+                        <div class="value-item">
+                            <h5><i class="fas fa-handshake me-2" style="color:#9f7734;"></i>Integrity</h5>
+                            <p>Highest standards of professional ethics, honesty and trust.</p>
+                        </div>
+                        <div class="value-item">
+                            <h5><i class="fas fa-users me-2" style="color:#9f7734;"></i>Collaboration</h5>
+                            <p>We work as a team, sharing knowledge for continuous improvement.</p>
                         </div>
                     </div>
-                    <div class="col-6 mb-4">
-                        <div class="service-card">
-                            <div class="service-icon mx-auto">
-                                <i class="fas fa-building"></i>
-                            </div>
-                            <h5>2,850+</h5>
-                            <p>Workplace Partners</p>
+                    <div class="col-md-6">
+                        <div class="value-item">
+                            <h5><i class="fas fa-bolt me-2" style="color:#9f7734;"></i>Empowerment</h5>
+                            <p>Delivering operational excellence through innovation at all levels.</p>
                         </div>
-                    </div>
-                    <div class="col-6 mb-4">
-                        <div class="service-card">
-                            <div class="service-icon mx-auto">
-                                <i class="fas fa-certificate"></i>
-                            </div>
-                            <h5>15+</h5>
-                            <p>SETA Accreditations</p>
+                        <div class="value-item">
+                            <h5><i class="fas fa-balance-scale me-2" style="color:#9f7734;"></i>Respect</h5>
+                            <p>Everyone treated with uncompromising civility and fairness.</p>
                         </div>
-                    </div>
-                    <div class="col-6 mb-4">
-                        <div class="service-card">
-                            <div class="service-icon mx-auto">
-                                <i class="fas fa-chalkboard-user"></i>
-                            </div>
-                            <h5>50+</h5>
-                            <p>Training Programmes</p>
+                        <div class="value-item">
+                            <h5><i class="fas fa-check-circle me-2" style="color:#9f7734;"></i>Responsibility</h5>
+                            <p>Fulfilling commitments with urgency and accountability.</p>
                         </div>
                     </div>
                 </div>
@@ -73,135 +778,440 @@
     </div>
 </section>
 
-<!-- Our Values -->
-<section class="section" style="background: #f8f9fa;">
+<!-- ====== VISION / MISSION ====== -->
+<section class="vm-section">
     <div class="container">
-        <div class="section-title">
-            <h2>Our Values</h2>
+        <div class="text-center mb-5">
+            <div class="m-label">Our Direction</div>
+            <div class="m-title">Vision & Mission</div>
         </div>
-        <div class="row">
-            <div class="col-md-4 mb-4">
-                <div class="value-card">
-                    <div class="value-icon mx-auto">
-                        <i class="fas fa-heart"></i>
-                    </div>
-                    <h5>Compassion</h5>
-                    <p>We care and express this through our dealings with all our stakeholders</p>
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="vm-card vm-vision">
+                    <div class="vm-type">Vision</div>
+                    <h3>Bridging Available and Required Skills</h3>
+                    <p>To improve competencies across Africa by connecting the skills job seekers have with those required by industry — building a stronger, more capable continent.</p>
                 </div>
             </div>
-            <div class="col-md-4 mb-4">
-                <div class="value-card">
-                    <div class="value-icon mx-auto">
-                        <i class="fas fa-handshake"></i>
-                    </div>
-                    <h5>Integrity</h5>
-                    <p>We embrace and uphold the highest standards of personal and professional ethics</p>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="value-card">
-                    <div class="value-icon mx-auto">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <h5>Collaboration</h5>
-                    <p>We work as a team and share knowledge for continuous improvement</p>
+            <div class="col-md-6">
+                <div class="vm-card vm-mission">
+                    <div class="vm-type">Mission</div>
+                    <h3>Build Enduring Relationships</h3>
+                    <p>Through delivery of aligned and responsive skills development and training services aimed at eradicating unemployment and creating meaningful, lasting livelihoods across South Africa.</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Services Section -->
-<section id="services" class="section">
+<!-- ====== SERVICES ====== -->
+<section id="services" class="services-section">
     <div class="container">
-        <div class="section-title">
-            <h2>Our Core Services</h2>
+        <div class="row mb-5">
+            <div class="col-md-6">
+                <div class="m-label">What We Do</div>
+                <div class="m-title">Comprehensive Human Capital Solutions</div>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+                <p class="m-subtitle">From learnership management to CSR consulting — end-to-end solutions tailored to micro enterprises and large corporates alike.</p>
+            </div>
         </div>
-        <div class="row">
-            <div class="col-md-4 mb-4">
-                <div class="service-card">
-                    <div class="service-icon mx-auto">
-                        <i class="fas fa-chalkboard"></i>
-                    </div>
-                    <h5>Skills Development & Training</h5>
-                    <p>Accredited training programmes and learnerships across multiple SETAs</p>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="service-card-new">
+                    <div class="service-icon-new"><i class="fas fa-graduation-cap"></i></div>
+                    <h4>Skills Development & Training</h4>
+                    <p>Accredited short-skills programmes and learnerships across multiple SETAs, facilitated by subject matter experts.</p>
+                    <ul>
+                        <li>Learnerships & Apprenticeships</li>
+                        <li>Health & Safety Training</li>
+                        <li>Basic First Aid (Level 1–4)</li>
+                        <li>Workplace Preparedness</li>
+                    </ul>
                 </div>
             </div>
-            <div class="col-md-4 mb-4">
-                <div class="service-card">
-                    <div class="service-icon mx-auto">
-                        <i class="fas fa-briefcase"></i>
-                    </div>
-                    <h5>Workplace Placements</h5>
-                    <p>Experiential training placements for graduates and undergraduates</p>
+            <div class="col-md-4">
+                <div class="service-card-new">
+                    <div class="service-icon-new"><i class="fas fa-briefcase"></i></div>
+                    <h4>Career Guidance & Placements</h4>
+                    <p>Connecting graduates, TVET learners and undergraduates with meaningful workplace opportunities.</p>
+                    <ul>
+                        <li>Graduate & TVET Placements</li>
+                        <li>Internship Programmes</li>
+                        <li>HET / WIL Placements</li>
+                        <li>Mentoring & Coaching</li>
+                    </ul>
                 </div>
             </div>
-            <div class="col-md-4 mb-4">
-                <div class="service-card">
-                    <div class="service-icon mx-auto">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <h5>Project Management</h5>
-                    <p>End-to-end management of skills development projects</p>
+            <div class="col-md-4">
+                <div class="service-card-new">
+                    <div class="service-icon-new"><i class="fas fa-chart-line"></i></div>
+                    <h4>Project Management</h4>
+                    <p>End-to-end management of skills development projects ensuring compliance and maximising community impact.</p>
+                    <ul>
+                        <li>EPWP Programme Management</li>
+                        <li>Candidacy Programmes</li>
+                        <li>Inservice Training Management</li>
+                        <li>Payroll Administration</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="service-card-new">
+                    <div class="service-icon-new"><i class="fas fa-building-columns"></i></div>
+                    <h4>CSR Consulting</h4>
+                    <p>Strategic planning and implementation of Corporate Social Responsibility programmes for sustainable development.</p>
+                    <ul>
+                        <li>CSI Planning & Development</li>
+                        <li>Fund Sourcing</li>
+                        <li>Community Skills Development</li>
+                        <li>Youth & Women Empowerment</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="service-card-new">
+                    <div class="service-icon-new"><i class="fas fa-user-graduate"></i></div>
+                    <h4>Graduate Development</h4>
+                    <p>Structured programmes bridging the gap between academic qualification and workplace readiness.</p>
+                    <ul>
+                        <li>Graduate Development Programmes</li>
+                        <li>Dual Apprenticeship Programmes</li>
+                        <li>On-the-Job Training</li>
+                        <li>Stakeholder Facilitation</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="service-card-new">
+                    <div class="service-icon-new"><i class="fas fa-landmark"></i></div>
+                    <h4>Local Government Capacity</h4>
+                    <p>Specialised training for local government including municipal financial management and IDP support.</p>
+                    <ul>
+                        <li>Municipal Financial Management</li>
+                        <li>Local Economic Development</li>
+                        <li>Councillor Practices</li>
+                        <li>IDP Planning Support</li>
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Stats Section -->
-<section class="stats-section">
+<!-- ====== STATS ====== -->
+<section class="stats-dark">
     <div class="container">
-        <div class="row text-center">
-            <div class="col-md-3 mb-4">
-                <div class="stat-number">10,000+</div>
-                <p>Learners Placed</p>
+        <div class="row text-center g-4">
+            <div class="col-6 col-md-3">
+                <div class="stat-item">
+                    <div class="stat-big-num">10,000+</div>
+                    <div class="stat-big-label">Learners Placed</div>
+                </div>
             </div>
-            <div class="col-md-3 mb-4">
-                <div class="stat-number">2,850+</div>
-                <p>Workplace Partners</p>
+            <div class="col-6 col-md-3">
+                <div class="stat-item">
+                    <div class="stat-big-num">2,850+</div>
+                    <div class="stat-big-label">Workplace Partners</div>
+                </div>
             </div>
-            <div class="col-md-3 mb-4">
-                <div class="stat-number">15+</div>
-                <p>Years Experience</p>
+            <div class="col-6 col-md-3">
+                <div class="stat-item">
+                    <div class="stat-big-num">8+</div>
+                    <div class="stat-big-label">SETA Accreditations</div>
+                </div>
             </div>
-            <div class="col-md-3 mb-4">
-                <div class="stat-number">100%</div>
-                <p>Commitment to Excellence</p>
+            <div class="col-6 col-md-3">
+                <div class="stat-item">
+                    <div class="stat-big-num">100%</div>
+                    <div class="stat-big-label">Commitment to Excellence</div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Contact Section -->
-<section id="contact" class="section">
+<!-- ====== ACCREDITATIONS ====== -->
+<section class="accred-section">
     <div class="container">
-        <div class="section-title">
-            <h2>Contact Us</h2>
+        <div class="text-center mb-5">
+            <div class="m-label">SETA Accreditations</div>
+            <div class="m-title">Nationally Accredited Programmes</div>
+            <p class="m-subtitle mx-auto" style="text-align:center;">Accredited with FP&M SETA, Services SETA, AgriSETA, LGSETA, CathSSETA, MICT SETA and more.</p>
         </div>
-        <div class="row">
-            <div class="col-lg-6 mb-4">
-                <div class="mb-4">
-                    <h5><i class="fas fa-map-marker-alt me-2" style="color: #9f7734;"></i> Visit Us</h5>
-                    <p>Office 1138, 11th Floor, Commercial City Building<br>40 DR A B Xuma Road, Durban, 4001</p>
-                </div>
-                <div class="mb-4">
-                    <h5><i class="fas fa-phone me-2" style="color: #9f7734;"></i> Call Us</h5>
-                    <p>073 931 7923 | 086 246 0207</p>
-                </div>
-                <div class="mb-4">
-                    <h5><i class="fas fa-envelope me-2" style="color: #9f7734;"></i> Email Us</h5>
-                    <p>info@malitinne.co.za</p>
+        <div class="row g-3">
+            <div class="col-6 col-md-3"><div class="accred-card"><div class="accred-name">AgriSETA</div><div class="accred-desc">Animal Production, Plant Production, Mixed Farming, Agri Trade</div></div></div>
+            <div class="col-6 col-md-3"><div class="accred-card"><div class="accred-name">FP&M SETA</div><div class="accred-desc">Furniture Making, Forestry, Clothing & Textile Manufacturing</div></div></div>
+            <div class="col-6 col-md-3"><div class="accred-card"><div class="accred-name">Services SETA</div><div class="accred-desc">Hairdressing, New Venture Creation, Beauty & Nail Technology</div></div></div>
+            <div class="col-6 col-md-3"><div class="accred-card"><div class="accred-name">LGSETA</div><div class="accred-desc">Municipal Finance, Local Economic Development, IDP Planning</div></div></div>
+            <div class="col-6 col-md-3"><div class="accred-card"><div class="accred-name">CathSSETA</div><div class="accred-desc">Professional Cookery, Fast Food Services, Convenience Foods</div></div></div>
+            <div class="col-6 col-md-3"><div class="accred-card"><div class="accred-name">MICT SETA</div><div class="accred-desc">TVET Placements: Information Technology & Unemployed Youth</div></div></div>
+            <div class="col-6 col-md-3"><div class="accred-card"><div class="accred-name">CETA</div><div class="accred-desc">Civil & Building Construction, Apprenticeships, Bricklaying</div></div></div>
+            <div class="col-6 col-md-3"><div class="accred-card"><div class="accred-name">EW SETA</div><div class="accred-desc">Electrical Engineering, Workplace Placements, Work Integrated Learning</div></div></div>
+        </div>
+        <div class="text-center mt-5">
+            <a href="{% url 'programmes' %}" class="btn-hero-primary">View All Programmes →</a>
+        </div>
+    </div>
+</section>
+
+<!-- ====== IMPACT ====== -->
+<section class="impact-section">
+    <div class="container">
+        <div class="row mb-5 align-items-end">
+            <div class="col-md-6">
+                <div class="m-label">Our Impact</div>
+                <div class="m-title">Transforming Lives Across South Africa</div>
+                <p class="m-subtitle mt-2">Within 5 years of existence, Malitinne created transformational impact across communities, municipalities and corporates nationwide.</p>
+            </div>
+            <div class="col-md-6">
+                <div class="row g-3">
+                    <div class="col-6"><div class="impact-num-card"><div class="big">10,000+</div><div class="lbl">Graduates, TVET learners & apprentices placed</div></div></div>
+                    <div class="col-6"><div class="impact-num-card"><div class="big">2,850+</div><div class="lbl">Workplaces in public & private sector</div></div></div>
+                    <div class="col-6"><div class="impact-num-card"><div class="big">7,197+</div><div class="lbl">Total beneficiaries across key clients</div></div></div>
+                    <div class="col-6"><div class="impact-num-card"><div class="big">2014</div><div class="lbl">Serving communities since</div></div></div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="card p-4">
-                    <h5>Send us a message</h5>
-                    <p>For inquiries about our services, please email us directly at <strong>info@malitinne.co.za</strong> or call us.</p>
-                    <a href="mailto:info@malitinne.co.za" class="btn btn-lms">Email Us</a>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="outcome-card">
+                    <div class="outcome-icon">🏘️</div>
+                    <h5>Community Skills Access</h5>
+                    <p>Creating access to pools of relevant skills for industries within local communities, improving employability.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="outcome-card">
+                    <div class="outcome-icon">💼</div>
+                    <h5>SMME Growth</h5>
+                    <p>Emergence of SMMEs which increased employment creation and contributed to GDP and economic growth.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="outcome-card">
+                    <div class="outcome-icon">♿</div>
+                    <h5>Inclusive Empowerment</h5>
+                    <p>Empowerment of People living with Disability, Youth and Women through targeted, accessible programmes.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="outcome-card">
+                    <div class="outcome-icon">🏛️</div>
+                    <h5>Sectoral Integration</h5>
+                    <p>Linkage of learning institutions, industry sectors and communities resulting in socioeconomic development.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="outcome-card">
+                    <div class="outcome-icon">🌍</div>
+                    <h5>Social Impact</h5>
+                    <p>Helping youth escape substance abuse, crime and poverty through meaningful employment and skills.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="outcome-card">
+                    <div class="outcome-icon">📈</div>
+                    <h5>Economic Growth</h5>
+                    <p>Employed youth now contribute to GDP and most create employment that benefits many others.</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
+
+<!-- ====== GOLD CTA BANNER ====== -->
+<section class="gold-banner">
+    <div class="container">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-4">
+            <div>
+                <h2>Ready to invest in your workforce's future?</h2>
+                <p>Government bodies, corporates and SETAs — let's build South Africa together.</p>
+            </div>
+            <a href="#contact" class="btn-white">Get In Touch Today →</a>
+        </div>
+    </div>
+</section>
+
+<!-- ====== CLIENTS ====== -->
+<section class="clients-section" id="clients-preview">
+    <div class="container">
+        <div class="row mb-5 align-items-center">
+            <div class="col-md-6">
+                <div class="m-label">Trusted By</div>
+                <div class="m-title">Our Clients & Partners</div>
+                <p class="m-subtitle mt-2">From municipalities and government departments to SETAs, training colleges and private enterprises — a true national footprint.</p>
+            </div>
+            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                <a href="{% url 'clients' %}" class="btn-hero-primary">View All Clients →</a>
+            </div>
+        </div>
+        <div class="row g-3">
+            <div class="col-6 col-md-3"><div class="client-pill">iSimangaliso Wetland Park<small>2,575 beneficiaries</small></div></div>
+            <div class="col-6 col-md-3"><div class="client-pill">CETA<small>1,850 beneficiaries</small></div></div>
+            <div class="col-6 col-md-3"><div class="client-pill">Artisan Dev Academy<small>4,580 beneficiaries</small></div></div>
+            <div class="col-6 col-md-3"><div class="client-pill">Edinvest<small>1,550 beneficiaries</small></div></div>
+            <div class="col-6 col-md-3"><div class="client-pill">uMgungundlovu Municipality<small>2,500 beneficiaries</small></div></div>
+            <div class="col-6 col-md-3"><div class="client-pill">Services SETA<small>450 beneficiaries</small></div></div>
+            <div class="col-6 col-md-3"><div class="client-pill">FP&M SETA<small>487 beneficiaries</small></div></div>
+            <div class="col-6 col-md-3"><div class="client-pill">Dept: Arts & Culture KZN<small>545 beneficiaries</small></div></div>
+        </div>
+    </div>
+</section>
+
+<!-- ====== LMS / COURSES ====== -->
+<section class="courses-section">
+    <div class="container">
+        <div class="row mb-5 align-items-end">
+            <div class="col-md-7">
+                <div class="m-label">Funda Malitinne LMS</div>
+                <div class="m-title">Available Programmes Online</div>
+                <p class="m-subtitle mt-2">Access our nationally accredited courses through the Funda Malitinne Learning Management System — learn anywhere, anytime.</p>
+            </div>
+            <div class="col-md-5 text-md-end mt-3 mt-md-0">
+                <a href="{% url 'lms_portal' %}" class="btn-hero-primary">Go to LMS Portal →</a>
+            </div>
+        </div>
+        <div class="row g-4">
+            {% for course in courses %}
+            <div class="col-md-4">
+                <div class="course-card-new">
+                    <div class="course-card-img">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <div class="course-card-body">
+                        <h5>{{ course.title }}</h5>
+                        <p>{{ course.description|truncatewords:20 }}</p>
+                        <p class="text-muted" style="font-size:13px;">
+                            <i class="fas fa-chalkboard-teacher me-1"></i> {{ course.instructor.username }}
+                        </p>
+                    </div>
+                    <div class="course-card-footer">
+                        {% if user.is_authenticated and user.role == 'student' %}
+                            <a href="/enroll/{{ course.id }}/" class="btn-hero-primary w-100 text-center d-block">Enrol Now →</a>
+                        {% else %}
+                            <a href="{% url 'login' %}" class="btn-hero-outline w-100 text-center d-block" style="border:1.5px solid rgba(159,119,52,0.4); color:#9f7734;">Login to Enrol</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-4">
+                <i class="fas fa-book-open fa-3x mb-3" style="color:#C49A2A; opacity:0.4;"></i>
+                <p style="color:#888;">No courses available yet. Please check back soon.</p>
+                <a href="{% url 'lms_portal' %}" class="btn-hero-primary mt-2">Access LMS Portal</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- ====== FOUNDER ====== -->
+<section class="founder-section">
+    <div class="container">
+        <div class="row g-5 align-items-center">
+            <div class="col-lg-4">
+                <div class="founder-card">
+                    <div class="founder-avatar">SK</div>
+                    <h3>Sibusisiwe Kraai</h3>
+                    <p class="founder-title">Founder & Director · Malitinne</p>
+                    <p class="founder-quote">"I was moved by the plight of youth, especially girls unable to secure their futures in the economy due to inadequate preparation."</p>
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <div class="m-label" style="color:#C49A2A;">Our Founder</div>
+                <div class="m-title" style="color:white;">Driven by Purpose, Guided by Passion</div>
+                <p class="founder-text mt-3">Sibusisiwe Kraai founded Malitinne after recognizing that many youths — especially from disadvantaged backgrounds — were not privy to the abundant opportunities available through government skills development interventions.</p>
+                <p class="founder-text">Sibu identified the mismatch between the skills job seekers have and those required by industry, and built Malitinne to bridge that gap. Within 5 years, Malitinne placed over 10,000 graduates and apprentices in over 2,850 workplaces across South Africa.</p>
+                <div class="founder-highlight">
+                    <p>Malitinne is always seeking partnerships through corporates, NGOs, and public or private institutions in developing the skills of especially the youth — giving them meaning in life and creating better, more livable communities.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ====== CONTACT ====== -->
+<section id="contact" class="contact-section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <div class="m-label">Get In Touch</div>
+            <div class="m-title">Let's Work Together</div>
+            <p class="m-subtitle mx-auto" style="text-align:center;">We have the operational capacity to deploy resources to any part of South Africa where our services are needed.</p>
+        </div>
+        <div class="row g-5">
+            <div class="col-lg-5">
+                <div class="d-flex flex-column gap-4">
+                    <div class="d-flex gap-3 align-items-start">
+                        <div class="contact-icon-box"><i class="fas fa-map-marker-alt"></i></div>
+                        <div>
+                            <div class="m-label mb-1">Physical Address</div>
+                            <p style="margin:0; color:#333; font-size:15px;">Office 1138, 11th Floor, Commercial City Building,<br>40 Dr A B Xuma Road, Durban, 4001</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-3 align-items-start">
+                        <div class="contact-icon-box"><i class="fas fa-phone"></i></div>
+                        <div>
+                            <div class="m-label mb-1">Phone</div>
+                            <p style="margin:0; color:#333; font-size:15px;">073 931 7923<br>086 246 0207<br>(031) 301 0835</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-3 align-items-start">
+                        <div class="contact-icon-box"><i class="fas fa-envelope"></i></div>
+                        <div>
+                            <div class="m-label mb-1">Email</div>
+                            <p style="margin:0; color:#333; font-size:15px;">sibu@malitinne.co.za<br>info@malitinne.co.za</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-3 align-items-start">
+                        <div class="contact-icon-box"><i class="fas fa-mailbox"></i></div>
+                        <div>
+                            <div class="m-label mb-1">Postal Address</div>
+                            <p style="margin:0; color:#333; font-size:15px;">P O Box 30165, Plessislaer, 3216</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="contact-form-card">
+                    <h4>Send Us a Message</h4>
+                    <form method="POST" action="{% url 'contact_submit' %}">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <input type="text" name="first_name" class="form-control" placeholder="First Name *" required>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="text" name="last_name" class="form-control" placeholder="Last Name *" required>
+                            </div>
+                            <div class="col-12">
+                                <input type="email" name="email" class="form-control" placeholder="Email Address *" required>
+                            </div>
+                            <div class="col-12">
+                                <input type="text" name="organisation" class="form-control" placeholder="Organisation / Company">
+                            </div>
+                            <div class="col-12">
+                                <select name="client_type" class="form-select">
+                                    <option value="">I am a...</option>
+                                    <option>Corporate / Employer</option>
+                                    <option>Government / Municipality</option>
+                                    <option>SETA / Training Body</option>
+                                    <option>Learner / Graduate</option>
+                                    <option>NGO / Community Organisation</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <textarea name="message" class="form-control" rows="4" placeholder="Tell us about your skills development needs... *" required></textarea>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn-form-submit">Send Message →</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 {% endblock %}
