@@ -1,4 +1,13 @@
 from django.contrib import admin
+from django.utils.html import format_html
+from django.urls import reverse
+from django.db.models import Count
+from .models import Opportunity, Application
+import csv
+from django.http import HttpResponse
+import xlwt
+
+from django.contrib import admin
 from .models import (
     User, Course, Lesson, Quiz, QuizQuestion, QuizAttempt, Assignment, 
     Submission, Progress, Certificate, Notification, Announcement, 
@@ -532,3 +541,198 @@ class ForumPostAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+class ApplicationInline(admin.TabularInline):
+    model = Application
+    fields = ('full_name', 'email', 'submitted_at', 'status', 'score')
+    readonly_fields = ('full_name', 'submitted_at')
+    can_delete = False
+    extra = 0
+    show_change_link = True
+    
+    def full_name(self, obj):
+        return obj.full_name
+    full_name.short_description = 'Name'
+
+@admin.action(description='Export selected as CSV')
+def export_to_csv(modeladmin, request, queryset):
+    import csv
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="applications_export.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['Application #', 'Opportunity', 'Name', 'Email', 'Phone', 'ID Number', 
+                     'Date of Birth', 'Gender', 'Race', 'Disability', 'City', 'Province',
+                     'Qualification', 'Institution', 'Year', 'Skills', 'Status', 'Submitted'])
+    
+    for app in queryset:
+        writer.writerow([
+            app.application_number, app.opportunity.title, app.full_name, app.email,
+            app.phone_number, app.id_number, app.date_of_birth, app.gender, app.race,
+            app.disability, app.city, app.province, app.highest_qualification,
+            app.institution, app.year_completed, app.skills, app.status, app.submitted_at
+        ])
+    
+    return response
+export_to_csv.short_description = "Export selected applications to CSV"
+
+@admin.action(description='Export selected as Excel')
+def export_to_excel(modeladmin, request, queryset):
+    response = HttpResponse(content_type='application/ms-excel')
+    response['Content-Disposition'] = 'attachment; filename="applications_export.xls"'
+    
+    wb = xlwt.Workbook(encoding='utf-8')
+    ws = wb.add_sheet('Applications')
+    
+    # Header row
+    headers = ['Application #', 'Opportunity', 'Name', 'Email', 'Phone', 'ID Number', 
+               'Date of Birth', 'Gender', 'Race', 'City', 'Province', 'Qualification',
+               'Institution', 'Year', 'Skills', 'Status', 'Submitted']
+    for col, header in enumerate(headers):
+        ws.write(0, col, header)
+    
+    # Data rows
+    for row, app in enumerate(queryset, start=1):
+        ws.write(row, 0, app.application_number)
+        ws.write(row, 1, app.opportunity.title)
+        ws.write(row, 2, app.full_name)
+        ws.write(row, 3, app.email)
+        ws.write(row, 4, app.phone_number)
+        ws.write(row, 5, app.id_number)
+        ws.write(row, 6, str(app.date_of_birth))
+        ws.write(row, 7, app.gender)
+        ws.write(row, 8, app.race)
+        ws.write(row, 9, app.city)
+        ws.write(row, 10, app.province)
+        ws.write(row, 11, app.highest_qualification)
+        ws.write(row, 12, app.institution)
+        ws.write(row, 13, str(app.year_completed))
+        ws.write(row, 14, app.skills[:200])
+        ws.write(row, 15, app.status)
+        ws.write(row, 16, str(app.submitted_at))
+    
+    wb.save(response)
+    return response
+export_to_excel.short_description = "Export selected to Excel"
+
+@admin.register(Opportunity)
+class OpportunityAdmin(admin.ModelAdmin):
+    list_display = ('title', 'opportunity_type', 'location', 'opening_date', 'closing_date', 
+                   'status', 'applications_count', 'is_open_status', 'featured')
+    list_filter = ('opportunity_type', 'status', 'featured', 'opening_date', 'closing_date')
+    search_fields = ('title', 'reference_number', 'location')
+    readonly_fields = ('reference_number', 'created_at', 'updated_at', 'applications_count_display')
+    inlines = [ApplicationInline]
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('title', 'opportunity_type', 'reference_number', 'description', 'status', 'featured', 'priority')
+        }),
+        ('Requirements & Responsibilities', {
+            'fields': ('requirements', 'responsibilities')
+        }),
+        ('Location & Compensation', {
+            'fields': ('location', 'remote_options', 'stipend_amount', 'funding_amount')
+        }),
+        ('Dates & Capacity', {
+            'fields': ('opening_date', 'closing_date', 'expected_start_date', 'available_positions', 'positions_filled')
+        }),
+        ('Contact Information', {
+            'fields': ('contact_email', 'contact_person', 'application_instructions')
+        }),
+        ('Metadata', {
+            'fields': ('created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    actions = [export_to_csv, export_to_excel]
+    
+    def applications_count(self, obj):
+        count = obj.applications.count()
+        url = reverse('admin:core_application_changelist') + f'?opportunity__id__exact={obj.id}'
+        return format_html('<a href="{}">{} applications</a>', url, count)
+    applications_count.short_description = 'Applications'
+    
+    def applications_count_display(self, obj):
+        return obj.applications.count()
+    applications_count_display.short_description = 'Total Applications'
+    
+    def is_open_status(self, obj):
+        if obj.is_open:
+            return format_html('<span style="color: green;">✓ Open</span>')
+        else:
+            if obj.status != 'published':
+                return format_html('<span style="color: red;">✗ Not Published</span>')
+            elif obj.positions_filled >= obj.available_positions:
+                return format_html('<span style="color: orange;">⚠ Filled</span>')
+            else:
+                return format_html('<span style="color: red;">✗ Closed</span>')
+    is_open_status.short_description = 'Status'
+    
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+@admin.register(Application)
+class ApplicationAdmin(admin.ModelAdmin):
+    list_display = ('application_number', 'full_name', 'opportunity', 'email', 'phone_number', 
+                   'submitted_at', 'status', 'score', 'review_status')
+    list_filter = ('status', 'opportunity__opportunity_type', 'submitted_at', 'province', 'gender')
+    search_fields = ('application_number', 'first_name', 'last_name', 'email', 'id_number', 'phone_number')
+    readonly_fields = ('application_number', 'submitted_at', 'ip_address', 'user_agent')
+    
+    fieldsets = (
+        ('Application Information', {
+            'fields': ('application_number', 'opportunity', 'status', 'status_notes', 'submitted_at')
+        }),
+        ('Personal Information', {
+            'fields': ('first_name', 'last_name', 'email', 'phone_number', 'alternative_phone', 
+                      'id_number', 'date_of_birth', 'gender', 'race', 'disability')
+        }),
+        ('Address Details', {
+            'fields': ('address', 'city', 'province', 'postal_code')
+        }),
+        ('Education & Experience', {
+            'fields': ('highest_qualification', 'institution', 'year_completed', 'field_of_study',
+                      'work_experience', 'skills')
+        }),
+        ('Documents', {
+            'fields': ('cv', 'cover_letter', 'id_document', 'qualifications')
+        }),
+        ('Review Information', {
+            'fields': ('reviewed_by', 'reviewed_at', 'score'),
+            'classes': ('collapse',)
+        }),
+        ('Additional Information', {
+            'fields': ('hear_about_us', 'additional_info'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    actions = [export_to_csv, export_to_excel, 'mark_as_shortlisted', 'mark_as_rejected']
+    
+    def mark_as_shortlisted(self, request, queryset):
+        queryset.update(status='shortlisted')
+        self.message_user(request, f"{queryset.count()} applications marked as shortlisted")
+    mark_as_shortlisted.short_description = "Mark selected as shortlisted"
+    
+    def mark_as_rejected(self, request, queryset):
+        queryset.update(status='rejected')
+        self.message_user(request, f"{queryset.count()} applications marked as rejected")
+    mark_as_rejected.short_description = "Mark selected as rejected"
+    
+    def review_status(self, obj):
+        if obj.reviewed_by:
+            return format_html('<span style="color: green;">✓ Reviewed by {}</span>', obj.reviewed_by.username)
+        return format_html('<span style="color: orange;">⏳ Pending Review</span>')
+    review_status.short_description = 'Review Status'
+    
+    def save_model(self, request, obj, form, change):
+        if 'status' in form.changed_data and obj.status in ['shortlisted', 'interview', 'offered']:
+            if not obj.reviewed_by:
+                obj.reviewed_by = request.user
+                obj.reviewed_at = timezone.now()
+        super().save_model(request, obj, form, change)

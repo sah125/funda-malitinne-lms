@@ -20,6 +20,8 @@ from datetime import datetime
 from django.core.mail import send_mail
 from django.conf import settings
 
+from .models import Opportunity, Application
+
 from .ai_assistant import AIAdminAssistant
 from .ai_recommendations import get_course_recommendations
 from .models import (
@@ -2472,6 +2474,112 @@ def contact_form_submit(request):
         return response
     
     return redirect('company_home')
+
+
+def opportunities_list(request):
+    """Display all open opportunities"""
+    opportunities = Opportunity.objects.filter(
+        status='published',
+        opening_date__lte=timezone.now().date(),
+        closing_date__gte=timezone.now().date()
+    ).exclude(positions_filled__gte=models.F('available_positions'))
+    
+    # Filter by type if specified
+    opportunity_type = request.GET.get('type')
+    if opportunity_type:
+        opportunities = opportunities.filter(opportunity_type=opportunity_type)
+    
+    # Search
+    search_query = request.GET.get('search')
+    if search_query:
+        opportunities = opportunities.filter(
+            Q(title__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(location__icontains=search_query)
+        )
+    
+    context = {
+        'opportunities': opportunities,
+        'opportunity_types': Opportunity.OPPORTUNITY_TYPES,
+    }
+    return render(request, 'malitinne/opportunities.html', context)
+
+def apply_for_opportunity(request, opportunity_id):
+    """Application form for a specific opportunity"""
+    opportunity = get_object_or_404(Opportunity, id=opportunity_id, status='published')
+    
+    if not opportunity.is_open:
+        messages.error(request, 'This opportunity is no longer accepting applications.')
+        return redirect('opportunities')
+    
+    if request.method == 'POST':
+        try:
+            # Create application
+            application = Application.objects.create(
+                opportunity=opportunity,
+                first_name=request.POST.get('first_name'),
+                last_name=request.POST.get('last_name'),
+                email=request.POST.get('email'),
+                phone_number=request.POST.get('phone_number'),
+                alternative_phone=request.POST.get('alternative_phone', ''),
+                id_number=request.POST.get('id_number'),
+                date_of_birth=request.POST.get('date_of_birth'),
+                gender=request.POST.get('gender', ''),
+                race=request.POST.get('race', ''),
+                disability=request.POST.get('disability', ''),
+                address=request.POST.get('address'),
+                city=request.POST.get('city'),
+                province=request.POST.get('province'),
+                postal_code=request.POST.get('postal_code', ''),
+                highest_qualification=request.POST.get('highest_qualification'),
+                institution=request.POST.get('institution'),
+                year_completed=request.POST.get('year_completed'),
+                field_of_study=request.POST.get('field_of_study', ''),
+                work_experience=request.POST.get('work_experience', ''),
+                skills=request.POST.get('skills'),
+                hear_about_us=request.POST.get('hear_about_us', ''),
+                additional_info=request.POST.get('additional_info', ''),
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+            )
+            
+            # Handle file uploads
+            if request.FILES.get('cv'):
+                application.cv = request.FILES['cv']
+            if request.FILES.get('cover_letter'):
+                application.cover_letter = request.FILES['cover_letter']
+            if request.FILES.get('id_document'):
+                application.id_document = request.FILES['id_document']
+            if request.FILES.get('qualifications'):
+                application.qualifications = request.FILES['qualifications']
+            
+            application.save()
+            
+            # Send confirmation email
+            try:
+                send_mail(
+                    f'Application Received - {opportunity.title}',
+                    f'Dear {application.first_name},\n\nThank you for applying for {opportunity.title}.\n\nYour application number is: {application.application_number}\n\nWe will contact you regarding the status of your application.\n\nRegards,\nMalitinne Team',
+                    settings.DEFAULT_FROM_EMAIL,
+                    [application.email],
+                    fail_silently=True
+                )
+            except:
+                pass
+            
+            messages.success(request, f'Application submitted successfully! Your reference number is {application.application_number}')
+            return redirect('opportunities')
+            
+        except Exception as e:
+            messages.error(request, f'Error submitting application: {str(e)}')
+    
+    context = {'opportunity': opportunity}
+    return render(request, 'malitinne/apply.html', context)
+
+def application_success(request, application_number):
+    """Success page after application submission"""
+    application = get_object_or_404(Application, application_number=application_number)
+    return render(request, 'malitinne/application_success.html', {'application': application})
 
 @login_required
 @user_passes_test(is_admin)
