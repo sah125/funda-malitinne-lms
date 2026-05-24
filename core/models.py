@@ -625,3 +625,178 @@ class ForumPost(models.Model):
     
     def __str__(self):
         return f"Post by {self.author.username} on {self.topic.title}"
+
+
+#------------------------------- oportunity ------------------------------#
+class Opportunity(models.Model):
+    OPPORTUNITY_TYPES = (
+        ('learnership', 'Learnership'),
+        ('internship', 'Internship'),
+        ('apprenticeship', 'Apprenticeship'),
+        ('job', 'Job Vacancy'),
+        ('funding', 'Funding Opportunity'),
+        ('bursary', 'Bursary'),
+        ('training', 'Training Programme'),
+    )
+    
+    STATUS_CHOICES = (
+        ('draft', 'Draft'),
+        ('published', 'Published'),
+        ('closed', 'Closed'),
+        ('cancelled', 'Cancelled'),
+    )
+    
+    # Basic Information
+    title = models.CharField(max_length=200)
+    opportunity_type = models.CharField(max_length=50, choices=OPPORTUNITY_TYPES)
+    reference_number = models.CharField(max_length=50, unique=True, blank=True)
+    description = models.TextField()
+    requirements = models.TextField(help_text="List requirements, one per line or use bullet points")
+    responsibilities = models.TextField(blank=True, help_text="Key responsibilities for the role")
+    
+    # Location & Logistics
+    location = models.CharField(max_length=200)
+    remote_options = models.BooleanField(default=False)
+    stipend_amount = models.CharField(max_length=100, blank=True, help_text="e.g., R3500 per month")
+    funding_amount = models.CharField(max_length=100, blank=True, help_text="e.g., Up to R100,000")
+    
+    # Dates
+    opening_date = models.DateField()
+    closing_date = models.DateField()
+    expected_start_date = models.DateField(null=True, blank=True)
+    
+    # Capacity
+    available_positions = models.IntegerField(default=1)
+    positions_filled = models.IntegerField(default=0)
+    
+    # Status & Visibility
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    featured = models.BooleanField(default=False)
+    priority = models.IntegerField(default=0, help_text="Higher number = higher priority in listings")
+    
+    # Additional Info
+    contact_email = models.EmailField(default='careers@malitinne.co.za')
+    contact_person = models.CharField(max_length=100, blank=True)
+    application_instructions = models.TextField(blank=True, help_text="Special instructions for applying")
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_opportunities')
+    
+    class Meta:
+        ordering = ['-priority', '-created_at']
+        verbose_name_plural = "Opportunities"
+    
+    def save(self, *args, **kwargs):
+        if not self.reference_number:
+            import uuid
+            self.reference_number = f"MAL-{self.opportunity_type[:3].upper()}-{uuid.uuid4().hex[:6].upper()}"
+        super().save(*args, **kwargs)
+    
+    @property
+    def is_open(self):
+        from django.utils import timezone
+        today = timezone.now().date()
+        return self.status == 'published' and self.opening_date <= today <= self.closing_date and self.positions_filled < self.available_positions
+    
+    @property
+    def remaining_positions(self):
+        return self.available_positions - self.positions_filled
+    
+    def __str__(self):
+        return f"{self.title} ({self.get_opportunity_type_display()})"
+
+
+class Application(models.Model):
+    APPLICATION_STATUS = (
+        ('pending', 'Pending Review'),
+        ('shortlisted', 'Shortlisted'),
+        ('interview', 'Interview Stage'),
+        ('assessment', 'Assessment Stage'),
+        ('offered', 'Offer Extended'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+        ('withdrawn', 'Withdrawn'),
+    )
+    
+    # Application Information
+    opportunity = models.ForeignKey(Opportunity, on_delete=models.CASCADE, related_name='applications')
+    application_number = models.CharField(max_length=50, unique=True, blank=True)
+    
+    # Personal Information
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    email = models.EmailField()
+    phone_number = models.CharField(max_length=20)
+    alternative_phone = models.CharField(max_length=20, blank=True)
+    
+    # Demographics
+    id_number = models.CharField(max_length=20)
+    date_of_birth = models.DateField()
+    gender = models.CharField(max_length=20, choices=(
+        ('male', 'Male'), ('female', 'Female'), ('other', 'Other'), ('prefer_not', 'Prefer not to say')
+    ), blank=True)
+    race = models.CharField(max_length=50, choices=(
+        ('african', 'African'), ('coloured', 'Coloured'), ('indian', 'Indian'), ('white', 'White'), ('other', 'Other')
+    ), blank=True, help_text="For BBBEE/Employment Equity purposes")
+    disability = models.CharField(max_length=100, blank=True, help_text="Specify disability if applicable")
+    
+    # Address
+    address = models.TextField()
+    city = models.CharField(max_length=100)
+    province = models.CharField(max_length=50, choices=(
+        ('EC', 'Eastern Cape'), ('FS', 'Free State'), ('GP', 'Gauteng'), 
+        ('KZN', 'KwaZulu-Natal'), ('LP', 'Limpopo'), ('MP', 'Mpumalanga'), 
+        ('NC', 'Northern Cape'), ('NW', 'North West'), ('WC', 'Western Cape')
+    ))
+    postal_code = models.CharField(max_length=10)
+    
+    # Education & Experience
+    highest_qualification = models.CharField(max_length=200)
+    institution = models.CharField(max_length=200)
+    year_completed = models.IntegerField()
+    field_of_study = models.CharField(max_length=200, blank=True)
+    
+    work_experience = models.TextField(blank=True, help_text="Previous work experience")
+    skills = models.TextField(help_text="Relevant skills, separated by commas")
+    
+    # Documents
+    cv = models.FileField(upload_to='applications/cvs/%Y/%m/', null=True, blank=True)
+    cover_letter = models.FileField(upload_to='applications/cover_letters/%Y/%m/', null=True, blank=True)
+    id_document = models.FileField(upload_to='applications/ids/%Y/%m/', null=True, blank=True)
+    qualifications = models.FileField(upload_to='applications/qualifications/%Y/%m/', null=True, blank=True)
+    
+    # Additional Information
+    hear_about_us = models.CharField(max_length=200, blank=True, help_text="How did you hear about this opportunity?")
+    additional_info = models.TextField(blank=True, help_text="Any additional information you'd like to share")
+    
+    # Status & Tracking
+    status = models.CharField(max_length=20, choices=APPLICATION_STATUS, default='pending')
+    status_notes = models.TextField(blank=True, help_text="Internal notes about application status")
+    
+    # Review Information
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_applications')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    score = models.IntegerField(null=True, blank=True, help_text="Application score out of 100")
+    
+    # Submission
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-submitted_at']
+    
+    def save(self, *args, **kwargs):
+        if not self.application_number:
+            import uuid
+            self.application_number = f"APP-{uuid.uuid4().hex[:8].upper()}"
+        super().save(*args, **kwargs)
+    
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+    
+    def __str__(self):
+        return f"{self.full_name} - {self.opportunity.title}"

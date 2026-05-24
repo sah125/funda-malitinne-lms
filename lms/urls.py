@@ -165,6 +165,14 @@ urlpatterns = [
 
     #Contact & Support
     path('contact/submit/', views.contact_form_submit, name='contact_submit'),
+
+
+
+    path('opportunities/', views.opportunities_list, name='opportunities'),
+    path('apply/<int:opportunity_id>/', views.apply_for_opportunity, name='apply'),
+    path('application/<str:application_number>/', views.application_success, name='application_success'),
+    path('opportunities/', views.opportunities_list, name='opportunities'),
+    path('apply/<int:opportunity_id>/', views.apply_for_opportunity, name='apply'),
 ]
 
 # ============================================================
