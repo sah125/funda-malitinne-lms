@@ -17,6 +17,8 @@ import mimetypes
 import os
 import time
 from datetime import datetime
+from django.core.mail import send_mail
+from django.conf import settings
 
 from .ai_assistant import AIAdminAssistant
 from .ai_recommendations import get_course_recommendations
@@ -2367,7 +2369,104 @@ def instructor_dashboard(request):
         'pending_grading': pending_grading,
         'all_students': all_students,  
     })
-
+def contact_form_submit(request):
+    """Handle contact form submissions"""
+    if request.method == 'POST':
+        try:
+            first_name = request.POST.get('first_name', '')
+            last_name = request.POST.get('last_name', '')
+            email = request.POST.get('email', '')
+            organisation = request.POST.get('organisation', '')
+            client_type = request.POST.get('client_type', '')
+            message = request.POST.get('message', '')
+            
+            # Validate required fields
+            if not first_name or not last_name or not email or not message:
+                messages.error(request, 'Please fill in all required fields.')
+                return redirect('company_home') + '#contact'
+            
+            # Prepare email content
+            full_name = f"{first_name} {last_name}"
+            
+            subject = f"New Contact Form Submission from {full_name}"
+            
+            html_message = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif;">
+                <h2 style="color: #9f7734;">New Contact Form Submission</h2>
+                <p><strong>Name:</strong> {full_name}</p>
+                <p><strong>Email:</strong> {email}</p>
+                <p><strong>Organisation:</strong> {organisation or 'Not provided'}</p>
+                <p><strong>I am a:</strong> {client_type or 'Not specified'}</p>
+                <p><strong>Message:</strong></p>
+                <p style="background: #f5f5f5; padding: 15px; border-left: 4px solid #9f7734;">{message.replace(chr(10), '<br>')}</p>
+                <hr>
+                <p style="font-size: 12px; color: #666;">Submitted from: Funda Malitinne Website Contact Form</p>
+            </body>
+            </html>
+            """
+            
+            plain_message = f"""
+            New Contact Form Submission
+            
+            Name: {full_name}
+            Email: {email}
+            Organisation: {organisation or 'Not provided'}
+            I am a: {client_type or 'Not specified'}
+            
+            Message:
+            {message}
+            """
+            
+            # Send to your email address
+            send_mail(
+                subject=subject,
+                message=plain_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=['sah.sakhile@gmail.com'],  # Your email address
+                html_message=html_message,
+                fail_silently=False
+            )
+            
+            # Send auto-reply to the user
+            auto_reply_html = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif;">
+                <h2 style="color: #9f7734;">Thank you for contacting Malitinne!</h2>
+                <p>Dear {full_name},</p>
+                <p>Thank you for reaching out to us. We have received your message and one of our representatives will get back to you within 24-48 business hours.</p>
+                <p><strong>Your message summary:</strong></p>
+                <p style="background: #f5f5f5; padding: 15px; border-left: 4px solid #9f7734;">{message[:200]}{'...' if len(message) > 200 else ''}</p>
+                <p>In the meantime, you can:</p>
+                <ul>
+                    <li>Visit our <a href="https://yourdomain.com/lms/">LMS Portal</a> to explore available courses</li>
+                    <li>Call us directly at 073 931 7923</li>
+                </ul>
+                <p>Best regards,<br>
+                <strong>Malitinne Team</strong></p>
+                <hr>
+                <p style="font-size: 10px; color: #666;">This is an automated response. Please do not reply to this email.</p>
+            </body>
+            </html>
+            """
+            
+            send_mail(
+                subject="Thank you for contacting Malitinne",
+                message=f"Thank you for contacting us, {full_name}. We will get back to you soon.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                html_message=auto_reply_html,
+                fail_silently=True  # Don't break if auto-reply fails
+            )
+            
+            messages.success(request, 'Thank you! Your message has been sent. We will contact you soon.')
+            
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+        
+        return redirect('company_home') + '#contact'
+    
+    return redirect('company_home')
 
 @login_required
 @user_passes_test(is_admin)

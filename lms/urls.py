@@ -162,6 +162,9 @@ urlpatterns = [
     # DJANGO ADMIN - MUST BE LAST!
     # ============================================================
     path('admin/', admin.site.urls),
+
+    #Contact & Support
+    path('contact/submit/', views.contact_form_submit, name='contact_submit'),
 ]
 
 # ============================================================
