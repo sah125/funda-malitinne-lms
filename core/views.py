@@ -2576,6 +2576,14 @@ def apply_for_opportunity(request, opportunity_id):
     context = {'opportunity': opportunity}
     return render(request, 'malitinne/apply.html', context)
 
+# Custom error handlers
+def custom_404(request, exception):
+    return render(request, '404.html', status=404)
+
+def custom_500(request):
+    return render(request, '404.html', status=500)
+
+
 def application_success(request, application_number):
     """Success page after application submission"""
     application = get_object_or_404(Application, application_number=application_number)

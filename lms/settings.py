@@ -3,8 +3,8 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-funda-malitinne-2026'
-DEBUG = True
-ALLOWED_HOSTS = ['*']
+DEBUG = True           # Enable Django's dev server features locally
+ALLOWED_HOSTS = ['malitinne.co.za', 'www.malitinne.co.za', '127.0.0.1']
 
 INSTALLED_APPS = [
     'django.contrib.admin',

@@ -5,6 +5,11 @@ from django.conf.urls.static import static
 from core import views
 from core.api import HealthCheckView
 
+
+from django.views.defaults import page_not_found
+path('test-404/', lambda request: page_not_found(request, Exception())),
+handler404 = 'core.views.custom_404'
+
 urlpatterns = [
     # ============================================================
     # HEALTH CHECK & MONITORING
@@ -173,7 +178,11 @@ urlpatterns = [
     path('application/<str:application_number>/', views.application_success, name='application_success'),
     path('opportunities/', views.opportunities_list, name='opportunities'),
     path('apply/<int:opportunity_id>/', views.apply_for_opportunity, name='apply'),
+    
 ]
+# Custom error handlers
+handler404 = 'core.views.custom_404'
+handler500 = 'core.views.custom_500'
 
 # ============================================================
 # STATIC & MEDIA FILES SERVING (Development Only)
