@@ -4,17 +4,22 @@ from django.conf import settings
 from django.conf.urls.static import static
 from core import views
 from core.api import HealthCheckView
-
+from django.contrib.sitemaps.views import sitemap
+from core.sitemaps import StaticViewSitemap
+from django.views.generic import TemplateView
 
 from django.views.defaults import page_not_found
-path('test-404/', lambda request: page_not_found(request, Exception())),
-handler404 = 'core.views.custom_404'
+
+sitemaps = {
+    'static': StaticViewSitemap,
+}
 
 urlpatterns = [
     # ============================================================
     # HEALTH CHECK & MONITORING
     # ============================================================
     path('health/', HealthCheckView.health_check, name='health_check'),
+    path('test-404/', lambda request: page_not_found(request, Exception()), name='test_404'),
     
     # ============================================================
     # ADMIN & COMPANY WEBSITE
@@ -163,26 +168,36 @@ urlpatterns = [
     path('api/lesson/<int:lesson_id>/complete/', views.api_lesson_complete, name='api_lesson_complete'),
     path('api/lesson/<int:lesson_id>/modules/status/', views.api_check_module_status, name='api_check_module_status'),
     
-    # ============================================================
-    # DJANGO ADMIN - MUST BE LAST!
-    # ============================================================
-    path('admin/', admin.site.urls),
-
     #Contact & Support
     path('contact/submit/', views.contact_form_submit, name='contact_submit'),
-
-
-
     path('opportunities/', views.opportunities_list, name='opportunities'),
     path('apply/<int:opportunity_id>/', views.apply_for_opportunity, name='apply'),
     path('application/<str:application_number>/', views.application_success, name='application_success'),
-    path('opportunities/', views.opportunities_list, name='opportunities'),
-    path('apply/<int:opportunity_id>/', views.apply_for_opportunity, name='apply'),
-    
+
+    # ============================================================
+    # DJANGO ADMIN - MUST BE LAST!
+    # ============================================================
+    path(
+        "robots.txt",
+        TemplateView.as_view(
+            template_name="robots.txt",
+            content_type="text/plain"
+        ),
+    ),
+
+    path('admin/', admin.site.urls),
+
+    path(
+        'sitemap.xml',
+        sitemap,
+        {'sitemaps': sitemaps},
+        name='django.contrib.sitemaps.views.sitemap'
+    ),
 ]
 # Custom error handlers
 handler404 = 'core.views.custom_404'
 handler500 = 'core.views.custom_500'
+
 
 # ============================================================
 # STATIC & MEDIA FILES SERVING (Development Only)
