@@ -1,3 +1,4 @@
+# ==================== FIXED IMPORTS ====================
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
@@ -7,7 +8,7 @@ from django.utils import timezone
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.crypto import get_random_string
-from django.db.models import Count, Q, Avg
+from django.db.models import Count, Q, Avg, F  # ADDED F here
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.text import get_valid_filename
 import json
@@ -17,11 +18,9 @@ import mimetypes
 import os
 import time
 from datetime import datetime
-from django.core.mail import send_mail
 from django.conf import settings
 
 from .models import Opportunity, Application
-
 from .ai_assistant import AIAdminAssistant
 from .ai_recommendations import get_course_recommendations
 from .models import (
@@ -35,15 +34,6 @@ from .models import (
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from io import BytesIO
-from django.shortcuts import render, get_object_or_404
-from .models import Lesson
-
-def lesson_discussions(request, lesson_id):
-    lesson = get_object_or_404(Lesson, id=lesson_id)
-
-    return render(request, 'lesson_discussions.html', {
-        'lesson': lesson
-    })
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -70,7 +60,6 @@ def get_client_ip(request):
         ip = request.META.get('REMOTE_ADDR')
     return ip
 
-
 def check_for_badges(user):
     streak, _ = DailyStreak.objects.get_or_create(user=user)
     
@@ -90,6 +79,7 @@ def check_for_badges(user):
         badge, _ = Badge.objects.get_or_create(name='Weekly Warrior', defaults={'description': 'Logged in for 7 days in a row', 'icon': 'fa-calendar-check', 'lessons_completed': 7})
         UserBadge.objects.get_or_create(user=user, badge=badge)
 
+# ==================== PAGE VIEWS ====================
 
 def programmes_page(request):
     """Display skills programmes page"""
@@ -99,7 +89,13 @@ def clients_page(request):
     """Display clients and testimonials page"""
     return render(request, 'malitinne/clients.html')
 
-# Add these functions to your views.py (near your other discussion views)
+def lesson_discussions(request, lesson_id):
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    return render(request, 'discussion/lesson_discussions.html', {
+        'lesson': lesson
+    })
+
+# ==================== DISCUSSION REPLY FUNCTIONS ====================
 
 @login_required
 def delete_reply(request, reply_id):
@@ -112,26 +108,19 @@ def delete_reply(request, reply_id):
         topic = reply.topic
         lesson = topic.lesson
         
-        # Check permissions - only instructor of the course or admin can delete
         if request.user.role == 'instructor':
             if lesson.course.instructor != request.user:
                 return JsonResponse({'error': 'You do not have permission to delete this reply'}, status=403)
         elif request.user.role != 'admin':
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
-        # Delete the reply
         reply.delete()
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'Reply deleted successfully'
-        })
+        return JsonResponse({'success': True, 'message': 'Reply deleted successfully'})
         
     except ForumPost.DoesNotExist:
         return JsonResponse({'error': 'Reply not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
 
 @login_required
 def like_reply(request, reply_id):
@@ -142,7 +131,6 @@ def like_reply(request, reply_id):
     try:
         reply = get_object_or_404(ForumPost, id=reply_id)
         
-        # Toggle like
         if request.user in reply.likes.all():
             reply.likes.remove(request.user)
             liked = False
@@ -161,8 +149,6 @@ def like_reply(request, reply_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-
-# Also add toggle_discussion_close if you haven't already
 @login_required
 def toggle_discussion_close(request, discussion_id):
     """Toggle close/lock status of a discussion (instructor only)"""
@@ -172,21 +158,17 @@ def toggle_discussion_close(request, discussion_id):
     try:
         topic = get_object_or_404(ForumTopic, id=discussion_id)
         
-        # Check if user has permission
         if request.user.role == 'instructor':
             if topic.lesson.course.instructor != request.user:
                 return JsonResponse({'error': 'You do not own this course'}, status=403)
         elif request.user.role != 'admin':
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
-        # Toggle the is_locked status (or is_closed if you prefer)
-        # Make sure your ForumTopic model has an 'is_locked' field
         if hasattr(topic, 'is_locked'):
             topic.is_locked = not topic.is_locked
             topic.save()
             is_closed = topic.is_locked
         else:
-            # If is_locked doesn't exist, you might need to add it to your model
             return JsonResponse({'error': 'Discussion locking not implemented'}, status=501)
         
         return JsonResponse({
@@ -692,12 +674,27 @@ def instructor_dashboard(request):
     total_lessons = sum(course.lessons.count() for course in courses)
     pending_grading = Submission.objects.filter(assignment__course__instructor=request.user, grade__isnull=True).count()
     
+    all_students = []
+    for course in courses:
+        for student in course.students.all():
+            progress, _ = Progress.objects.get_or_create(student=student, course=course)
+            enrollment_date = student.date_joined.date() if student.date_joined else None
+            
+            if not any(s['student'].id == student.id for s in all_students):
+                all_students.append({
+                    'student': student,
+                    'course': course,
+                    'progress': progress.progress_percentage,
+                    'enrollment_date': enrollment_date,
+                })
+    
     return render(request, 'instructor_dashboard.html', {
         'courses': courses,
         'total_courses': courses.count(),
         'total_students': total_students,
         'total_lessons': total_lessons,
-        'pending_grading': pending_grading
+        'pending_grading': pending_grading,
+        'all_students': all_students,
     })
 
 @login_required
@@ -1209,7 +1206,6 @@ def delete_course(request, course_id):
     messages.success(request, 'Course deleted successfully.')
     return redirect('admin_dashboard')
 
-
 @login_required
 def delete_user(request, user_id):
     if request.user.role != 'admin':
@@ -1302,7 +1298,6 @@ def discussion_detail(request, topic_id):
     topic = get_object_or_404(ForumTopic, id=topic_id)
     lesson = topic.lesson
     
-    # Check permissions
     if request.user.role == 'student':
         if request.user not in lesson.course.students.all():
             messages.warning(request, 'You need to be enrolled in this course to view discussions.')
@@ -1312,10 +1307,8 @@ def discussion_detail(request, topic_id):
             messages.error(request, 'You do not have permission to view this discussion.')
             return redirect('instructor_dashboard')
     
-    # Get all posts (replies) for this topic
     posts = topic.posts.filter(parent=None).order_by('created_at')
     
-    # Handle new reply
     if request.method == 'POST' and 'add_reply' in request.POST:
         content = request.POST.get('content')
         parent_id = request.POST.get('parent_reply_id')
@@ -1337,7 +1330,6 @@ def discussion_detail(request, topic_id):
         
         return redirect('discussion_detail', topic_id=topic.id)
     
-    # Handle delete reply (instructor only)
     if request.method == 'POST' and 'delete_reply' in request.POST:
         if request.user.role == 'instructor' and lesson.course.instructor == request.user:
             reply_id = request.POST.get('reply_id')
@@ -1352,7 +1344,6 @@ def discussion_detail(request, topic_id):
         
         return redirect('discussion_detail', topic_id=topic.id)
     
-    # Prepare replies with nested structure
     reply_list = []
     for post in posts:
         reply_data = {
@@ -1375,11 +1366,8 @@ def discussion_detail(request, topic_id):
     
     return render(request, 'discussion/discussion_detail.html', context)
 
-
-
 @login_required
 def toggle_discussion_pin(request, discussion_id):
-    """Toggle pin status of a discussion (instructor only)"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     
@@ -1397,10 +1385,8 @@ def toggle_discussion_pin(request, discussion_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-
 @login_required
 def toggle_discussion_lock(request, discussion_id):
-    """Toggle lock status of a discussion (instructor only)"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     
@@ -1418,16 +1404,8 @@ def toggle_discussion_lock(request, discussion_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-
-
-
-
-
-# Add this function near your other discussion-related views (around the lesson_discussions function)
-
 @login_required
 def delete_discussion(request, discussion_id):
-    """Delete a discussion topic (instructor only)"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     
@@ -1435,11 +1413,9 @@ def delete_discussion(request, discussion_id):
         topic = get_object_or_404(ForumTopic, id=discussion_id)
         lesson = topic.lesson
         
-        # Check if user is instructor of this course
         if request.user.role != 'instructor' or lesson.course.instructor != request.user:
             return JsonResponse({'error': 'You do not have permission to delete this discussion'}, status=403)
         
-        # Delete all posts first (cascade should handle this, but to be safe)
         topic.posts.all().delete()
         topic.delete()
         
@@ -1828,16 +1804,13 @@ def ai_recommendations(request):
         'progress_percentage': overall_progress
     })
 
-
-# ==================== INSTRUCTOR STUDENT VIEW (READ ONLY) ====================
+# ==================== INSTRUCTOR STUDENT VIEW ====================
 
 @login_required
 @user_passes_test(is_instructor)
 def instructor_student_view(request, user_id):
-    """Instructor view of student profile - Read only"""
     student = get_object_or_404(User, id=user_id, role='student')
     
-    # Check if this student is enrolled in any of the instructor's courses
     instructor_courses = Course.objects.filter(instructor=request.user)
     is_enrolled = student.enrolled_courses.filter(id__in=instructor_courses).exists()
     
@@ -1845,12 +1818,10 @@ def instructor_student_view(request, user_id):
         messages.error(request, 'You can only view students enrolled in your courses.')
         return redirect('instructor_dashboard')
     
-    # Get student profile data
     profile, created = LearnerProfile.objects.get_or_create(user=student)
     documents = student.documents.all()
     logbooks = student.logbook_entries.all().order_by('-entry_date')[:10]
     
-    # Get academic progress
     enrolled_courses = student.enrolled_courses.all()
     course_progress = []
     for course in enrolled_courses:
@@ -1862,7 +1833,6 @@ def instructor_student_view(request, user_id):
             'total_lessons': course.lessons.count()
         })
     
-    # Get certificates
     certificates = Certificate.objects.filter(student=student)
     
     context = {
@@ -1872,12 +1842,12 @@ def instructor_student_view(request, user_id):
         'logbooks': logbooks,
         'course_progress': course_progress,
         'certificates': certificates,
-        'can_edit': False,  # Read-only mode
+        'can_edit': False,
         'is_instructor': True,
     }
     return render(request, 'instructor/student_profile_view.html', context)
 
-# ==================== LEARNER PROFILE MANAGEMENT (QCTO COMPLIANT) ====================
+# ==================== LEARNER PROFILE MANAGEMENT ====================
 
 @login_required
 @user_passes_test(is_admin)
@@ -2044,16 +2014,16 @@ def add_logbook_entry(request, user_id):
         'hours': str(entry.hours_spent), 'description': entry.description, 'skills': entry.skills_learned
     }})
 
+# ==================== EXPORT LEARNER REPORT (SINGLE DEFINITION) ====================
+
 @login_required
 @user_passes_test(is_admin)
 def export_learner_report(request, user_id):
-    """Export learner profile as HTML report (no external dependencies)"""
     learner = get_object_or_404(User, id=user_id)
-    profile, created = LearnerProfile.objects.get_or_create(user=learner)
+    profile = LearnerProfile.objects.get_or_create(user=learner)[0]
     documents = learner.documents.all()
     logbooks = learner.logbook_entries.all().order_by('-entry_date')
     
-    # Get course progress
     course_progress = []
     for course in learner.enrolled_courses.all():
         progress, _ = Progress.objects.get_or_create(student=learner, course=course)
@@ -2064,266 +2034,98 @@ def export_learner_report(request, user_id):
             'total_lessons': course.lessons.count()
         })
     
-    # Build document rows
-    document_rows = ""
+    doc_rows = ""
     for doc in documents:
-        document_rows += f"""
-        <tr>
-            <td>{doc.get_document_type_display()}</td>
-            <td>{doc.file_name}</td>
-            <td>{doc.upload_date.strftime('%Y-%m-%d')}</td>
-            <td>{doc.file_size // 1024} KB</td>
-        </tr>
-        """
+        doc_rows += f'<tr><td>{doc.get_document_type_display()}</td><td>{doc.file_name}</td><td>{doc.upload_date.strftime("%Y-%m-%d")}</td><td>{doc.file_size // 1024} KB</td></tr>'
     
     if not documents:
-        document_rows = '<tr><td colspan="4" style="text-align: center;">No documents uploaded</td></tr>'
+        doc_rows = '<tr><td colspan="4" style="text-align: center;">No documents uploaded</td></tr>'
     
-    # Build logbook rows
     logbook_rows = ""
     for entry in logbooks:
-        logbook_rows += f"""
-        <tr>
-            <td>{entry.entry_date.strftime('%Y-%m-%d')}</td>
-            <td>{entry.hours_spent}</td>
-            <td>{entry.description[:100]}</td>
-            <td>{entry.skills_learned[:100] if entry.skills_learned else 'N/A'}</td>
-            <td><span style="color: {'green' if entry.supervisor_approved else 'orange'};">{'Approved' if entry.supervisor_approved else 'Pending'}</span></td>
-        </tr>
-        """
+        logbook_rows += f'<tr><td>{entry.entry_date.strftime("%Y-%m-%d")}</td><td>{entry.hours_spent}</td><td>{entry.description[:100]}</td><td>{entry.skills_learned[:100] if entry.skills_learned else "N/A"}</td><td><span style="color: {"green" if entry.supervisor_approved else "orange"};">{"Approved" if entry.supervisor_approved else "Pending"}</span></td></tr>'
     
     if not logbooks:
         logbook_rows = '<tr><td colspan="5" style="text-align: center;">No logbook entries</td></tr>'
     
-    # Build course progress rows
     progress_rows = ""
     for cp in course_progress:
         status = "Completed" if cp['progress'] == 100 else "In Progress" if cp['progress'] > 0 else "Not Started"
         color = "green" if cp['progress'] == 100 else "orange" if cp['progress'] > 0 else "gray"
-        progress_rows += f"""
+        progress_rows += f'''
         <tr>
             <td>{cp['course'].title}</td>
-            <td>
-                <div style="background: #e0e0e0; border-radius: 10px; height: 20px; width: 100%; overflow: hidden;">
-                    <div style="background: linear-gradient(90deg, #9f7734, #7a5828); width: {cp['progress']}%; height: 100%; border-radius: 10px; text-align: center; color: white; font-size: 11px; line-height: 20px;">
-                        {cp['progress']}%
-                    </div>
-                </div>
-            </td>
+            <td><div class="progress-bar"><div class="progress-fill" style="width: {cp['progress']}%">{cp['progress']}%</div></div></td>
             <td>{cp['completed_lessons']} / {cp['total_lessons']}</td>
             <td><span style="color: {color};">{status}</span></td>
         </tr>
-        """
+        '''
     
-    if not course_progress:
-        progress_rows = '<tr><td colspan="4" style="text-align: center;">No courses enrolled</td></tr>'
-    
-    # Generate full HTML
     html_content = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>QCTO Learner Report - {learner.get_full_name() or learner.username}</title>
     <style>
-        body {{
-            font-family: 'Segoe UI', Arial, sans-serif;
-            margin: 40px;
-            line-height: 1.6;
-            color: #333;
-        }}
-        .header {{
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 3px solid #9f7734;
-            padding-bottom: 20px;
-        }}
-        .header h1 {{
-            color: #9f7734;
-            margin: 0;
-            font-size: 28px;
-        }}
-        .header p {{
-            color: #666;
-            margin: 5px 0;
-        }}
-        .section {{
-            margin-bottom: 25px;
-            page-break-inside: avoid;
-        }}
-        .section-title {{
-            background: #9f7734;
-            color: white;
-            padding: 10px 15px;
-            margin: 20px 0 10px 0;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 5px;
-        }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin: 10px 0;
-        }}
-        td, th {{
-            padding: 10px;
-            border: 1px solid #ddd;
-        }}
-        th {{
-            background: #f5f5f5;
-            text-align: left;
-            font-weight: 600;
-        }}
-        .info-table td:first-child {{
-            background: #f9f9f9;
-            font-weight: bold;
-            width: 30%;
-        }}
-        .footer {{
-            margin-top: 50px;
-            font-size: 10px;
-            text-align: center;
-            border-top: 1px solid #ccc;
-            padding-top: 20px;
-        }}
-        .popia-notice {{
-            background: #f0f9ff;
-            padding: 15px;
-            margin-top: 20px;
-            font-size: 10px;
-            border-left: 4px solid #9f7734;
-        }}
-        .watermark {{
-            text-align: center;
-            font-size: 9px;
-            color: #999;
-            margin-top: 10px;
-        }}
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; margin: 40px; line-height: 1.6; color: #333; }}
+        .header {{ text-align: center; margin-bottom: 30px; border-bottom: 3px solid #9f7734; padding-bottom: 20px; }}
+        .header h1 {{ color: #9f7734; margin: 0; font-size: 28px; }}
+        .section {{ margin-bottom: 25px; page-break-inside: avoid; }}
+        .section-title {{ background: #9f7734; color: white; padding: 10px 15px; margin: 20px 0 10px 0; font-size: 18px; font-weight: bold; border-radius: 5px; }}
+        table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
+        td, th {{ padding: 10px; border: 1px solid #ddd; }}
+        th {{ background: #f5f5f5; text-align: left; font-weight: 600; }}
+        .info-table td:first-child {{ background: #f9f9f9; font-weight: bold; width: 30%; }}
+        .progress-bar {{ background: #e0e0e0; border-radius: 10px; height: 20px; overflow: hidden; }}
+        .progress-fill {{ background: linear-gradient(90deg, #9f7734, #7a5828); height: 100%; border-radius: 10px; text-align: center; color: white; font-size: 11px; line-height: 20px; }}
+        .footer {{ margin-top: 50px; font-size: 10px; text-align: center; border-top: 1px solid #ccc; padding-top: 20px; }}
+        .popia-notice {{ background: #f0f9ff; padding: 15px; margin-top: 20px; font-size: 10px; border-left: 4px solid #9f7734; }}
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>📄 QCTO Learner Profile Report</h1>
-        <p><strong>Generated on:</strong> {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-        <p><strong>Generated by:</strong> {request.user.get_full_name() or request.user.username}</p>
-        <p><strong>Report ID:</strong> QCTO-{learner.id}-{timezone.now().strftime('%Y%m%d')}</p>
+        <h1>QCTO Learner Profile Report</h1>
+        <p>Generated on: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        <p>Generated by: {request.user.get_full_name() or request.user.username}</p>
     </div>
     
     <div class="section">
-        <div class="section-title">👤 Section A: Personal Information</div>
+        <div class="section-title">Section A: Personal Information</div>
         <table class="info-table">
             <tr><td>Full Name:</td><td>{learner.get_full_name() or learner.username}</td></tr>
             <tr><td>ID Number:</td><td>{learner.id_number or 'Not provided'}</td></tr>
             <tr><td>Date of Birth:</td><td>{learner.date_of_birth.strftime('%Y-%m-%d') if learner.date_of_birth else 'Not provided'}</td></tr>
-            <tr><td>Gender:</td><td>{learner.get_gender_display() or 'Not provided'}</td></tr>
-            <tr><td>Nationality:</td><td>{learner.nationality or 'South African'}</td></tr>
             <tr><td>Email:</td><td>{learner.email}</td></tr>
-            <tr><td>Phone Number:</td><td>{learner.contact_number or 'Not provided'}</td></tr>
-            <tr><td>Physical Address:</td><td>{profile.physical_address or 'Not provided'}</td></tr>
-            <tr><td>Preferred Language:</td><td>{learner.preferred_language or 'English'}</td></tr>
+            <tr><td>Phone:</td><td>{learner.contact_number or 'Not provided'}</td></tr>
         </table>
     </div>
     
     <div class="section">
-        <div class="section-title">🎓 Section B: Academic Information</div>
-        <table class="info-table">
-            <tr><td>Current Course:</td><td>{profile.current_course.title if profile.current_course else 'Not enrolled'}</td></tr>
-            <tr><td>Enrollment Date:</td><td>{profile.enrollment_date.strftime('%Y-%m-%d') if profile.enrollment_date else 'Not set'}</td></tr>
-            <tr><td>Expected Completion:</td><td>{profile.expected_completion_date.strftime('%Y-%m-%d') if profile.expected_completion_date else 'Not set'}</td></tr>
-            <tr><td>Certificate Issued:</td><td>{'Yes' if profile.certificate_issued else 'No'}</td></tr>
-            <tr><td>Certificate Date:</td><td>{profile.certificate_issued_date.strftime('%Y-%m-%d') if profile.certificate_issued_date else 'N/A'}</td></tr>
-            <tr><td>POPIA Consent:</td><td>{'Yes' if profile.popia_consent else 'No'}</td></tr>
-            <tr><td>Consent Date:</td><td>{profile.popia_consent_date.strftime('%Y-%m-%d') if profile.popia_consent_date else 'N/A'}</td></tr>
-        </table>
+        <div class="section-title">Section B: Course Progress</div>
+        <table><thead><tr><th>Course</th><th>Progress</th><th>Lessons</th><th>Status</th></tr></thead><tbody>{progress_rows}</tbody></table>
     </div>
     
     <div class="section">
-        <div class="section-title">📊 Section C: Course Progress</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Course Title</th>
-                    <th>Progress</th>
-                    <th>Lessons Completed</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {progress_rows}
-            </tbody>
-        </table>
+        <div class="section-title">Section C: Documents</div>
+        <table><thead><tr><th>Type</th><th>File Name</th><th>Date</th><th>Size</th></tr></thead><tbody>{doc_rows}</tbody></table>
     </div>
     
     <div class="section">
-        <div class="section-title">📄 Section D: Uploaded Documents</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Document Type</th>
-                    <th>File Name</th>
-                    <th>Upload Date</th>
-                    <th>Size</th>
-                </tr>
-            </thead>
-            <tbody>
-                {document_rows}
-            </tbody>
-        </table>
-    </div>
-    
-    <div class="section">
-        <div class="section-title">📘 Section E: Logbook / Workplace Experience</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Hours</th>
-                    <th>Description</th>
-                    <th>Skills Learned</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {logbook_rows}
-            </tbody>
-        </table>
-    </div>
-    
-    <div class="section">
-        <div class="section-title">🏢 Section F: Internship / Workplace Details</div>
-        <table class="info-table">
-            <tr><td>Host Company:</td><td>{profile.host_company_name or 'Not provided'}</td></tr>
-            <tr><td>MoU Period:</td><td>{profile.mou_start_date.strftime('%Y-%m-%d') if profile.mou_start_date else 'N/A'} to {profile.mou_end_date.strftime('%Y-%m-%d') if profile.mou_end_date else 'N/A'}</td></tr>
-            <tr><td>Supervisor Name:</td><td>{profile.supervisor_name or 'Not assigned'}</td></tr>
-            <tr><td>Supervisor Contact:</td><td>{profile.supervisor_phone or 'N/A'} / {profile.supervisor_email or 'N/A'}</td></tr>
-        </table>
+        <div class="section-title">Section D: Logbook Entries</div>
+        <table><thead><tr><th>Date</th><th>Hours</th><th>Description</th><th>Skills</th><th>Status</th></tr></thead><tbody>{logbook_rows}</tbody></table>
     </div>
     
     <div class="footer">
         <div class="popia-notice">
-            <strong>🔒 POPIA Notice (Protection of Personal Information Act No. 4 of 2013):</strong><br>
-            This document contains personal information that is protected under POPIA. Unauthorized disclosure, distribution, or copying of this information is prohibited. 
-            The information contained in this report is for official QCTO verification and training provider purposes only. 
-            All personal information is processed in accordance with the POPIA regulations.
-        </div>
-        <div class="watermark">
-            Funda Malitinne Learning Management System | QCTO Compliant Report | Version 1.0
+            <strong>POPIA Notice:</strong> This document contains personal information protected under POPIA. Unauthorized disclosure is prohibited.
         </div>
     </div>
 </body>
 </html>
 """
     
-    # Log the export for audit trail
-    AuditLog.objects.create(
-        user=request.user,
-        action='export',
-        resource_type='LearnerProfile',
-        resource_id=user_id,
-        ip_address=get_client_ip(request),
-        details={'format': 'HTML', 'report_type': 'QCTO_Learner_Report'}
-    )
+    AuditLog.objects.create(user=request.user, action='export', resource_type='LearnerProfile', resource_id=user_id, ip_address=get_client_ip(request), details={'format': 'HTML'})
     
-    # Return as HTML file (can be saved as HTML or printed to PDF by browser)
     response = HttpResponse(html_content, content_type='text/html')
     response['Content-Disposition'] = f'attachment; filename="learner_report_{learner.username}_{timezone.now().strftime("%Y%m%d_%H%M%S")}.html"'
     return response
@@ -2334,45 +2136,9 @@ def get_backup_log_api(request):
     backups = BackupLog.objects.all()[:10]
     return JsonResponse({'backups': [{'timestamp': b.backup_timestamp.isoformat(), 'type': b.backup_type, 'size': b.backup_size, 'status': b.status} for b in backups]})
 
+# ==================== CONTACT FORM ====================
 
-
-@login_required
-def instructor_dashboard(request):
-    if request.user.role != 'instructor':
-        return redirect('student_dashboard')
-    
-    courses = Course.objects.filter(instructor=request.user)
-    
-    total_students = sum(course.students.count() for course in courses)
-    total_lessons = sum(course.lessons.count() for course in courses)
-    pending_grading = Submission.objects.filter(assignment__course__instructor=request.user, grade__isnull=True).count()
-    
-    # Get all students enrolled in instructor's courses (for the students table)
-    all_students = []
-    for course in courses:
-        for student in course.students.all():
-            progress, _ = Progress.objects.get_or_create(student=student, course=course)
-            enrollment_date = student.date_joined.date() if student.date_joined else None
-            
-            # Check if student already added (avoid duplicates if in multiple courses)
-            if not any(s['student'].id == student.id for s in all_students):
-                all_students.append({
-                    'student': student,
-                    'course': course,
-                    'progress': progress.progress_percentage,
-                    'enrollment_date': enrollment_date,
-                })
-    
-    return render(request, 'instructor_dashboard.html', {
-        'courses': courses,
-        'total_courses': courses.count(),
-        'total_students': total_students,
-        'total_lessons': total_lessons,
-        'pending_grading': pending_grading,
-        'all_students': all_students,  
-    })
 def contact_form_submit(request):
-    """Handle contact form submissions"""
     if request.method == 'POST':
         try:
             first_name = request.POST.get('first_name', '')
@@ -2382,114 +2148,58 @@ def contact_form_submit(request):
             client_type = request.POST.get('client_type', '')
             message = request.POST.get('message', '')
             
-            # Validate required fields
             if not first_name or not last_name or not email or not message:
                 messages.error(request, 'Please fill in all required fields.')
-                return redirect('company_home')  # Remove the +#contact part
+                response = redirect('company_home')
+                response['Location'] += '#contact'
+                return response
             
-            # Prepare email content
             full_name = f"{first_name} {last_name}"
-            
-            subject = f"New Contact Form Submission from {full_name}"
             
             html_message = f"""
             <html>
-            <body style="font-family: Arial, sans-serif;">
-                <h2 style="color: #9f7734;">New Contact Form Submission</h2>
+            <body>
+                <h2>New Contact Form Submission</h2>
                 <p><strong>Name:</strong> {full_name}</p>
                 <p><strong>Email:</strong> {email}</p>
                 <p><strong>Organisation:</strong> {organisation or 'Not provided'}</p>
                 <p><strong>I am a:</strong> {client_type or 'Not specified'}</p>
                 <p><strong>Message:</strong></p>
-                <p style="background: #f5f5f5; padding: 15px; border-left: 4px solid #9f7734;">{message.replace(chr(10), '<br>')}</p>
-                <hr>
-                <p style="font-size: 12px; color: #666;">Submitted from: Funda Malitinne Website Contact Form</p>
+                <p>{message}</p>
             </body>
             </html>
             """
             
-            plain_message = f"""
-            New Contact Form Submission
-            
-            Name: {full_name}
-            Email: {email}
-            Organisation: {organisation or 'Not provided'}
-            I am a: {client_type or 'Not specified'}
-            
-            Message:
-            {message}
-            """
-            
-            # Send to your email address
             send_mail(
-                subject=subject,
-                message=plain_message,
+                subject=f'New Contact Form Submission from {full_name}',
+                message=message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=['sah.sakhile@gmail.com'],
                 html_message=html_message,
                 fail_silently=False
             )
             
-            # Send auto-reply to the user
-            auto_reply_html = f"""
-            <html>
-            <body style="font-family: Arial, sans-serif;">
-                <h2 style="color: #9f7734;">Thank you for contacting Malitinne!</h2>
-                <p>Dear {full_name},</p>
-                <p>Thank you for reaching out to us. We have received your message and one of our representatives will get back to you within 24-48 business hours.</p>
-                <p><strong>Your message summary:</strong></p>
-                <p style="background: #f5f5f5; padding: 15px; border-left: 4px solid #9f7734;">{message[:200]}{'...' if len(message) > 200 else ''}</p>
-                <p>In the meantime, you can:</p>
-                <ul>
-                    <li>Visit our <a href="https://www.malitinne.co.za/lms/">LMS Portal</a> to explore available courses</li>
-                    <li>Call us directly at 073 931 7923</li>
-                </ul>
-                <p>Best regards,<br>
-                <strong>Malitinne Team</strong></p>
-                <hr>
-                <p style="font-size: 10px; color: #666;">This is an automated response. Please do not reply to this email.</p>
-            </body>
-            </html>
-            """
-            
-            send_mail(
-                subject="Thank you for contacting Malitinne",
-                message=f"Thank you for contacting us, {full_name}. We will get back to you soon.",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                html_message=auto_reply_html,
-                fail_silently=True
-            )
-            
-            messages.success(request, 'Thank you! Your message has been sent. We will contact you soon.')
-            
+            messages.success(request, 'Thank you! Your message has been sent.')
         except Exception as e:
-            # Log the error for debugging
-            print(f"Contact form error: {str(e)}")
-            messages.error(request, 'An error occurred. Please try again or call us directly at 073 931 7923.')
-        
-        # Redirect with anchor to contact section
-        response = redirect('company_home')
-        response['Location'] += '#contact'
-        return response
+            messages.error(request, 'An error occurred. Please try again.')
     
-    return redirect('company_home')
+    response = redirect('company_home')
+    response['Location'] += '#contact'
+    return response
 
+# ==================== OPPORTUNITIES ====================
 
 def opportunities_list(request):
-    """Display all open opportunities"""
     opportunities = Opportunity.objects.filter(
         status='published',
         opening_date__lte=timezone.now().date(),
         closing_date__gte=timezone.now().date()
-    ).exclude(positions_filled__gte=models.F('available_positions'))
+    ).exclude(positions_filled__gte=F('available_positions'))
     
-    # Filter by type if specified
     opportunity_type = request.GET.get('type')
     if opportunity_type:
         opportunities = opportunities.filter(opportunity_type=opportunity_type)
     
-    # Search
     search_query = request.GET.get('search')
     if search_query:
         opportunities = opportunities.filter(
@@ -2505,7 +2215,6 @@ def opportunities_list(request):
     return render(request, 'malitinne/opportunities.html', context)
 
 def apply_for_opportunity(request, opportunity_id):
-    """Application form for a specific opportunity"""
     opportunity = get_object_or_404(Opportunity, id=opportunity_id, status='published')
     
     if not opportunity.is_open:
@@ -2514,7 +2223,6 @@ def apply_for_opportunity(request, opportunity_id):
     
     if request.method == 'POST':
         try:
-            # Create application
             application = Application.objects.create(
                 opportunity=opportunity,
                 first_name=request.POST.get('first_name'),
@@ -2543,7 +2251,6 @@ def apply_for_opportunity(request, opportunity_id):
                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
             )
             
-            # Handle file uploads
             if request.FILES.get('cv'):
                 application.cv = request.FILES['cv']
             if request.FILES.get('cover_letter'):
@@ -2555,7 +2262,6 @@ def apply_for_opportunity(request, opportunity_id):
             
             application.save()
             
-            # Send confirmation email
             try:
                 send_mail(
                     f'Application Received - {opportunity.title}',
@@ -2569,213 +2275,20 @@ def apply_for_opportunity(request, opportunity_id):
             
             messages.success(request, f'Application submitted successfully! Your reference number is {application.application_number}')
             return redirect('opportunities')
-            
         except Exception as e:
             messages.error(request, f'Error submitting application: {str(e)}')
     
     context = {'opportunity': opportunity}
     return render(request, 'malitinne/apply.html', context)
 
-# Custom error handlers
+def application_success(request, application_number):
+    application = get_object_or_404(Application, application_number=application_number)
+    return render(request, 'malitinne/application_success.html', {'application': application})
+
+# ==================== ERROR HANDLERS ====================
+
 def custom_404(request, exception):
     return render(request, '404.html', status=404)
 
 def custom_500(request):
     return render(request, '404.html', status=500)
-
-
-def application_success(request, application_number):
-    """Success page after application submission"""
-    application = get_object_or_404(Application, application_number=application_number)
-    return render(request, 'malitinne/application_success.html', {'application': application})
-
-@login_required
-@user_passes_test(is_admin)
-def export_learner_report(request, user_id):
-    """Export learner profile as HTML report (no PDF dependencies)"""
-    learner = get_object_or_404(User, id=user_id)
-    profile = LearnerProfile.objects.get_or_create(user=learner)[0]
-    documents = learner.documents.all()
-    logbooks = learner.logbook_entries.all().order_by('-entry_date')
-    
-    # Get course progress
-    course_progress = []
-    for course in learner.enrolled_courses.all():
-        progress, _ = Progress.objects.get_or_create(student=learner, course=course)
-        course_progress.append({
-            'course': course,
-            'progress': progress.progress_percentage,
-            'completed_lessons': progress.completed_lessons.count(),
-            'total_lessons': course.lessons.count()
-        })
-    
-    # Generate HTML report
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>QCTO Learner Report - {learner.get_full_name()|default:learner.username}</title>
-        <style>
-            body {{
-                font-family: Arial, sans-serif;
-                margin: 40px;
-                line-height: 1.6;
-                color: #333;
-            }}
-            .header {{
-                text-align: center;
-                margin-bottom: 30px;
-                border-bottom: 2px solid #9f7734;
-                padding-bottom: 20px;
-            }}
-            .header h1 {{
-                color: #9f7734;
-                margin: 0;
-            }}
-            .section {{
-                margin-bottom: 25px;
-                page-break-inside: avoid;
-            }}
-            .section-title {{
-                background: #9f7734;
-                color: white;
-                padding: 10px;
-                margin: 20px 0 10px 0;
-                font-size: 16px;
-                font-weight: bold;
-            }}
-            table {{
-                width: 100%;
-                border-collapse: collapse;
-                margin: 10px 0;
-            }}
-            td, th {{
-                padding: 8px;
-                border: 1px solid #ddd;
-            }}
-            th {{
-                background: #f5f5f5;
-                text-align: left;
-            }}
-            .footer {{
-                margin-top: 50px;
-                font-size: 10px;
-                text-align: center;
-                border-top: 1px solid #ccc;
-                padding-top: 20px;
-            }}
-            .popia-notice {{
-                background: #f0f9ff;
-                padding: 15px;
-                margin-top: 20px;
-                font-size: 9px;
-            }}
-            .label {{
-                font-weight: bold;
-                width: 30%;
-                background: #f9f9f9;
-            }}
-            .progress-bar {{
-                background: #e0e0e0;
-                border-radius: 10px;
-                height: 20px;
-                overflow: hidden;
-            }}
-            .progress-fill {{
-                background: linear-gradient(90deg, #9f7734, #7a5828);
-                height: 100%;
-                border-radius: 10px;
-                text-align: center;
-                color: white;
-                font-size: 11px;
-                line-height: 20px;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>QCTO Learner Profile Report</h1>
-            <p>Generated on: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-            <p>Generated by: {request.user.get_full_name()|default:request.user.username}</p>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">Section A: Personal Information</div>
-            <table>
-                <tr><td class="label">Full Name:</td><td>{learner.get_full_name()|default:learner.username}</td></tr>
-                <tr><td class="label">ID Number:</td><td>{learner.id_number|default:"Not provided"}</td></tr>
-                <tr><td class="label">Date of Birth:</td><td>{learner.date_of_birth.strftime('%Y-%m-%d') if learner.date_of_birth else "Not provided"}</td></tr>
-                <tr><td class="label">Gender:</td><td>{learner.get_gender_display()|default:"Not provided"}</td></tr>
-                <tr><td class="label">Nationality:</td><td>{learner.nationality|default:"South African"}</td></tr>
-                <tr><td class="label">Email:</td><td>{learner.email}</td></tr>
-                <tr><td class="label">Phone:</td><td>{learner.contact_number|default:"Not provided"}</td></tr>
-                <tr><td class="label">Address:</td><td>{profile.physical_address|default:"Not provided"}</td></tr>
-            </table>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">Section B: Academic Information</div>
-            <table>
-                <tr><td class="label">Current Course:</td><td>{profile.current_course.title if profile.current_course else "Not enrolled"}</td></tr>
-                <tr><td class="label">Enrollment Date:</td><td>{profile.enrollment_date.strftime('%Y-%m-%d') if profile.enrollment_date else "Not set"}</td></tr>
-                <tr><td class="label">Certificate Issued:</td><td>{"Yes" if profile.certificate_issued else "No"}</td></tr>
-                <tr><td class="label">Certificate Date:</td><td>{profile.certificate_issued_date.strftime('%Y-%m-%d') if profile.certificate_issued_date else "N/A"}</td></tr>
-            </table>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">Section C: Course Progress</div>
-            <table>
-                <thead><tr><th>Course</th><th>Progress</th><th>Lessons Completed</th><th>Status</th></tr></thead>
-                <tbody>
-                    {''.join([f'<tr><td>{cp["course"].title}</td><td><div class="progress-bar"><div class="progress-fill" style="width: {cp["progress"]}%">{cp["progress"]}%</div></div></td><td>{cp["completed_lessons"]}/{cp["total_lessons"]}</td><td>{"Completed" if cp["progress"] == 100 else "In Progress"}</td></tr>' for cp in course_progress])}
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">Section D: Documents Uploaded</div>
-            <table>
-                <thead><tr><th>Document Type</th><th>File Name</th><th>Upload Date</th></tr></thead>
-                <tbody>
-                    {''.join([f'<tr><td>{doc.get_document_type_display()}</td><td>{doc.file_name}</td><td>{doc.upload_date.strftime("%Y-%m-%d")}</td></tr>' for doc in documents])}
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">Section E: Logbook Entries</div>
-            <table>
-                <thead><tr><th>Date</th><th>Hours</th><th>Description</th><th>Skills Learned</th></tr></thead>
-                <tbody>
-                    {''.join([f'<tr><td>{entry.entry_date.strftime("%Y-%m-%d")}</td><td>{entry.hours_spent}</td><td>{entry.description|truncatewords:20}</td><td>{entry.skills_learned|truncatewords:10}</td></tr>' for entry in logbooks])}
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="footer">
-            <p>This report is QCTO compliant and contains verified learner information.</p>
-            <div class="popia-notice">
-                <strong>POPIA Notice:</strong> This document contains personal information protected under the Protection of Personal Information Act (POPIA) No. 4 of 2013. 
-                Unauthorized disclosure is prohibited. The information in this report is for official QCTO verification purposes only.
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    
-    # Log the export
-    AuditLog.objects.create(
-        user=request.user,
-        action='export',
-        resource_type='LearnerProfile',
-        resource_id=user_id,
-        ip_address=get_client_ip(request),
-        details={'format': 'HTML'}
-    )
-    
-    # Return as HTML file (can be printed to PDF by user or saved as HTML)
-    response = HttpResponse(html_content, content_type='text/html')
-    response['Content-Disposition'] = f'attachment; filename="learner_report_{learner.username}_{timezone.now().strftime("%Y%m%d_%H%M%S")}.html"'
-    return response
