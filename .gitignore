@@ -1,3 +1,8 @@
+*.pyc
+__pycache__/
+db.sqlite3
+logs/
+nohup.out
 __pycache__/
 *.pyc
 db.sqlite3
