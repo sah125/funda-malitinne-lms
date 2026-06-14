@@ -242,6 +242,33 @@ class Progress(models.Model):
             self.save()
             return True
         return False
+    
+    @property
+    def practical_progress_percentage(self):
+        modules = self.course.learning_modules.filter(module_type='practical')
+        total = modules.count()
+        if total == 0:
+            return 0
+        done = AssessorSignOff.objects.filter(student=self.student, module__in=modules, outcome='competent').count()
+        return int((done / total) * 100)
+    
+    @property
+    def work_experience_progress_percentage(self):
+        modules = self.course.learning_modules.filter(module_type='work_experience')
+        total = modules.count()
+        if total == 0:
+            return 0
+        done = AssessorSignOff.objects.filter(student=self.student, module__in=modules, outcome='competent').count()
+        return int((done / total) * 100)
+    
+    @property
+    def overall_qualification_percentage(self):
+        parts = [self.progress_percentage]
+        if self.course.learning_modules.filter(module_type='practical').exists():
+            parts.append(self.practical_progress_percentage)
+        if self.course.learning_modules.filter(module_type='work_experience').exists():
+            parts.append(self.work_experience_progress_percentage)
+        return int(sum(parts) / len(parts)) if parts else 0
 
 class Certificate(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='certificates')
@@ -412,11 +439,18 @@ class Attendance(models.Model):
 
 class LearningModule(models.Model):
     """Group lessons into modules like Blackboard"""
+    MODULE_TYPE_CHOICES = (
+        ('knowledge', 'Knowledge Module'),
+        ('practical', 'Practical Skill Module'),
+        ('work_experience', 'Work Experience Module'),
+    )
+    
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='learning_modules')
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     order = models.IntegerField(default=0)
     is_visible = models.BooleanField(default=True)
+    module_type = models.CharField(max_length=20, choices=MODULE_TYPE_CHOICES, default='knowledge')
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -520,6 +554,8 @@ class LearnerDocument(models.Model):
 class LogbookEntry(models.Model):
     """Workplace experience logbook entries"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='logbook_entries')
+    module = models.ForeignKey(LearningModule, on_delete=models.SET_NULL, null=True, blank=True, related_name='logbook_entries')
+    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True, related_name='logbook_entries')
     entry_date = models.DateField()
     hours_spent = models.DecimalField(max_digits=5, decimal_places=1, default=0, help_text="Hours spent on this activity")
     description = models.TextField()
@@ -800,3 +836,129 @@ class Application(models.Model):
     
     def __str__(self):
         return f"{self.full_name} - {self.opportunity.title}"
+
+
+class ObservationChecklistItem(models.Model):
+    """A single competency an assessor checks off during a practical demonstration"""
+    module = models.ForeignKey(LearningModule, on_delete=models.CASCADE, related_name='checklist_items')
+    description = models.CharField(max_length=500)
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.module.title} - {self.description[:50]}"
+
+
+class StudentChecklistResult(models.Model):
+    """Whether a student demonstrated a specific competency"""
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='checklist_results')
+    item = models.ForeignKey(ObservationChecklistItem, on_delete=models.CASCADE, related_name='results')
+    is_competent = models.BooleanField(default=False)
+    assessed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='checklist_assessments')
+    assessed_at = models.DateTimeField(null=True, blank=True)
+    comments = models.TextField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ['student', 'item']
+
+    def __str__(self):
+        return f"{self.student.username} - {self.item.description[:30]} - {'Competent' if self.is_competent else 'Not yet'}"
+
+
+class ModuleEvidence(models.Model):
+    """Evidence uploaded by a student for a practical or work-experience module"""
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='module_evidence')
+    module = models.ForeignKey(LearningModule, on_delete=models.CASCADE, related_name='evidence_items')
+    title = models.CharField(max_length=200)
+    file = models.FileField(upload_to='module_evidence/%Y/%m/')
+    description = models.TextField(blank=True, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
+    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_evidence')
+    verified_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"{self.student.username} - {self.module.title} - {self.title}"
+
+
+class AssessorSignOff(models.Model):
+    """Assessor's final sign-off on a student's competence for a module"""
+    OUTCOME_CHOICES = (
+        ('competent', 'Competent'),
+        ('not_yet_competent', 'Not Yet Competent'),
+    )
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sign_offs')
+    module = models.ForeignKey(LearningModule, on_delete=models.CASCADE, related_name='sign_offs')
+    assessor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='assessments_given')
+    outcome = models.CharField(max_length=20, choices=OUTCOME_CHOICES, default='not_yet_competent')
+    comments = models.TextField(blank=True, null=True)
+    signed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['student', 'module']
+
+    def __str__(self):
+        return f"{self.student.username} - {self.module.title} - {self.get_outcome_display()}"
+
+
+class PortfolioOfEvidence(models.Model):
+    """Aggregated portfolio of evidence for a qualification, submitted for assessment"""
+    STATUS_CHOICES = (
+        ('in_progress', 'In Progress'),
+        ('submitted', 'Submitted'),
+        ('approved', 'Approved'),
+        ('returned', 'Returned for Revision'),
+    )
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='portfolios')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='portfolios')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='in_progress')
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_portfolios')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ['student', 'course']
+
+    def __str__(self):
+        return f"{self.student.username} - {self.course.title} - {self.get_status_display()}"
+
+
+class SummativeAssessment(models.Model):
+    """Internal Integrated Summative Assessment (IISA) for a qualification"""
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='summative_assessments')
+    title = models.CharField(max_length=200)
+    instructions = models.TextField()
+    due_date = models.DateTimeField()
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.course.title} - {self.title}"
+
+
+class SummativeAssessmentSubmission(models.Model):
+    RESULT_CHOICES = (
+        ('pending', 'Pending Assessment'),
+        ('competent', 'Competent'),
+        ('not_yet_competent', 'Not Yet Competent'),
+    )
+    assessment = models.ForeignKey(SummativeAssessment, on_delete=models.CASCADE, related_name='submissions')
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='summative_submissions')
+    file_upload = models.FileField(upload_to='summative_submissions/%Y/%m/')
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    result = models.CharField(max_length=20, choices=RESULT_CHOICES, default='pending')
+    assessed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='summative_assessments_given')
+    assessed_at = models.DateTimeField(null=True, blank=True)
+    feedback = models.TextField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ['assessment', 'student']
+
+    def __str__(self):
+        return f"{self.student.username} - {self.assessment.title} - {self.get_result_display()}"
