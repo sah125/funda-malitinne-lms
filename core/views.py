@@ -29,7 +29,9 @@ from .models import (
     Announcement, CourseGroup, Attendance, LearningModule,
     LearnerProfile, LearnerDocument, LogbookEntry, BackupLog, AuditLog,
     LessonModule, UserModuleProgress, LessonInteraction, DailyStreak, Badge, UserBadge,
-    ForumTopic, ForumPost
+    ForumTopic, ForumPost, ObservationChecklistItem, StudentChecklistResult,
+    AssessorSignOff, ModuleEvidence, PortfolioOfEvidence, SummativeAssessment,
+    SummativeAssessmentSubmission
 )
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
@@ -2284,6 +2286,543 @@ def apply_for_opportunity(request, opportunity_id):
 def application_success(request, application_number):
     application = get_object_or_404(Application, application_number=application_number)
     return render(request, 'malitinne/application_success.html', {'application': application})
+
+# ==================== PRACTICAL SKILLS & OBSERVATION CHECKLIST ====================
+
+@login_required
+def get_observation_checklist(request, lesson_id):
+    """Get observation checklist for a lesson's practical module"""
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    
+    # Check permissions
+    if request.user.role == 'student' and request.user not in lesson.course.students.all():
+        return JsonResponse({'error': 'Not enrolled'}, status=403)
+    
+    # Get the practical module for this lesson
+    practical_modules = lesson.course.learning_modules.filter(module_type='practical')
+    if not practical_modules.exists():
+        return JsonResponse({'checklist': [], 'message': 'No practical checklist available'})
+    
+    module = practical_modules.first()
+    checklist_items = module.checklist_items.all()
+    
+    # Get student's results if they're a student
+    results = {}
+    if request.user.role == 'student':
+        student_results = StudentChecklistResult.objects.filter(student=request.user, item__in=checklist_items)
+        for result in student_results:
+            results[result.item.id] = result.is_competent
+    
+    checklist_data = []
+    for item in checklist_items:
+        checklist_data.append({
+            'id': item.id,
+            'description': item.description,
+            'order': item.order,
+            'is_competent': results.get(item.id, False)
+        })
+    
+    return JsonResponse({
+        'module_id': module.id,
+        'module_title': module.title,
+        'checklist': checklist_data
+    })
+
+
+@login_required
+@user_passes_test(is_instructor)
+def assess_checklist_item(request, item_id):
+    """Assessor marks a checklist item as competent/not yet competent"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    item = get_object_or_404(ObservationChecklistItem, id=item_id)
+    student_id = request.POST.get('student_id')
+    is_competent = request.POST.get('is_competent') == 'true'
+    comments = request.POST.get('comments', '')
+    
+    student = get_object_or_404(User, id=student_id, role='student')
+    
+    # Verify instructor owns this course
+    if student not in item.module.course.students.all():
+        return JsonResponse({'error': 'Student not in this course'}, status=403)
+    
+    result, created = StudentChecklistResult.objects.update_or_create(
+        student=student,
+        item=item,
+        defaults={
+            'is_competent': is_competent,
+            'assessed_by': request.user,
+            'assessed_at': timezone.now(),
+            'comments': comments
+        }
+    )
+    
+    # Check if all items for this module are competent
+    all_items = item.module.checklist_items.all()
+    all_competent = all(
+        StudentChecklistResult.objects.filter(student=student, item=i, is_competent=True).exists()
+        for i in all_items
+    )
+    
+    if all_competent:
+        # Auto-sign-off the module if all items competent
+        signoff, created = AssessorSignOff.objects.update_or_create(
+            student=student,
+            module=item.module,
+            defaults={
+                'assessor': request.user,
+                'outcome': 'competent',
+                'comments': f'Auto-signed off after all checklist items completed. {comments}',
+                'signed_at': timezone.now()
+            }
+        )
+        
+        # Update progress
+        progress, _ = Progress.objects.get_or_create(student=student, course=item.module.course)
+        
+        return JsonResponse({
+            'success': True,
+            'is_competent': is_competent,
+            'module_completed': True,
+            'message': f'Checklist item updated. Module {item.module.title} is now COMPETENT!'
+        })
+    
+    return JsonResponse({
+        'success': True,
+        'is_competent': is_competent,
+        'module_completed': False,
+        'message': f'Checklist item marked as {"competent" if is_competent else "not yet competent"}'
+    })
+
+
+@login_required
+def get_module_competency_status(request, module_id):
+    """Get a student's competency status for a module"""
+    module = get_object_or_404(LearningModule, id=module_id)
+    student_id = request.GET.get('student_id')
+    
+    if request.user.role == 'instructor' and student_id:
+        student = get_object_or_404(User, id=student_id, role='student')
+    elif request.user.role == 'student':
+        student = request.user
+    else:
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    # Check sign-off status
+    signoff = AssessorSignOff.objects.filter(student=student, module=module).first()
+    
+    # Get checklist progress
+    checklist_items = module.checklist_items.all()
+    completed_items = StudentChecklistResult.objects.filter(
+        student=student, item__in=checklist_items, is_competent=True
+    ).count()
+    
+    # Get evidence uploaded
+    evidence = ModuleEvidence.objects.filter(student=student, module=module)
+    
+    return JsonResponse({
+        'module_id': module.id,
+        'module_title': module.title,
+        'module_type': module.module_type,
+        'signoff_status': signoff.outcome if signoff else 'not_assessed',
+        'checklist_total': checklist_items.count(),
+        'checklist_completed': completed_items,
+        'evidence_count': evidence.count(),
+        'evidence_items': [{'id': e.id, 'title': e.title, 'verified': e.is_verified} for e in evidence],
+        'is_competent': signoff and signoff.outcome == 'competent'
+    })
+
+
+# ==================== MODULE EVIDENCE UPLOAD (WORK EXPERIENCE & PORTFOLIO) ====================
+
+@login_required
+def upload_module_evidence(request, module_id):
+    """Upload evidence for a work experience or practical module"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    module = get_object_or_404(LearningModule, id=module_id)
+    
+    if request.user.role == 'student' and request.user not in module.course.students.all():
+        return JsonResponse({'error': 'Not enrolled in this course'}, status=403)
+    
+    if 'file' not in request.FILES:
+        return JsonResponse({'error': 'No file provided'}, status=400)
+    
+    file = request.FILES['file']
+    title = request.POST.get('title', file.name)
+    description = request.POST.get('description', '')
+    
+    # Validate file type
+    allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 
+                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+    if file.content_type not in allowed_types:
+        return JsonResponse({'error': 'Invalid file type. PDF, DOC, or images only.'}, status=400)
+    
+    evidence = ModuleEvidence.objects.create(
+        student=request.user if request.user.role == 'student' else None,
+        module=module,
+        title=title,
+        file=file,
+        description=description,
+        uploaded_at=timezone.now()
+    )
+    
+    # If instructor is uploading on behalf of student
+    student_id = request.POST.get('student_id')
+    if request.user.role == 'instructor' and student_id:
+        student = get_object_or_404(User, id=student_id, role='student')
+        evidence.student = student
+        evidence.save()
+    
+    return JsonResponse({
+        'success': True,
+        'evidence': {
+            'id': evidence.id,
+            'title': evidence.title,
+            'file_url': evidence.file.url if evidence.file else None,
+            'uploaded_at': evidence.uploaded_at.strftime('%Y-%m-%d %H:%M'),
+            'is_verified': evidence.is_verified
+        }
+    })
+
+
+@login_required
+def delete_module_evidence(request, evidence_id):
+    """Delete uploaded evidence"""
+    if request.method != 'DELETE':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    evidence = get_object_or_404(ModuleEvidence, id=evidence_id)
+    
+    # Check permissions
+    if request.user.role == 'student' and evidence.student != request.user:
+        return JsonResponse({'error': 'Cannot delete other student\'s evidence'}, status=403)
+    
+    if request.user.role == 'instructor' and request.user not in evidence.module.course.instructor:
+        return JsonResponse({'error': 'You do not own this course'}, status=403)
+    
+    # Delete file from disk
+    if evidence.file and os.path.isfile(evidence.file.path):
+        os.remove(evidence.file.path)
+    
+    evidence.delete()
+    return JsonResponse({'success': True})
+
+
+@login_required
+@user_passes_test(is_instructor)
+def verify_module_evidence(request, evidence_id):
+    """Instructor verifies evidence as authentic"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    evidence = get_object_or_404(ModuleEvidence, id=evidence_id)
+    is_verified = request.POST.get('is_verified') == 'true'
+    
+    evidence.is_verified = is_verified
+    evidence.verified_by = request.user
+    evidence.verified_at = timezone.now() if is_verified else None
+    evidence.save()
+    
+    return JsonResponse({
+        'success': True,
+        'is_verified': evidence.is_verified,
+        'verified_by': request.user.username,
+        'verified_at': evidence.verified_at.strftime('%Y-%m-%d %H:%M') if evidence.verified_at else None
+    })
+
+
+# ==================== PORTFOLIO OF EVIDENCE ====================
+
+@login_required
+def get_portfolio_status(request, course_id):
+    """Get portfolio status for a student"""
+    course = get_object_or_404(Course, id=course_id)
+    student_id = request.GET.get('student_id')
+    
+    if request.user.role == 'instructor' and student_id:
+        student = get_object_or_404(User, id=student_id, role='student')
+    elif request.user.role == 'student':
+        student = request.user
+    else:
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    portfolio, created = PortfolioOfEvidence.objects.get_or_create(student=student, course=course)
+    
+    # Get all evidence for this course
+    modules = course.learning_modules.filter(module_type__in=['practical', 'work_experience'])
+    evidence_counts = {}
+    for module in modules:
+        evidence_counts[module.id] = ModuleEvidence.objects.filter(student=student, module=module).count()
+    
+    # Get sign-offs
+    signoffs = {}
+    for signoff in AssessorSignOff.objects.filter(student=student, module__in=modules):
+        signoffs[signoff.module_id] = signoff.outcome
+    
+    return JsonResponse({
+        'portfolio_id': portfolio.id,
+        'status': portfolio.status,
+        'submitted_at': portfolio.submitted_at.strftime('%Y-%m-%d %H:%M') if portfolio.submitted_at else None,
+        'reviewed_at': portfolio.reviewed_at.strftime('%Y-%m-%d %H:%M') if portfolio.reviewed_at else None,
+        'notes': portfolio.notes,
+        'modules': [
+            {
+                'id': m.id,
+                'title': m.title,
+                'module_type': m.module_type,
+                'evidence_count': evidence_counts.get(m.id, 0),
+                'signoff_status': signoffs.get(m.id, 'not_assessed')
+            }
+            for m in modules
+        ]
+    })
+
+
+@login_required
+def submit_portfolio(request, course_id):
+    """Student submits portfolio for assessment"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    if request.user.role != 'student':
+        return JsonResponse({'error': 'Only students can submit portfolios'}, status=403)
+    
+    course = get_object_or_404(Course, id=course_id)
+    portfolio, created = PortfolioOfEvidence.objects.get_or_create(student=request.user, course=course)
+    
+    # Check if all required modules have sign-offs
+    practical_modules = course.learning_modules.filter(module_type='practical')
+    work_modules = course.learning_modules.filter(module_type='work_experience')
+    
+    missing_signoffs = []
+    for module in practical_modules:
+        if not AssessorSignOff.objects.filter(student=request.user, module=module, outcome='competent').exists():
+            missing_signoffs.append(f"Practical: {module.title}")
+    
+    for module in work_modules:
+        if not AssessorSignOff.objects.filter(student=request.user, module=module, outcome='competent').exists():
+            missing_signoffs.append(f"Work Experience: {module.title}")
+    
+    if missing_signoffs:
+        return JsonResponse({
+            'success': False,
+            'error': 'Cannot submit portfolio until all modules are signed off as competent',
+            'missing_signoffs': missing_signoffs
+        }, status=400)
+    
+    portfolio.status = 'submitted'
+    portfolio.submitted_at = timezone.now()
+    portfolio.save()
+    
+    # Notify instructors/admins
+    instructors = User.objects.filter(role__in=['instructor', 'admin'])
+    for instructor in instructors:
+        send_notification(
+            instructor,
+            f'Portfolio Submitted - {course.title}',
+            f'{request.user.get_full_name()} has submitted their portfolio for review',
+            f'/admin/learner/{request.user.id}/'
+        )
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'Portfolio submitted for assessment',
+        'submitted_at': portfolio.submitted_at.strftime('%Y-%m-%d %H:%M')
+    })
+
+
+# ==================== IISA (SUMMATIVE ASSESSMENT) ====================
+
+@login_required
+def get_iisa_assessments(request, course_id):
+    """Get IISA/summative assessments for a course"""
+    course = get_object_or_404(Course, id=course_id)
+    
+    assessments = course.summative_assessments.all()
+    results = {}
+    
+    if request.user.role == 'student':
+        for assessment in assessments:
+            submission = SummativeAssessmentSubmission.objects.filter(
+                assessment=assessment, student=request.user
+            ).first()
+            if submission:
+                results[assessment.id] = {
+                    'submitted': True,
+                    'result': submission.result,
+                    'submitted_at': submission.submitted_at.strftime('%Y-%m-%d %H:%M'),
+                    'feedback': submission.feedback
+                }
+            else:
+                results[assessment.id] = {'submitted': False}
+    
+    return JsonResponse({
+        'assessments': [
+            {
+                'id': a.id,
+                'title': a.title,
+                'instructions': a.instructions,
+                'due_date': a.due_date.strftime('%Y-%m-%d %H:%M'),
+                'status': results.get(a.id, {'submitted': False})
+            }
+            for a in assessments
+        ]
+    })
+
+
+@login_required
+def submit_iisa(request, assessment_id):
+    """Student submits IISA assessment"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    if request.user.role != 'student':
+        return JsonResponse({'error': 'Only students can submit assessments'}, status=403)
+    
+    assessment = get_object_or_404(SummativeAssessment, id=assessment_id)
+    
+    # Check if already submitted
+    existing = SummativeAssessmentSubmission.objects.filter(
+        assessment=assessment, student=request.user
+    ).first()
+    
+    if existing:
+        return JsonResponse({'error': 'You have already submitted this assessment'}, status=400)
+    
+    if 'file' not in request.FILES:
+        return JsonResponse({'error': 'No file provided'}, status=400)
+    
+    file = request.FILES['file']
+    
+    submission = SummativeAssessmentSubmission.objects.create(
+        assessment=assessment,
+        student=request.user,
+        file_upload=file,
+        submitted_at=timezone.now(),
+        result='pending'
+    )
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'IISA assessment submitted successfully',
+        'submission_id': submission.id,
+        'submitted_at': submission.submitted_at.strftime('%Y-%m-%d %H:%M')
+    })
+
+
+@login_required
+@user_passes_test(is_instructor)
+def grade_iisa(request, assessment_id):
+    """Instructor grades IISA assessment"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    assessment = get_object_or_404(SummativeAssessment, id=assessment_id)
+    student_id = request.POST.get('student_id')
+    result = request.POST.get('result')  # 'competent' or 'not_yet_competent'
+    feedback = request.POST.get('feedback', '')
+    
+    student = get_object_or_404(User, id=student_id, role='student')
+    
+    submission = get_object_or_404(
+        SummativeAssessmentSubmission,
+        assessment=assessment,
+        student=student
+    )
+    
+    submission.result = result
+    submission.assessed_by = request.user
+    submission.assessed_at = timezone.now()
+    submission.feedback = feedback
+    submission.save()
+    
+    # If student passed IISA, mark qualification as complete
+    if result == 'competent':
+        # Check if all IISA assessments passed
+        all_assessments = assessment.course.summative_assessments.all()
+        all_passed = all(
+            SummativeAssessmentSubmission.objects.filter(
+                assessment=a, student=student, result='competent'
+            ).exists()
+            for a in all_assessments
+        )
+        
+        if all_passed:
+            # Generate final certificate
+            progress = Progress.objects.get(student=student, course=assessment.course)
+            if progress.progress_percentage == 100:
+                certificate, created = Certificate.objects.get_or_create(
+                    student=student,
+                    course=assessment.course
+                )
+                if created:
+                    send_notification(
+                        student,
+                        f'🎉 Qualification Complete! - {assessment.course.title}',
+                        f'Congratulations! You have successfully completed all requirements including the IISA.',
+                        f'/certificates/'
+                    )
+    
+    return JsonResponse({
+        'success': True,
+        'result': result,
+        'assessed_by': request.user.username,
+        'assessed_at': submission.assessed_at.strftime('%Y-%m-%d %H:%M')
+    })
+
+
+# ==================== ASSESSOR SIGN-OFF ====================
+
+@login_required
+@user_passes_test(is_instructor)
+def assessor_signoff(request, module_id):
+    """Assessor signs off a module as competent"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    module = get_object_or_404(LearningModule, id=module_id)
+    student_id = request.POST.get('student_id')
+    outcome = request.POST.get('outcome')  # 'competent' or 'not_yet_competent'
+    comments = request.POST.get('comments', '')
+    
+    student = get_object_or_404(User, id=student_id, role='student')
+    
+    # For practical modules, check checklist completion
+    if module.module_type == 'practical':
+        checklist_items = module.checklist_items.all()
+        if checklist_items.exists():
+            completed = StudentChecklistResult.objects.filter(
+                student=student, item__in=checklist_items, is_competent=True
+            ).count()
+            
+            if outcome == 'competent' and completed < checklist_items.count():
+                return JsonResponse({
+                    'error': f'Cannot sign off as competent. Only {completed}/{checklist_items.count()} checklist items completed.'
+                }, status=400)
+    
+    signoff, created = AssessorSignOff.objects.update_or_create(
+        student=student,
+        module=module,
+        defaults={
+            'assessor': request.user,
+            'outcome': outcome,
+            'comments': comments,
+            'signed_at': timezone.now()
+        }
+    )
+    
+    # Update student progress
+    progress, _ = Progress.objects.get_or_create(student=student, course=module.course)
+    
+    return JsonResponse({
+        'success': True,
+        'outcome': outcome,
+        'signed_at': signoff.signed_at.strftime('%Y-%m-%d %H:%M'),
+        'message': f'Module signed off as {outcome.replace("_", " ").upper()}'
+    })
 
 # ==================== ERROR HANDLERS ====================
 
