@@ -4,7 +4,7 @@
 <style>
     .opportunities-hero {
         background: linear-gradient(135deg, #0D1B2A 0%, #1a2a3e 100%);
-        padding: 100px 0 60px;
+        padding: 120px 0 60px;
         color: white;
     }
     
@@ -49,23 +49,6 @@
     .type-bursary { background: #e0f7fa; color: #0097a7; }
     .type-training { background: #fff8e1; color: #f9a825; }
     
-    .closing-soon {
-        color: #e74c3c;
-        font-weight: 600;
-        font-size: 0.75rem;
-        background: #fee;
-        padding: 2px 8px;
-        border-radius: 12px;
-    }
-
-    .badge.bg-danger {
-        background: #e74c3c;
-        color: white;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 0.7rem;
-    }
-    
     .btn-apply {
         background: #9f7734;
         color: white;
@@ -75,17 +58,17 @@
         display: inline-block;
         transition: all 0.3s;
     }
-
-    .btn-apply.disabled {
-        background: #ccc !important;
-        cursor: not-allowed !important;
-        pointer-events: none;
-    }
     
     .btn-apply:hover {
         background: #7a5828;
         color: white;
         transform: translateY(-2px);
+    }
+    
+    .closing-soon {
+        color: #e74c3c;
+        font-weight: 600;
+        font-size: 0.85rem;
     }
 </style>
 
@@ -99,7 +82,7 @@
 <div class="container">
     <div class="filter-section">
         <form method="GET" class="row g-3">
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <select name="type" class="form-select">
                     <option value="">All Types</option>
                     {% for type_value, type_label in opportunity_types %}
@@ -107,56 +90,40 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <input type="text" name="search" class="form-control" placeholder="Search opportunities..." value="{{ request.GET.search }}">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <button type="submit" class="btn btn-dark w-100">Filter</button>
-            </div>
-            <div class="col-md-3">
-                <a href="{% url 'opportunities' %}" class="btn btn-outline-secondary w-100">Clear All</a>
             </div>
         </form>
     </div>
     
-    <div class="row">
-        <div class="col-12">
-            {% for opp in opportunities %}
-            <div class="opportunity-card">
-                <span class="opportunity-type type-{{ opp.opportunity_type }}">
-                    {{ opp.get_opportunity_type_display }}
-                </span>
-                <h3>{{ opp.title }}</h3>
-                <p><i class="fas fa-map-marker-alt"></i> {{ opp.location }}</p>
-                <p>{{ opp.description|truncatewords:30 }}</p>
-                <div class="row mt-3">
-                    <div class="col-md-6">
-                        <small><i class="fas fa-calendar-alt"></i> Closing: {{ opp.closing_date|date:"F d, Y" }}</small>
-                        <!-- Show warning if closing within 7 days -->
-                        {% if opp.closing_date <= today|date:"Y-m-d"|add:"+7 days" %}
-                            <span class="closing-soon ms-2">⚠️ Closing soon!</span>
-                        {% endif %}
-                        <!-- Show closed badge if expired -->
-                        {% if opp.closing_date < today %}
-                            <span class="badge bg-danger ms-2">Closed</span>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6 text-md-end">
-                        {% if opp.is_open %}
-                            <a href="{% url 'apply' opp.id %}" class="btn-apply">Apply Now →</a>
-                        {% else %}
-                            <span class="btn-apply disabled" style="background: #ccc; cursor: not-allowed;">Expired</span>
-                        {% endif %}
-                    </div>
-                </div>
+    {% for opp in opportunities %}
+    <div class="opportunity-card">
+        <span class="opportunity-type type-{{ opp.opportunity_type }}">
+            {{ opp.get_opportunity_type_display }}
+        </span>
+        <h3>{{ opp.title }}</h3>
+        <p><i class="fas fa-map-marker-alt"></i> {{ opp.location }}</p>
+        <p>{{ opp.description|truncatewords:30 }}</p>
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <small><i class="fas fa-calendar-alt"></i> Closing: {{ opp.closing_date|date:"F d, Y" }}</small>
+                {% if opp.closing_date <= today %}
+                    <span class="closing-soon ms-2">Closed</span>
+                {% endif %}
             </div>
-            {% empty %}
-            <div class="text-center py-5">
-                <h4>No opportunities available at the moment</h4>
-                <p>Please check back later for new opportunities.</p>
+            <div class="col-md-6 text-md-end">
+                <a href="{% url 'apply' opp.id %}" class="btn-apply">Apply Now →</a>
             </div>
-            {% endfor %}
         </div>
     </div>
+    {% empty %}
+    <div class="text-center py-5">
+        <h4>No opportunities available at the moment</h4>
+        <p>Please check back later for new opportunities.</p>
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}
