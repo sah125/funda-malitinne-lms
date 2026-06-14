@@ -169,7 +169,7 @@ urlpatterns = [
     path('api/lesson/<int:lesson_id>/modules/status/', views.api_check_module_status, name='api_check_module_status'),
     
     # ============================================================
-    # LEARNER EVIDENCE & ASSESSMENT
+    # QCTO EVIDENCE SYSTEM - PRACTICAL SKILLS, WORK EXPERIENCE, PORTFOLIO, IISA
     # ============================================================
     # Practical Skills & Observation Checklist
     path('api/lesson/<int:lesson_id>/checklist/', views.get_observation_checklist, name='get_observation_checklist'),
