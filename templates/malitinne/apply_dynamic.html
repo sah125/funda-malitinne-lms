@@ -1,0 +1,258 @@
+{% extends 'malitinne/base.html' %}
+
+{% block content %}
+<style>
+    .apply-hero {
+        background: linear-gradient(135deg, #0D1B2A 0%, #1a2a3e 100%);
+        padding: 100px 0 50px;
+        color: white;
+    }
+    
+    .application-form {
+        background: white;
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        margin: -50px 0 60px;
+        position: relative;
+    }
+    
+    .form-section {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .form-section h3 {
+        color: #9f7734;
+        font-size: 1.3rem;
+        margin-bottom: 20px;
+        border-left: 4px solid #9f7734;
+        padding-left: 15px;
+    }
+    
+    .required-field::after {
+        content: '*';
+        color: red;
+        margin-left: 5px;
+    }
+    
+    .btn-submit {
+        background: #9f7734;
+        color: white;
+        padding: 15px 40px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 16px;
+        width: 100%;
+        transition: all 0.3s;
+    }
+    
+    .btn-submit:hover {
+        background: #7a5828;
+        transform: translateY(-2px);
+    }
+    
+    .opportunity-details {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+    }
+    
+    .badge-type {
+        background: #9f7734;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+    }
+</style>
+
+<div class="apply-hero">
+    <div class="container">
+        <h1>Apply for {{ opportunity.title }}</h1>
+        <p><span class="badge-type">{{ opportunity.get_opportunity_type_display }}</span></p>
+        <p>Reference: {{ opportunity.reference_number }}</p>
+        <p>Closing Date: {{ opportunity.closing_date|date:"F d, Y" }}</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="application-form">
+        <form method="POST" enctype="multipart/form-data" id="applicationForm">
+            {% csrf_token %}
+            
+            <!-- Opportunity-specific requirements notice -->
+            <div class="opportunity-details">
+                <h4>Position Requirements</h4>
+                <p>{{ opportunity.requirements|linebreaks }}</p>
+                {% if opportunity.responsibilities %}
+                <h5>Key Responsibilities:</h5>
+                <p>{{ opportunity.responsibilities|linebreaks }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="form-section">
+                <h3>Personal Information</h3>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="required-field">First Name</label>
+                        <input type="text" name="first_name" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="required-field">Last Name</label>
+                        <input type="text" name="last_name" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="required-field">Email Address</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="required-field">Phone Number</label>
+                        <input type="tel" name="phone_number" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label>Alternative Phone</label>
+                        <input type="tel" name="alternative_phone" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="required-field">ID Number</label>
+                        <input type="text" name="id_number" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="required-field">Date of Birth</label>
+                        <input type="date" name="date_of_birth" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label>Gender</label>
+                        <select name="gender" class="form-select">
+                            <option value="">Select</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label>Race (for BBBEE/EE purposes)</label>
+                        <select name="race" class="form-select">
+                            <option value="">Select</option>
+                            <option value="african">African</option>
+                            <option value="coloured">Coloured</option>
+                            <option value="indian">Indian</option>
+                            <option value="white">White</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label>Disability (if applicable)</label>
+                        <input type="text" name="disability" class="form-control" placeholder="Specify disability">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Address Details</h3>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="required-field">Physical Address</label>
+                        <textarea name="address" class="form-control" rows="2" required></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="required-field">City/Town</label>
+                        <input type="text" name="city" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="required-field">Province</label>
+                        <select name="province" class="form-select" required>
+                            <option value="">Select Province</option>
+                            <option value="EC">Eastern Cape</option>
+                            <option value="FS">Free State</option>
+                            <option value="GP">Gauteng</option>
+                            <option value="KZN">KwaZulu-Natal</option>
+                            <option value="LP">Limpopo</option>
+                            <option value="MP">Mpumalanga</option>
+                            <option value="NC">Northern Cape</option>
+                            <option value="NW">North West</option>
+                            <option value="WC">Western Cape</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label>Postal Code</label>
+                        <input type="text" name="postal_code" class="form-control">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Education & Experience</h3>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="required-field">Highest Qualification</label>
+                        <input type="text" name="highest_qualification" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="required-field">Institution</label>
+                        <input type="text" name="institution" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="required-field">Year Completed</label>
+                        <input type="number" name="year_completed" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label>Field of Study</label>
+                        <input type="text" name="field_of_study" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label>Work Experience</label>
+                        <textarea name="work_experience" class="form-control" rows="3" placeholder="List your previous work experience"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="required-field">Skills</label>
+                        <textarea name="skills" class="form-control" rows="2" required placeholder="List your relevant skills, separated by commas"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Documents</h3>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="required-field">CV/Resume</label>
+                        <input type="file" name="cv" class="form-control" accept=".pdf,.doc,.docx" required>
+                        <small class="text-muted">PDF, DOC, DOCX (Max 5MB)</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label>Cover Letter</label>
+                        <input type="file" name="cover_letter" class="form-control" accept=".pdf,.doc,.docx">
+                    </div>
+                    <div class="col-md-6">
+                        <label>ID Document</label>
+                        <input type="file" name="id_document" class="form-control" accept=".pdf,.jpg,.png">
+                    </div>
+                    <div class="col-md-6">
+                        <label>Qualifications</label>
+                        <input type="file" name="qualifications" class="form-control" accept=".pdf">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Additional Information</h3>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label>How did you hear about us?</label>
+                        <input type="text" name="hear_about_us" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label>Additional Information</label>
+                        <textarea name="additional_info" class="form-control" rows="3" placeholder="Any other information you'd like to share"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-submit">Submit Application</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

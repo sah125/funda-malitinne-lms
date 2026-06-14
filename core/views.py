@@ -17,7 +17,7 @@ import io
 import mimetypes
 import os
 import time
-from datetime import datetime
+from datetime import datetime, date
 from django.conf import settings
 
 from .models import Opportunity, Application
@@ -2192,12 +2192,28 @@ def contact_form_submit(request):
 # ==================== OPPORTUNITIES ====================
 
 def opportunities_list(request):
+    """Display all open opportunities - expired ones automatically hidden"""
+    today = timezone.now().date()
+    
+    # Only show opportunities that are:
+    # 1. Published
+    # 2. Opening date <= today
+    # 3. Closing date >= today (not expired)
+    # 4. Still have positions available
     opportunities = Opportunity.objects.filter(
         status='published',
-        opening_date__lte=timezone.now().date(),
-        closing_date__gte=timezone.now().date()
+        opening_date__lte=today,
+        closing_date__gte=today  # This automatically filters out expired posts
     ).exclude(positions_filled__gte=F('available_positions'))
     
+    # Optional: Auto-update expired opportunities to 'closed' status
+    # This runs every time the page loads - keeps statuses current
+    Opportunity.objects.filter(
+        status='published',
+        closing_date__lt=today
+    ).update(status='closed')
+    
+    # Apply filters
     opportunity_type = request.GET.get('type')
     if opportunity_type:
         opportunities = opportunities.filter(opportunity_type=opportunity_type)
@@ -2213,18 +2229,27 @@ def opportunities_list(request):
     context = {
         'opportunities': opportunities,
         'opportunity_types': Opportunity.OPPORTUNITY_TYPES,
+        'today': today,
     }
-    return render(request, 'malitinne/opportunities.html', context)
+    return render(request, 'malitinne/opportunities_list.html', context)
+
 
 def apply_for_opportunity(request, opportunity_id):
-    opportunity = get_object_or_404(Opportunity, id=opportunity_id, status='published')
+    """Application form for opportunities - checks if still open"""
+    opportunity = get_object_or_404(Opportunity, id=opportunity_id)
     
+    # Check if opportunity is still open (not expired)
     if not opportunity.is_open:
-        messages.error(request, 'This opportunity is no longer accepting applications.')
+        messages.error(request, 'This opportunity is no longer accepting applications. It has expired or been filled.')
         return redirect('opportunities')
     
     if request.method == 'POST':
         try:
+            # Double-check expiry before saving
+            if not opportunity.is_open:
+                messages.error(request, 'This opportunity closed while you were applying. Please check other opportunities.')
+                return redirect('opportunities')
+            
             application = Application.objects.create(
                 opportunity=opportunity,
                 first_name=request.POST.get('first_name'),
@@ -2253,6 +2278,7 @@ def apply_for_opportunity(request, opportunity_id):
                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
             )
             
+            # Handle file uploads
             if request.FILES.get('cv'):
                 application.cv = request.FILES['cv']
             if request.FILES.get('cover_letter'):
@@ -2264,24 +2290,40 @@ def apply_for_opportunity(request, opportunity_id):
             
             application.save()
             
+            # Send confirmation email to applicant
             try:
                 send_mail(
-                    f'Application Received - {opportunity.title}',
-                    f'Dear {application.first_name},\n\nThank you for applying for {opportunity.title}.\n\nYour application number is: {application.application_number}\n\nWe will contact you regarding the status of your application.\n\nRegards,\nMalitinne Team',
-                    settings.DEFAULT_FROM_EMAIL,
-                    [application.email],
+                    subject=f'Application Received - {opportunity.title}',
+                    message=f'Dear {application.first_name},\n\nThank you for applying for {opportunity.title}.\n\nYour application number is: {application.application_number}\n\nWe will contact you regarding the status of your application.\n\nRegards,\nMalitinne Team',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[application.email],
                     fail_silently=True
                 )
             except:
                 pass
             
+            # Send notification to admins
+            admin_emails = User.objects.filter(role='admin', is_active=True).values_list('email', flat=True)
+            for email in admin_emails:
+                try:
+                    send_mail(
+                        subject=f'New Application: {opportunity.title}',
+                        message=f'A new application has been submitted for {opportunity.title} by {application.full_name}.\n\nApplication Number: {application.application_number}\n\nLogin to admin panel to review.',
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email],
+                        fail_silently=True
+                    )
+                except:
+                    pass
+            
             messages.success(request, f'Application submitted successfully! Your reference number is {application.application_number}')
-            return redirect('opportunities')
+            return redirect('application_success', application_number=application.application_number)
         except Exception as e:
             messages.error(request, f'Error submitting application: {str(e)}')
     
     context = {'opportunity': opportunity}
-    return render(request, 'malitinne/apply.html', context)
+    return render(request, 'malitinne/apply_dynamic.html', context)
+
 
 def application_success(request, application_number):
     application = get_object_or_404(Application, application_number=application_number)

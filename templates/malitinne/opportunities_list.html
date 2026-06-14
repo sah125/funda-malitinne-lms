@@ -1,0 +1,129 @@
+{% extends 'malitinne/base.html' %}
+
+{% block content %}
+<style>
+    .opportunities-hero {
+        background: linear-gradient(135deg, #0D1B2A 0%, #1a2a3e 100%);
+        padding: 120px 0 60px;
+        color: white;
+    }
+    
+    .filter-section {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-top: -30px;
+        margin-bottom: 40px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    
+    .opportunity-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        transition: all 0.3s;
+        border-left: 4px solid #9f7734;
+    }
+    
+    .opportunity-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    
+    .opportunity-type {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
+    
+    .type-learnership { background: #e3f2fd; color: #1976d2; }
+    .type-internship { background: #e8f5e9; color: #388e3c; }
+    .type-apprenticeship { background: #fff3e0; color: #f57c00; }
+    .type-job { background: #fce4ec; color: #c2185b; }
+    .type-funding { background: #f3e5f5; color: #7b1fa2; }
+    .type-bursary { background: #e0f7fa; color: #0097a7; }
+    .type-training { background: #fff8e1; color: #f9a825; }
+    
+    .btn-apply {
+        background: #9f7734;
+        color: white;
+        padding: 8px 25px;
+        border-radius: 25px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+    }
+    
+    .btn-apply:hover {
+        background: #7a5828;
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .closing-soon {
+        color: #e74c3c;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+</style>
+
+<div class="opportunities-hero">
+    <div class="container">
+        <h1>Career Opportunities</h1>
+        <p>Find learnerships, internships, apprenticeships, and job vacancies</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="filter-section">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <select name="type" class="form-select">
+                    <option value="">All Types</option>
+                    {% for type_value, type_label in opportunity_types %}
+                    <option value="{{ type_value }}" {% if request.GET.type == type_value %}selected{% endif %}>{{ type_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="Search opportunities..." value="{{ request.GET.search }}">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-dark w-100">Filter</button>
+            </div>
+        </form>
+    </div>
+    
+    {% for opp in opportunities %}
+    <div class="opportunity-card">
+        <span class="opportunity-type type-{{ opp.opportunity_type }}">
+            {{ opp.get_opportunity_type_display }}
+        </span>
+        <h3>{{ opp.title }}</h3>
+        <p><i class="fas fa-map-marker-alt"></i> {{ opp.location }}</p>
+        <p>{{ opp.description|truncatewords:30 }}</p>
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <small><i class="fas fa-calendar-alt"></i> Closing: {{ opp.closing_date|date:"F d, Y" }}</small>
+                {% if opp.closing_date <= today %}
+                    <span class="closing-soon ms-2">Closed</span>
+                {% endif %}
+            </div>
+            <div class="col-md-6 text-md-end">
+                <a href="{% url 'apply' opp.id %}" class="btn-apply">Apply Now →</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-5">
+        <h4>No opportunities available at the moment</h4>
+        <p>Please check back later for new opportunities.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
