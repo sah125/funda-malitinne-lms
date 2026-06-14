@@ -168,6 +168,31 @@ urlpatterns = [
     path('api/lesson/<int:lesson_id>/complete/', views.api_lesson_complete, name='api_lesson_complete'),
     path('api/lesson/<int:lesson_id>/modules/status/', views.api_check_module_status, name='api_check_module_status'),
     
+    # ============================================================
+    # LEARNER EVIDENCE & ASSESSMENT
+    # ============================================================
+    # Practical Skills & Observation Checklist
+    path('api/lesson/<int:lesson_id>/checklist/', views.get_observation_checklist, name='get_observation_checklist'),
+    path('api/checklist/<int:item_id>/assess/', views.assess_checklist_item, name='assess_checklist_item'),
+    path('api/module/<int:module_id>/competency/', views.get_module_competency_status, name='get_module_competency_status'),
+    
+    # Module Evidence Upload (Work Experience & Portfolio)
+    path('api/module/<int:module_id>/evidence/upload/', views.upload_module_evidence, name='upload_module_evidence'),
+    path('api/evidence/<int:evidence_id>/delete/', views.delete_module_evidence, name='delete_module_evidence'),
+    path('api/evidence/<int:evidence_id>/verify/', views.verify_module_evidence, name='verify_module_evidence'),
+    
+    # Portfolio of Evidence
+    path('api/course/<int:course_id>/portfolio/', views.get_portfolio_status, name='get_portfolio_status'),
+    path('api/course/<int:course_id>/portfolio/submit/', views.submit_portfolio, name='submit_portfolio'),
+    
+    # IISA (Summative Assessment)
+    path('api/course/<int:course_id>/iisa/', views.get_iisa_assessments, name='get_iisa_assessments'),
+    path('api/iisa/<int:assessment_id>/submit/', views.submit_iisa, name='submit_iisa'),
+    path('api/iisa/<int:assessment_id>/grade/', views.grade_iisa, name='grade_iisa'),
+    
+    # Assessor Sign-off
+    path('api/module/<int:module_id>/signoff/', views.assessor_signoff, name='assessor_signoff'),
+    
     #Contact & Support
     path('contact/submit/', views.contact_form_submit, name='contact_submit'),
     path('opportunities/', views.opportunities_list, name='opportunities'),
