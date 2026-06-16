@@ -3,19 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Funda Malitinne LMS - Empowering Education</title>
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/static/Malitinne-logo-v.ico">
-    <link rel="shortcut icon" type="image/x-icon" href="/static/Malitinne-logo-v.ico">
-    <link rel="apple-touch-icon" href="/static/Malitinne-logo.png">
+    <!-- ===== TITLE ===== -->
+    <title>{% block title %}Malitinne Skills Development | Grooming Human Capital for the Workplace{% endblock %}</title>
     
-    <!-- Bootstrap & Font Awesome -->
+    <!-- ===== SEO META TAGS ===== -->
+    <meta name="description" content="Malitinne is a South African black-women owned skills development company specializing in learnerships, apprenticeships, SETA-accredited training, and workplace placements.">
+    <meta name="keywords" content="skills development, learnerships, apprenticeships, SETA accredited, training, workplace placements, Durban, South Africa, human capital development, skills training">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Malitinne (Pty) Ltd">
+    <link rel="canonical" href="https://www.malitinne.co.za/">
+    
+    <!-- ===== OPEN GRAPH / FACEBOOK ===== -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.malitinne.co.za/">
+    <meta property="og:title" content="Malitinne Skills Development | Grooming Human Capital for the Workplace">
+    <meta property="og:description" content="SETA-accredited skills development, learnerships, apprenticeships, training and workplace placements in South Africa.">
+    <meta property="og:image" content="https://www.malitinne.co.za/static/Malitinne-logo.png">
+    
+    <!-- ===== TWITTER ===== -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://www.malitinne.co.za/">
+    <meta name="twitter:title" content="Malitinne Skills Development | Grooming Human Capital for the Workplace">
+    <meta name="twitter:description" content="SETA-accredited skills development, learnerships, apprenticeships, training and workplace placements in South Africa.">
+    <meta name="twitter:image" content="https://www.malitinne.co.za/static/Malitinne-logo.png">
+    
+    <!-- ===== FAVICON ===== -->
+    {% load static %}
+    <link rel="icon" type="image/x-icon" href="{% static 'Malitinne-logo-v.ico' %}">
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'Malitinne-logo-v.ico' %}">
+    <link rel="apple-touch-icon" href="{% static 'Malitinne-logo.png' %}">
+    
+    <!-- ===== BOOTSTRAP & FONTS ===== -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- ===== ORGANIZATION SCHEMA ===== -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Malitinne (Pty) Ltd",
+      "description": "Black-women owned skills development company specializing in learnerships, apprenticeships, SETA-accredited training, workplace placements, and project management.",
+      "url": "https://www.malitinne.co.za",
+      "logo": "https://www.malitinne.co.za/static/Malitinne-logo.png",
+      "email": "info@malitinne.co.za",
+      "telephone": "+27 31 301 0835",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Office 1138, 11th Floor, Commercial City Building, 40 DR A B Xuma Road",
+        "addressLocality": "Durban",
+        "addressRegion": "KwaZulu-Natal",
+        "postalCode": "4001",
+        "addressCountry": "ZA"
+      },
+      "sameAs": [
+        "https://www.facebook.com/malitinne",
+        "https://www.instagram.com/malitinne",
+        "https://www.linkedin.com/company/malitinne"
+      ],
+      "foundingDate": "2015",
+      "founder": {
+        "@type": "Person",
+        "name": "Sibusisiwe Kraai"
+      },
+      "awards": [
+        "SETA Accredited",
+        "BBBEE Compliant",
+        "Black-Women Owned"
+      ]
+    }
+    </script>
+    
+    <!-- ===== LOCAL BUSINESS SCHEMA ===== -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "Malitinne (Pty) Ltd",
+      "image": "https://www.malitinne.co.za/static/Malitinne-logo.png",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Office 1138, 11th Floor, Commercial City Building, 40 DR A B Xuma Road",
+        "addressLocality": "Durban",
+        "addressRegion": "KwaZulu-Natal",
+        "postalCode": "4001",
+        "addressCountry": "ZA"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": "-29.8587",
+        "longitude": "31.0218"
+      },
+      "openingHours": "Mo-Fr 08:00-16:30",
+      "telephone": "+27 31 301 0835",
+      "priceRange": "$$"
+    }
+    </script>
     
     <style>
-        /* Modern Variables */
         :root {
             --primary: #667eea;
             --secondary: #764ba2;
@@ -30,20 +117,15 @@
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
         
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             background: var(--gray-50);
             color: var(--gray-800);
-            line-height: 1.5;
+            line-height: 1.6;
         }
         
-        /* Modern Navbar – light, icons, clean */
         .navbar {
             background: var(--white) !important;
             box-shadow: var(--shadow-sm);
@@ -58,13 +140,9 @@
             font-weight: 700;
             font-size: 1.25rem;
             color: var(--gray-800) !important;
-            transition: opacity 0.2s;
         }
         
-        .navbar-brand img {
-            height: 36px;
-            width: auto;
-        }
+        .navbar-brand img { height: 36px; width: auto; }
         
         .navbar .nav-link {
             display: flex;
@@ -78,27 +156,12 @@
             transition: all 0.2s;
         }
         
-        .navbar .nav-link i {
-            font-size: 1rem;
-            transition: transform 0.2s;
-        }
-        
+        .navbar .nav-link i { font-size: 1rem; }
         .navbar .nav-link:hover {
             background: var(--gray-100);
             color: var(--primary) !important;
         }
         
-        .navbar .nav-link:hover i {
-            transform: translateX(2px);
-        }
-        
-        /* Active link styling (optional) */
-        .navbar .nav-link.active {
-            background: var(--gray-100);
-            color: var(--primary) !important;
-        }
-        
-        /* Buttons – keep your gradient, modern pill */
         .btn-primary {
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             border: none;
@@ -125,7 +188,6 @@
             color: white;
         }
         
-        /* Cards – modern */
         .card {
             border-radius: 1rem;
             border: 1px solid var(--gray-200);
@@ -140,21 +202,6 @@
             box-shadow: var(--shadow-md);
         }
         
-        /* Progress Bar */
-        .progress-bar {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-        }
-        
-        /* Footer – light */
-        footer {
-            background: var(--white);
-            border-top: 1px solid var(--gray-200);
-            color: var(--gray-700);
-            padding: 2rem 0;
-            margin-top: 3rem;
-        }
-        
-        /* Dashboard Header (kept gradient) */
         .dashboard-header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             border-radius: 1.5rem;
@@ -163,7 +210,6 @@
             margin-bottom: 2rem;
         }
         
-        /* Stat Cards */
         .stat-card {
             background: var(--white);
             border-radius: 1rem;
@@ -173,10 +219,7 @@
             border-left: 4px solid var(--primary);
         }
         
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
         
         .stat-number {
             font-size: 2rem;
@@ -193,104 +236,31 @@
             font-weight: 500;
         }
         
-        /* Course Cards */
-        .course-card {
+        footer {
             background: var(--white);
-            border-radius: 1rem;
-            overflow: hidden;
-            border: 1px solid var(--gray-200);
-            transition: all 0.2s;
-            margin-bottom: 1.5rem;
-        }
-        
-        .course-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-md);
-        }
-        
-        .course-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            color: white;
-            padding: 1rem;
-        }
-        
-        /* Admin sidebar (light) */
-        .sidebar {
-            background: var(--white);
-            border-right: 1px solid var(--gray-200);
-        }
-        
-        .sidebar-menu-item {
+            border-top: 1px solid var(--gray-200);
             color: var(--gray-700);
-        }
-        
-        .sidebar-menu-item:hover {
-            background: var(--gray-100);
-            color: var(--primary);
-        }
-        
-        /* Login & Register background */
-        .login-body {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            min-height: 100vh;
-        }
-        
-        /* Links */
-        a {
-            color: var(--primary);
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        
-        a:hover {
-            color: var(--secondary);
-        }
-        
-        /* Alerts */
-        .alert-info {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            color: white;
-            border: none;
-            border-radius: 0.75rem;
-        }
-        
-        /* Mobile toggle */
-        .navbar-toggler {
-            border: none;
-            color: var(--gray-800);
-        }
-        
-        .navbar-toggler:focus {
-            box-shadow: none;
+            padding: 2rem 0;
+            margin-top: 3rem;
         }
         
         @media (max-width: 768px) {
-            .navbar-brand {
-                font-size: 1rem;
-            }
-            .navbar-brand img {
-                height: 28px;
-            }
-            .navbar .nav-link {
-                padding: 0.5rem 0.75rem;
-            }
-            .btn-primary {
-                padding: 0.4rem 1rem;
-                font-size: 0.85rem;
-            }
-            .dashboard-header {
-                padding: 1.5rem;
-            }
+            .navbar-brand img { height: 28px; }
+            .navbar .nav-link { padding: 0.5rem 0.75rem; }
+            .dashboard-header { padding: 1.5rem; }
         }
     </style>
+    
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
 
-<!-- Modern Navbar with Icons -->
+<!-- ===== NAVBAR ===== -->
 <nav class="navbar navbar-expand-lg">
     <div class="container">
         <a class="navbar-brand" href="/">
-            <img src="/static/Malitinne-logo.png" alt="Funda Malitinne Logo">
+            <img src="{% static 'Malitinne-logo.png' %}" alt="Malitinne Skills Development">
+            <span>Funda Malitinne</span>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"><i class="fas fa-bars"></i></span>
@@ -324,6 +294,16 @@
                     </li>
                 {% else %}
                     <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-home"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'opportunities' %}">
+                            <i class="fas fa-briefcase"></i> Opportunities
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{% url 'login' %}">
                             <i class="fas fa-key"></i> Login
                         </a>
@@ -339,6 +319,7 @@
     </div>
 </nav>
 
+<!-- ===== MAIN CONTENT ===== -->
 <main class="container mt-4">
     {% if messages %}
         {% for message in messages %}
@@ -352,10 +333,15 @@
     {% block content %}{% endblock %}
 </main>
 
+<!-- ===== FOOTER ===== -->
 <footer>
     <div class="container text-center">
-        <p>&copy; 2026 Funda Malitinne Learning Management System. All rights reserved.</p>
-        <p>Empowering Education, Transforming Lives</p>
+        <p>&copy; 2026 Malitinne (Pty) Ltd. All rights reserved.</p>
+        <p style="font-size:0.85rem;color:var(--gray-700);">
+            <i class="fas fa-certificate"></i> SETA Accredited · 
+            <i class="fas fa-star"></i> BBBEE Compliant · 
+            <i class="fas fa-female"></i> Black-Women Owned
+        </p>
     </div>
 </footer>
 

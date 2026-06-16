@@ -3,10 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Malitinne - Skills Development & Training Solutions</title>
+    
+    <!-- ===== TITLE ===== -->
+    <title>{% block title %}Malitinne Skills Development | Grooming Human Capital for the Workplace{% endblock %}</title>
+    
+    <!-- ===== SEO META TAGS ===== -->
+    <meta name="description" content="Malitinne is a South African black-women owned skills development company specializing in learnerships, apprenticeships, SETA-accredited training, and workplace placements.">
+    <meta name="keywords" content="skills development, learnerships, apprenticeships, SETA accredited, training, workplace placements, Durban, South Africa, human capital development, skills training">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Malitinne (Pty) Ltd">
+    <link rel="canonical" href="https://www.malitinne.co.za/">
+    
+    <!-- ===== OPEN GRAPH / FACEBOOK ===== -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.malitinne.co.za/">
+    <meta property="og:title" content="Malitinne Skills Development | Grooming Human Capital for the Workplace">
+    <meta property="og:description" content="SETA-accredited skills development, learnerships, apprenticeships, training and workplace placements in South Africa.">
+    <meta property="og:image" content="https://www.malitinne.co.za/static/Malitinne-logo.png">
+    
+    <!-- ===== TWITTER ===== -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://www.malitinne.co.za/">
+    <meta name="twitter:title" content="Malitinne Skills Development | Grooming Human Capital for the Workplace">
+    <meta name="twitter:description" content="SETA-accredited skills development, learnerships, apprenticeships, training and workplace placements in South Africa.">
+    <meta name="twitter:image" content="https://www.malitinne.co.za/static/Malitinne-logo.png">
+    
+    <!-- ===== FAVICON ===== -->
+    {% load static %}
+    <link rel="icon" type="image/x-icon" href="{% static 'Malitinne-logo-v.ico' %}">
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'Malitinne-logo-v.ico' %}">
+    <link rel="apple-touch-icon" href="{% static 'Malitinne-logo.png' %}">
+    
+    <!-- ===== CSS ===== -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- ===== ORGANIZATION SCHEMA ===== -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Malitinne (Pty) Ltd",
+      "description": "Black-women owned skills development company specializing in learnerships, apprenticeships, SETA-accredited training, workplace placements, and project management.",
+      "url": "https://www.malitinne.co.za",
+      "logo": "https://www.malitinne.co.za/static/Malitinne-logo.png",
+      "email": "info@malitinne.co.za",
+      "telephone": "+27 31 301 0835",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Office 1138, 11th Floor, Commercial City Building, 40 DR A B Xuma Road",
+        "addressLocality": "Durban",
+        "addressRegion": "KwaZulu-Natal",
+        "postalCode": "4001",
+        "addressCountry": "ZA"
+      },
+      "sameAs": [
+        "https://www.facebook.com/malitinne",
+        "https://www.instagram.com/malitinne",
+        "https://www.linkedin.com/company/malitinne"
+      ],
+      "foundingDate": "2015",
+      "founder": {
+        "@type": "Person",
+        "name": "Sibusisiwe Kraai"
+      },
+      "awards": [
+        "SETA Accredited",
+        "BBBEE Compliant",
+        "Black-Women Owned"
+      ]
+    }
+    </script>
+    
+    <!-- ===== LOCAL BUSINESS SCHEMA ===== -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "Malitinne (Pty) Ltd",
+      "image": "https://www.malitinne.co.za/static/Malitinne-logo.png",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Office 1138, 11th Floor, Commercial City Building, 40 DR A B Xuma Road",
+        "addressLocality": "Durban",
+        "addressRegion": "KwaZulu-Natal",
+        "postalCode": "4001",
+        "addressCountry": "ZA"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": "-29.8587",
+        "longitude": "31.0218"
+      },
+      "openingHours": "Mo-Fr 08:00-16:30",
+      "telephone": "+27 31 301 0835",
+      "priceRange": "$$",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "2.7",
+        "reviewCount": "3"
+      }
+    }
+    </script>
+    
     <style>
         :root {
             --primary: #9f7734;
@@ -58,16 +158,6 @@
         }
         
         .nav-link:hover {
-            color: var(--primary) !important;
-        }
-        
-        .navbar-nav .nav-link {
-            font-weight: 500;
-            color: var(--text) !important;
-            transition: color 0.3s;
-        }
-        
-        .navbar-nav .nav-link:hover {
             color: var(--primary) !important;
         }
         
@@ -267,7 +357,7 @@
 <nav class="navbar navbar-expand-lg">
     <div class="container">
         <a class="navbar-brand" href="/">
-            <img src="/static/Malitinne-logo.png" alt="Malitinne Logo">
+            <img src="{% static 'Malitinne-logo.png' %}" alt="Malitinne Skills Development">
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
@@ -281,7 +371,7 @@
                 <li class="nav-item"><a class="nav-link" href="/#clients">Clients</a></li>
                 <li class="nav-item"><a class="nav-link" href="/#contact">Contact</a></li>
                 <li class="nav-item">
-                    <a class="btn btn-lms ms-3" href="{% url 'lms_portal' %}">LMS Portal</a>
+                    <a class="btn btn-lms ms-3" href="{% url 'lms_portal' %}"><i class="fas fa-graduation-cap"></i> LMS Portal</a>
                 </li>
             </ul>
         </div>
@@ -327,6 +417,11 @@
         <hr class="mt-3" style="border-color: rgba(255,255,255,0.1);">
         <div class="text-center pt-3">
             <p>&copy; 2026 Malitinne (Pty) Ltd. All rights reserved.</p>
+            <p style="font-size:0.85rem;opacity:0.7;">
+                <i class="fas fa-certificate"></i> SETA Accredited · 
+                <i class="fas fa-star"></i> BBBEE Compliant · 
+                <i class="fas fa-female"></i> Black-Women Owned
+            </p>
         </div>
     </div>
 </footer>
