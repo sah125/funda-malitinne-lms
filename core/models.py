@@ -33,6 +33,15 @@ class User(AbstractUser):
     preferred_language = models.CharField(max_length=50, default='English')
     is_approved = models.BooleanField(default=False)
     approved_at = models.DateTimeField(blank=True, null=True)
+    DEPARTMENT_CHOICES = (
+        ('skills_development', 'Skills Development'),
+        ('finance', 'Finance'),
+        ('hr', 'Human Resources'),
+        ('operations', 'Operations'),
+        ('project_management', 'Project Management'),
+        ('management', 'Management'),
+    )
+    department = models.CharField(max_length=30, choices=DEPARTMENT_CHOICES, blank=True, null=True)
     
     def __str__(self):
         return f"{self.username} ({self.role})"
@@ -628,6 +637,35 @@ class ForumTopic(models.Model):
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # NEW FIELDS FOR TICKETING
+    is_ticket = models.BooleanField(default=False)
+    is_resolved = models.BooleanField(default=False)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='resolved_tickets'
+    )
+    project = models.ForeignKey(
+        'TenderOpportunity',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='tickets'
+    )
+    priority = models.CharField(
+        max_length=20,
+        choices=[
+            ('low', 'Low'),
+            ('medium', 'Medium'),
+            ('high', 'High'),
+            ('critical', 'Critical')
+        ],
+        default='medium'
+    )
     
     class Meta:
         ordering = ['-created_at']
@@ -962,3 +1000,261 @@ class SummativeAssessmentSubmission(models.Model):
 
     def __str__(self):
         return f"{self.student.username} - {self.assessment.title} - {self.get_result_display()}"
+
+
+class Task(models.Model):
+    STATUS_CHOICES = (
+        ('todo', 'To Do'),
+        ('in_progress', 'In Progress'),
+        ('done', 'Done'),
+    )
+    PRIORITY_CHOICES = (
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    )
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    assigned_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tasks')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_tasks')
+    due_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='todo')
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['due_date', '-priority']
+
+    def __str__(self):
+        return f"{self.title} ({self.assigned_to.username})"
+
+
+class Meeting(models.Model):
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    organizer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='organized_meetings')
+    attendees = models.ManyToManyField(User, related_name='meetings', blank=True)
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    location = models.CharField(max_length=255, blank=True, help_text="Room name or video call link")
+
+    class Meta:
+        ordering = ['start_time']
+
+    def __str__(self):
+        return f"{self.title} - {self.start_time.strftime('%Y-%m-%d %H:%M')}"
+
+
+class StaffAnnouncement(models.Model):
+    CATEGORY_CHOICES = (
+        ('general', 'General'),
+        ('hr', 'HR'),
+        ('policy', 'Policy Update'),
+        ('event', 'Event'),
+    )
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='staff_announcements')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='general')
+    is_pinned = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-is_pinned', '-created_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.get_category_display()})"
+
+
+# ==================== TENDER & OPPORTUNITY TRACKING (PHASE 2) ====================
+
+class TenderSource(models.Model):
+    """Sources to crawl for opportunities (eTenders, SETA portals, etc.)"""
+    SOURCE_TYPES = (
+        ('etenders', 'National eTenders Portal'),
+        ('seta', 'SETA Portal'),
+        ('municipality', 'Municipality Website'),
+        ('other', 'Other Source'),
+    )
+    name = models.CharField(max_length=200)
+    source_type = models.CharField(max_length=50, choices=SOURCE_TYPES)
+    base_url = models.URLField()
+    search_keywords = models.TextField(help_text="Comma-separated keywords to filter")
+    is_active = models.BooleanField(default=True)
+    last_crawled = models.DateTimeField(null=True, blank=True)
+    crawl_frequency_hours = models.IntegerField(default=24)
+    
+    def __str__(self):
+        return self.name
+
+
+class TenderOpportunity(models.Model):
+    """Crawled tender/opportunity from various sources"""
+    STATUS_CHOICES = (
+        ('new', 'New'),
+        ('viewed', 'Viewed'),
+        ('applied', 'Applied'),
+        ('shortlisted', 'Shortlisted'),
+        ('won', 'Won'),
+        ('lost', 'Lost'),
+        ('expired', 'Expired'),
+    )
+    
+    CATEGORY_CHOICES = (
+        ('training', 'Training & Skills Development'),
+        ('consulting', 'Consulting Services'),
+        ('supplies', 'Supplies & Equipment'),
+        ('construction', 'Construction'),
+        ('other', 'Other'),
+    )
+    
+    source = models.ForeignKey(TenderSource, on_delete=models.SET_NULL, null=True, related_name='opportunities')
+    tender_id = models.CharField(max_length=100, help_text="Original tender ID from source")
+    title = models.CharField(max_length=500)
+    description = models.TextField()
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='training')
+    
+    published_date = models.DateField(null=True, blank=True)
+    closing_date = models.DateField()
+    opening_date = models.DateField(null=True, blank=True)
+    
+    estimated_value = models.CharField(max_length=200, blank=True, help_text="Estimated value range")
+    bidder_deposit = models.CharField(max_length=200, blank=True)
+    
+    location = models.CharField(max_length=200, blank=True)
+    department = models.CharField(max_length=300, blank=True, help_text="Issuing department/agency")
+    
+    document_url = models.URLField(blank=True, help_text="Link to original tender document")
+    local_document = models.FileField(upload_to='tenders/%Y/%m/', blank=True, null=True)
+    
+    ai_relevance_score = models.FloatField(default=0, help_text="0-100 score based on business fit")
+    ai_confidence = models.FloatField(default=0, help_text="Confidence in scoring")
+    ai_match_reasons = models.TextField(blank=True, help_text="Why this tender is relevant")
+    
+    internal_notes = models.TextField(blank=True)
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tenders')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    
+    follow_up_date = models.DateField(null=True, blank=True)
+    follow_up_notes = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_tenders')
+    
+    class Meta:
+        unique_together = ['source', 'tender_id']
+        ordering = ['closing_date', '-ai_relevance_score']
+    
+    def __str__(self):
+        return f"{self.title} (Closes: {self.closing_date})"
+    
+    @property
+    def days_until_close(self):
+        from django.utils import timezone
+        delta = self.closing_date - timezone.now().date()
+        return delta.days
+    
+    @property
+    def is_urgent(self):
+        return self.days_until_close <= 7 and self.status == 'new'
+    
+    @property
+    def is_open(self):
+        from django.utils import timezone
+        return self.closing_date >= timezone.now().date() and self.status not in ['expired', 'lost']
+
+
+# ==================== SHARED DOCUMENT DRIVE (PHASE 3) ====================
+
+class DocumentCategory(models.Model):
+    """Categories for organizing shared documents"""
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=50, default='fa-folder')
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subcategories')
+    order = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['order', 'name']
+        verbose_name_plural = "Document categories"
+    
+    def __str__(self):
+        if self.parent:
+            return f"{self.parent.name} / {self.name}"
+        return self.name
+
+
+class SharedDocument(models.Model):
+    """Document shared in the company drive"""
+    VISIBILITY_CHOICES = (
+        ('all_staff', 'All Staff'),
+        ('management', 'Management Only'),
+        ('department', 'Specific Department'),
+        ('private', 'Private (Owner Only)'),
+    )
+    
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    category = models.ForeignKey(DocumentCategory, on_delete=models.SET_NULL, null=True, related_name='documents')
+    
+    file = models.FileField(upload_to='shared_drive/%Y/%m/')
+    file_name = models.CharField(max_length=500)
+    file_size = models.BigIntegerField(default=0, help_text="File size in bytes")
+    mime_type = models.CharField(max_length=100, blank=True)
+    
+    version = models.CharField(max_length=20, default='1.0')
+    previous_version = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='later_versions')
+    
+    visibility = models.CharField(max_length=20, choices=VISIBILITY_CHOICES, default='all_staff')
+    allowed_departments = models.ManyToManyField('User', limit_choices_to={'role__in': ['instructor', 'admin']}, blank=True, related_name='accessible_docs')
+    
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='uploaded_documents_shared')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    tags = models.CharField(max_length=500, blank=True, help_text="Comma-separated tags")
+    
+    download_count = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['-uploaded_at']
+    
+    def __str__(self):
+        return self.title
+    
+    def save(self, *args, **kwargs):
+        if self.file:
+            self.file_name = self.file.name.split('/')[-1]
+            if not self.file_size and hasattr(self.file, 'size'):
+                self.file_size = self.file.size
+        super().save(*args, **kwargs)
+
+
+class DocumentDownloadLog(models.Model):
+    """Track who downloaded which document"""
+    document = models.ForeignKey(SharedDocument, on_delete=models.CASCADE, related_name='download_logs')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='document_downloads')
+    downloaded_at = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-downloaded_at']
+    
+    def __str__(self):
+        return f"{self.user.username} downloaded {self.document.title}"
+
+
+class CrawlLog(models.Model):
+    """Log of automated crawl operations"""
+    source = models.ForeignKey(TenderSource, on_delete=models.CASCADE, related_name='crawl_logs')
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    opportunities_found = models.IntegerField(default=0)
+    opportunities_new = models.IntegerField(default=0)
+    status = models.CharField(max_length=50, choices=[('success', 'Success'), ('failed', 'Failed'), ('in_progress', 'In Progress')])
+    error_message = models.TextField(blank=True)
+    
+    def __str__(self):
+        return f"Crawl {self.source.name} - {self.started_at}"

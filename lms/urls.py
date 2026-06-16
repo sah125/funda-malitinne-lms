@@ -95,6 +95,34 @@ urlpatterns = [
     # ============================================================
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('delete-user/<int:user_id>/', views.delete_user, name='delete_user'),
+    path('staff-portal/', views.staff_portal, name='staff_portal'),
+
+    # Shared Drive
+    path('shared-drive/', views.shared_drive, name='shared_drive'),
+    path('shared-drive/upload/', views.upload_document, name='upload_document'),
+    path('shared-drive/download/<int:doc_id>/', views.download_document, name='download_document'),
+    path('shared-drive/delete/<int:doc_id>/', views.delete_document, name='delete_document'),
+    
+    # AI Command API
+    path('api/ai-command/', views.ai_command_api, name='ai_command_api'),
+    
+    # POPIA Consent API
+    path('api/popia-consent/', views.popia_consent_api, name='popia_consent_api'),
+    # Look for this line in urls.py
+    path('discussion/<int:topic_id>/', views.discussion_detail, name='discussion_detail'),
+# Tender Intelligence
+    path('tender-dashboard/', views.tender_dashboard, name='tender_dashboard'),
+    path('tender-crawl/', views.run_tender_crawl, name='run_tender_crawl'),
+    path('tender/<int:tender_id>/', views.tender_detail, name='tender_detail'),# Tender Management
+   # path('tenders/', views.tender_dashboard, name='tender_dashboard'),
+    #path('tenders/run-crawl/', views.run_tender_crawl, name='run_tender_crawl'),
+    #path('tenders/<int:tender_id>/', views.tender_detail, name='tender_detail'),
+
+    # Shared Document Drive
+    #path('shared-drive/', views.shared_drive, name='shared_drive'),
+    #path('shared-drive/upload/', views.upload_document, name='upload_document'),
+    #path('shared-drive/download/<int:doc_id>/', views.download_document, name='download_document'),
+    #path('shared-drive/delete/<int:doc_id>/', views.delete_document, name='delete_document'),
     
     # ============================================================
     # LEARNER PROFILE MANAGEMENT (QCTO COMPLIANT)
@@ -137,7 +165,7 @@ urlpatterns = [
     # DISCUSSION & FORUM SYSTEM
     # ============================================================
     # Lesson discussions
-    path('lesson/<int:lesson_id>/discussions/', views.lesson_discussions, name='lesson_discussions'),
+    #path('lesson/<int:lesson_id>/discussions/', views.lesson_discussions, name='lesson_discussions'),
     
     # Discussion detail
     path('discussion/<int:topic_id>/', views.discussion_detail, name='discussion_detail'),

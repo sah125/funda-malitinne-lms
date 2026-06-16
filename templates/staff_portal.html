@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Funda Malitinne - Operations Command Center</title>
+    <link rel="icon" type="image/x-icon" href="/static/Malitinne-logo-v.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ===== GLOBAL RESET ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #f0f2f5; 
+            overflow-x: hidden;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            position: fixed; 
+            left: 0; top: 0; 
+            width: 280px; height: 100%;
+            background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%);
+            color: white; 
+            z-index: 1000; 
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-track { background: transparent; }
+        .sidebar::-webkit-scrollbar-thumb { background: #9f7734; border-radius: 4px; }
+
+        .sidebar-header { 
+            padding: 25px 20px; 
+            text-align: center; 
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .sidebar-header h3 { 
+            font-weight: 700; 
+            margin: 0; 
+            font-size: 1.2rem;
+            letter-spacing: 0.5px;
+        }
+        .sidebar-header h3 i { color: #9f7734; }
+        .sidebar-header p { 
+            font-size: 11px; 
+            opacity: 0.6; 
+            margin: 5px 0 0;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .sidebar-menu { padding: 15px 0; }
+        .sidebar-menu-item {
+            padding: 12px 25px; 
+            display: flex; 
+            align-items: center; 
+            gap: 14px;
+            color: rgba(255,255,255,0.7); 
+            text-decoration: none; 
+            transition: all 0.3s; 
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            font-size: 0.9rem;
+        }
+        .sidebar-menu-item:hover { 
+            background: rgba(255,255,255,0.05); 
+            color: white; 
+            border-left-color: #9f7734;
+        }
+        .sidebar-menu-item.active { 
+            background: rgba(159,119,52,0.15); 
+            border-left-color: #9f7734; 
+            color: white;
+        }
+        .sidebar-menu-item i { width: 22px; font-size: 1rem; text-align: center; }
+        .sidebar-menu-item .badge-count {
+            margin-left: auto;
+            background: #dc3545;
+            color: white;
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 20px 25px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.4);
+            text-align: center;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content { 
+            margin-left: 280px; 
+            padding: 20px 30px; 
+            min-height: 100vh;
+        }
+
+        /* ===== TOP BAR ===== */
+        .top-bar {
+            background: white; 
+            border-radius: 16px; 
+            padding: 18px 25px; 
+            margin-bottom: 25px;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .welcome-text h4 { 
+            margin: 0; 
+            font-weight: 700; 
+            color: #1a1a2e; 
+            font-size: 1.2rem;
+        }
+        .welcome-text p { 
+            margin: 2px 0 0; 
+            color: #888; 
+            font-size: 0.8rem; 
+        }
+        .welcome-text .role-badge { 
+            background: #9f7734; 
+            color: white; 
+            padding: 2px 12px; 
+            border-radius: 20px; 
+            font-size: 0.7rem; 
+            font-weight: 600; 
+        }
+        .welcome-text .stats-badge {
+            background: #e8f0fe;
+            color: #1a56db;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-left: 6px;
+        }
+
+        .top-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .top-bar-right .notification-bell {
+            position: relative;
+            cursor: pointer;
+        }
+        .top-bar-right .notification-bell .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 0.55rem;
+            padding: 2px 6px;
+        }
+        .user-avatar {
+            width: 40px; 
+            height: 40px; 
+            background: linear-gradient(135deg, #9f7734 0%, #6b4f1f 100%);
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            color: white; 
+            font-weight: bold; 
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .user-avatar:hover { transform: scale(1.05); }
+
+        /* ===== STAT CARDS ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 18px 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            border-left: 4px solid #9f7734;
+            transition: transform 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-card .stat-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+            font-weight: 600;
+        }
+        .stat-card .stat-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-top: 4px;
+            color: #1a1a2e;
+        }
+        .stat-card .stat-number.danger { color: #dc3545; }
+        .stat-card .stat-number.warning { color: #ffc107; }
+        .stat-card .stat-number.success { color: #28a745; }
+        .stat-card .stat-icon {
+            float: right;
+            font-size: 1.8rem;
+            opacity: 0.2;
+            color: #1a1a2e;
+        }
+
+        /* ===== DATA CARDS ===== */
+        .data-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            margin-bottom: 25px;
+        }
+        .data-card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .data-card-header h5 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1rem;
+            color: #1a1a2e;
+        }
+        .data-card-header h5 i { color: #9f7734; margin-right: 8px; }
+        .data-card-body { padding: 20px; }
+
+        /* ===== PROJECT CARDS ===== */
+        .project-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+        .project-card {
+            background: #fafbfc;
+            border-radius: 12px;
+            padding: 16px;
+            border-left: 4px solid #28a745;
+            transition: all 0.3s;
+            border: 1px solid #f0f0f0;
+        }
+        .project-card:hover { 
+            transform: translateY(-3px); 
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        }
+        .project-card.risk-high { border-left-color: #dc3545; border-color: #fdd; }
+        .project-card.risk-medium { border-left-color: #ffc107; border-color: #fed; }
+        .project-card.risk-low { border-left-color: #28a745; border-color: #dfd; }
+
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .project-name { 
+            font-weight: 600; 
+            font-size: 0.9rem; 
+            color: #1a1a2e;
+        }
+        .risk-badge {
+            font-size: 0.6rem;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .risk-badge.high { background: #dc3545; color: white; }
+        .risk-badge.medium { background: #ffc107; color: #333; }
+        .risk-badge.low { background: #28a745; color: white; }
+
+        .project-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 6px;
+            margin: 10px 0;
+        }
+        .project-stats .stat-item {
+            background: white;
+            padding: 6px 8px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #f0f0f0;
+        }
+        .project-stats .stat-item .value {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #1a1a2e;
+        }
+        .project-stats .stat-item .label {
+            font-size: 0.55rem;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .project-stats .stat-item .value.danger { color: #dc3545; }
+        .project-stats .stat-item .value.warning { color: #ffc107; }
+
+        .project-progress {
+            height: 3px;
+            background: #e9ecef;
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .project-progress .bar {
+            height: 100%;
+            border-radius: 3px;
+            background: #28a745;
+            transition: width 0.5s ease;
+        }
+        .project-progress .bar.warning { background: #ffc107; }
+        .project-progress .bar.danger { background: #dc3545; }
+
+        .project-actions {
+            margin-top: 10px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+        .project-actions .btn-sm { font-size: 0.7rem; padding: 3px 10px; }
+
+        /* ===== URGENT ACTIONS ===== */
+        .action-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 4px solid #6c757d;
+            background: #f8f9fa;
+            transition: all 0.2s;
+        }
+        .action-item:hover { background: #f1f3f5; }
+        .action-item.priority-critical { border-left-color: #dc3545; background: #fff5f5; }
+        .action-item.priority-high { border-left-color: #fd7e14; background: #fff8f0; }
+        .action-item.priority-medium { border-left-color: #ffc107; background: #fffdf0; }
+        .action-item .icon { font-size: 1.2rem; }
+        .action-item .content { flex: 1; }
+        .action-item .content .title { font-weight: 500; font-size: 0.9rem; }
+        .action-item .content .detail { font-size: 0.8rem; color: #666; }
+        .action-item .count-badge {
+            background: #dc3545;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .action-item.priority-high .count-badge { background: #fd7e14; }
+        .action-item.priority-medium .count-badge { background: #ffc107; color: #333; }
+
+        /* ===== AI COMMAND CENTER ===== */
+        .ai-command-section {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            border-left: 4px solid #9f7734;
+            margin-top: 10px;
+        }
+        .ai-command-section h3 {
+            margin: 0 0 5px 0;
+            font-weight: 700;
+            color: #1a1a2e;
+            font-size: 1.1rem;
+        }
+        .ai-command-section .subtitle {
+            color: #888;
+            font-size: 0.8rem;
+            margin-bottom: 15px;
+        }
+        .ai-command-input {
+            display: flex;
+            gap: 10px;
+        }
+        .ai-command-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s;
+        }
+        .ai-command-input input:focus {
+            outline: none;
+            border-color: #9f7734;
+            box-shadow: 0 0 0 4px rgba(159,119,52,0.1);
+        }
+        .ai-command-input button {
+            padding: 12px 28px;
+            background: #9f7734;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        .ai-command-input button:hover {
+            background: #7a5828;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(159,119,52,0.3);
+        }
+
+        .suggested-questions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 12px;
+        }
+        .suggested-questions button {
+            padding: 4px 14px;
+            font-size: 0.75rem;
+            border: 1px solid #e9ecef;
+            background: white;
+            border-radius: 20px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .suggested-questions button:hover {
+            background: #9f7734;
+            color: white;
+            border-color: #9f7734;
+        }
+
+        .ai-response {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            min-height: 50px;
+            border: 1px solid #e9ecef;
+            margin-top: 15px;
+            color: #555;
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+        .ai-response.loading { 
+            color: #999; 
+            font-style: italic; 
+        }
+        .ai-response.error {
+            color: #991b1b;
+            background: #fee2e2;
+            border-color: #fecaca;
+        }
+        .ai-response.success {
+            color: #065f46;
+            background: #d1fae5;
+            border-color: #a7f3d0;
+        }
+        .ai-response .response-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+        .ai-response ul { padding-left: 20px; margin: 5px 0; }
+        .ai-response ul li { padding: 3px 0; border-bottom: 1px solid #f0f0f0; }
+
+        /* ===== POPIA BANNER ===== */
+        .popia-banner {
+            background: #fff8e6;
+            border: 1px solid #f3e0cf;
+            border-radius: 12px;
+            padding: 14px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .popia-banner strong { color: #1a1a2e; }
+        .popia-banner .btn-consent {
+            background: #0d6efd;
+            color: white;
+            border: none;
+            padding: 6px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+        .popia-banner .btn-consent:hover { background: #0b5ed7; transform: scale(1.02); }
+
+        /* ===== TASK ITEMS ===== */
+        .task-item, .meeting-item, .notif-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .task-item:last-child, .meeting-item:last-child, .notif-item:last-child { border-bottom: none; }
+        .task-item .priority-tag {
+            font-size: 0.6rem;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .priority-tag.high { background: #fee2e2; color: #991b1b; }
+        .priority-tag.medium { background: #fef3c7; color: #92400e; }
+        .priority-tag.low { background: #d1fae5; color: #065f46; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 992px) {
+            .sidebar { transform: translateX(-100%); width: 280px; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 15px; }
+            .project-stats { grid-template-columns: 1fr 1fr; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .mobile-toggle {
+                display: flex !important;
+            }
+        }
+        @media (max-width: 576px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .project-grid { grid-template-columns: 1fr; }
+            .top-bar { flex-direction: column; align-items: flex-start; }
+            .ai-command-input { flex-direction: column; }
+            .popia-banner { flex-direction: column; align-items: stretch; text-align: center; }
+        }
+
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: #1a1a2e;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 30px 15px;
+            color: #999;
+        }
+        .empty-state i { font-size: 2.5rem; opacity: 0.3; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <h3><i class="fas fa-chess-king"></i> Funda Malitinne</h3>
+        <p>Operations Command Center</p>
+    </div>
+    <div class="sidebar-menu">
+        <div class="sidebar-menu-item active">
+            <i class="fas fa-th-large"></i> Dashboard
+            <span class="badge-count">{{ stats.total_projects }}</span>
+        </div>
+        <div class="sidebar-menu-item" onclick="window.location.href='/admin-dashboard/'">
+            <i class="fas fa-user-cog"></i> Admin Panel
+        </div>
+        <div class="sidebar-menu-item" onclick="window.location.href='/shared-drive/'">
+            <i class="fas fa-folder-open"></i> Shared Drive
+        </div>
+        <div class="sidebar-menu-item" onclick="window.location.href='/tender-dashboard/'">
+            <i class="fas fa-file-contract"></i> Tenders
+            <span class="badge-count" style="background:#9f7734;">{{ stats.total_projects }}</span>
+        </div>
+        <div class="sidebar-menu-item" onclick="window.location.href='/lms/'">
+            <i class="fas fa-graduation-cap"></i> LMS Portal
+        </div>
+        <div class="sidebar-menu-item" onclick="window.location.href='/discussions/'">
+            <i class="fas fa-comments"></i> Discussions
+        </div>
+        <div class="sidebar-menu-item" onclick="logout()" style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.05);padding-top:15px;">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </div>
+    </div>
+    <div class="sidebar-footer">
+        <i class="fas fa-shield-alt"></i> POPIA Compliant<br>
+        v2.0 &bull; QCTO Ready
+    </div>
+</nav>
+
+<!-- ===== OVERLAY FOR MOBILE ===== -->
+<div id="sidebarOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:999;" onclick="toggleSidebar()"></div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main-content">
+
+    <!-- ===== TOP BAR ===== -->
+    <div class="top-bar">
+        <div class="d-flex align-items-center gap-2">
+            <button class="mobile-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="welcome-text">
+                <h4>👋 Welcome, {{ user.get_full_name|default:user.username }}</h4>
+                <p>
+                    <span class="role-badge">{{ user.get_role_display }}</span>
+                    <span class="stats-badge"><i class="fas fa-robot"></i> {{ ai_queries_today }} AI queries today</span>
+                    <span class="stats-badge" style="background:#f0f0f0;color:#666;"><i class="fas fa-clock"></i> {{ now|date:"H:i" }}</span>
+                </p>
+            </div>
+        </div>
+        <div class="top-bar-right">
+            <div class="notification-bell" onclick="window.location.href='/notifications/'">
+                <i class="fas fa-bell fa-lg" style="color:#666;"></i>
+                {% if notification_count > 0 %}
+                <span class="badge bg-danger rounded-pill">{{ notification_count }}</span>
+                {% endif %}
+            </div>
+            <div class="user-avatar" title="{{ user.username }}">{{ user.username|slice:":1"|upper }}</div>
+        </div>
+    </div>
+
+    <!-- ===== POPIA CONSENT BANNER ===== -->
+    {% if show_popica_banner and not has_popia_consent %}
+    <div class="popia-banner">
+        <div>
+            <strong><i class="fas fa-shield-alt"></i> POPIA Consent Required</strong>
+            <span style="font-size:0.85rem;color:#666;margin-left:10px;">
+                Please provide your consent for processing your personal information.
+            </span>
+        </div>
+        <button class="btn-consent" onclick="providePopiaConsent()">
+            <i class="fas fa-check"></i> Provide Consent
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- ===== STATS GRID ===== -->
+    <div class="stats-grid">
+        <div class="stat-card" style="border-left-color:#9f7734;">
+            <div class="stat-icon"><i class="fas fa-briefcase"></i></div>
+            <div class="stat-label">Total Projects</div>
+            <div class="stat-number">{{ stats.total_projects }}</div>
+        </div>
+        <div class="stat-card" style="border-left-color:#28a745;">
+            <div class="stat-icon"><i class="fas fa-user-graduate"></i></div>
+            <div class="stat-label">Active Learners</div>
+            <div class="stat-number">{{ stats.total_learners }}</div>
+        </div>
+        <div class="stat-card" style="border-left-color:{% if stats.overall_attendance < 70 %}#dc3545{% elif stats.overall_attendance < 85 %}#ffc107{% else %}#28a745{% endif %};">
+            <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+            <div class="stat-label">Attendance</div>
+            <div class="stat-number {% if stats.overall_attendance < 70 %}danger{% elif stats.overall_attendance < 85 %}warning{% else %}success{% endif %}">
+                {{ stats.overall_attendance }}%
+            </div>
+        </div>
+        <div class="stat-card" style="border-left-color:{% if stats.open_tickets > 0 %}#dc3545{% else %}#28a745{% endif %};">
+            <div class="stat-icon"><i class="fas fa-ticket-alt"></i></div>
+            <div class="stat-label">Open Tickets</div>
+            <div class="stat-number {% if stats.open_tickets > 0 %}danger{% else %}success{% endif %}">
+                {{ stats.open_tickets }}
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== URGENT ACTIONS ===== -->
+    {% if urgent_actions %}
+    <div class="data-card">
+        <div class="data-card-header">
+            <h5><i class="fas fa-exclamation-triangle" style="color:#dc3545;"></i> ⚠️ Urgent Actions</h5>
+            <span class="badge bg-danger">{{ urgent_actions|length }}</span>
+        </div>
+        <div class="data-card-body">
+            {% for action in urgent_actions %}
+            <div class="action-item priority-{{ action.priority }}">
+                <span class="icon">{{ action.icon }}</span>
+                <div class="content">
+                    <div class="title">{{ action.description }}</div>
+                    <div class="detail">Needs immediate attention</div>
+                </div>
+                <span class="count-badge">{{ action.count }}</span>
+                <a href="{{ action.action_url }}" class="btn btn-sm btn-outline-primary">Resolve</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ===== PROJECT HEALTH MONITOR ===== -->
+    <div class="data-card">
+        <div class="data-card-header">
+            <h5><i class="fas fa-chart-pie"></i> 📊 Project Health Monitor</h5>
+            <span class="text-muted" style="font-size:0.8rem;">
+                <i class="fas fa-circle" style="color:#28a745;"></i> Low 
+                <i class="fas fa-circle" style="color:#ffc107;margin-left:8px;"></i> Medium 
+                <i class="fas fa-circle" style="color:#dc3545;margin-left:8px;"></i> High
+            </span>
+        </div>
+        <div class="data-card-body">
+            <div class="project-grid">
+                {% for project in projects_health %}
+                <div class="project-card risk-{{ project.risk }}">
+                    <div class="project-header">
+                        <span class="project-name">{{ project.name|truncatechars:25 }}</span>
+                        {% if project.risk == 'high' %}
+                            <span class="risk-badge high">HIGH</span>
+                        {% elif project.risk == 'medium' %}
+                            <span class="risk-badge medium">MEDIUM</span>
+                        {% else %}
+                            <span class="risk-badge low">LOW</span>
+                        {% endif %}
+                    </div>
+                    <div class="project-stats">
+                        <div class="stat-item">
+                            <div class="value">{{ project.learners }}</div>
+                            <div class="label">Learners</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="value {% if project.attendance < 70 %}danger{% endif %}">{{ project.attendance }}%</div>
+                            <div class="label">Attendance</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="value {% if project.poe_completion < 60 %}danger{% endif %}">{{ project.poe_completion }}%</div>
+                            <div class="label">POE</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="value {% if project.open_tickets > 0 %}danger{% endif %}">{{ project.open_tickets }}</div>
+                            <div class="label">Tickets</div>
+                        </div>
+                    </div>
+                    <div class="project-progress">
+                        <div class="bar {% if project.attendance < 70 %}danger{% elif project.attendance < 85 %}warning{% endif %}" style="width:{{ project.attendance }}%;"></div>
+                    </div>
+                    <div class="project-actions">
+                        <a href="/tender/{{ project.id }}/" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-eye"></i> Details
+                        </a>
+                        <a href="/project/{{ project.id }}/roster/" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-users"></i> Roster
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state" style="grid-column:1/-1;">
+                    <i class="fas fa-folder-open"></i>
+                    <p>No active projects with learners.</p>
+                    <span class="text-muted" style="font-size:0.8rem;">Create a project or enroll learners to see them here.</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== TASKS & MEETINGS ROW ===== -->
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="data-card">
+                <div class="data-card-header">
+                    <h5><i class="fas fa-tasks"></i> My Tasks</h5>
+                    <span class="text-muted small">{{ my_tasks|length }} pending</span>
+                </div>
+                <div class="data-card-body" style="max-height:300px;overflow-y:auto;">
+                    {% for task in my_tasks %}
+                    <div class="task-item">
+                        <div>
+                            <div style="font-weight:500;font-size:0.9rem;">{{ task.title }}</div>
+                            {% if task.due_date %}
+                            <div class="text-muted" style="font-size:0.75rem;">
+                                <i class="fas fa-calendar-alt"></i> Due {{ task.due_date|date:"M d, Y" }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="text-end">
+                            <span class="priority-tag {{ task.priority }}">{{ task.get_priority_display }}</span>
+                            <div style="font-size:0.65rem;color:#888;margin-top:2px;">{{ task.get_status_display }}</div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="fas fa-check-circle" style="color:#28a745;"></i>
+                        <p>No open tasks. Great job! 🎉</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="data-card">
+                <div class="data-card-header">
+                    <h5><i class="fas fa-calendar-alt"></i> Upcoming Meetings</h5>
+                    <span class="text-muted small">Next 5</span>
+                </div>
+                <div class="data-card-body" style="max-height:300px;overflow-y:auto;">
+                    {% for meeting in upcoming_meetings %}
+                    <div class="meeting-item">
+                        <div>
+                            <div style="font-weight:500;font-size:0.9rem;">{{ meeting.title }}</div>
+                            {% if meeting.location %}
+                            <div class="text-muted" style="font-size:0.75rem;">
+                                <i class="fas fa-map-marker-alt"></i> {{ meeting.location }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="text-end" style="font-size:0.8rem;color:#666;">
+                            <i class="fas fa-clock"></i> {{ meeting.start_time|date:"M d, H:i" }}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="fas fa-calendar-check" style="color:#28a745;"></i>
+                        <p>No upcoming meetings scheduled.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== NOTIFICATIONS ===== -->
+    <div class="data-card">
+        <div class="data-card-header">
+            <h5><i class="fas fa-bell"></i> Recent Notifications</h5>
+            <a href="/notifications/" class="btn btn-sm btn-outline-secondary">View All</a>
+        </div>
+        <div class="data-card-body" style="max-height:250px;overflow-y:auto;">
+            {% for n in notifications %}
+            <div class="notif-item">
+                <div>
+                    <div style="font-weight:500;font-size:0.9rem;">{{ n.title }}</div>
+                    <div class="text-muted" style="font-size:0.8rem;">{{ n.message|truncatechars:80 }}</div>
+                </div>
+                <div class="text-muted" style="font-size:0.7rem;white-space:nowrap;">
+                    {{ n.created_at|date:"M d" }}
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+                <i class="fas fa-inbox" style="color:#28a745;"></i>
+                <p>No new notifications. All caught up! 🎉</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ===== AI COMMAND CENTER ===== -->
+    <div class="ai-command-section">
+        <h3><i class="fas fa-robot" style="color:#9f7734;"></i> AI Command Center</h3>
+        <div class="subtitle">Ask anything about the LMS and get instant insights from your data.</div>
+        
+        <div class="ai-command-input">
+            <input type="text" id="aiCommandInput" placeholder="Ask anything... e.g., 'Show projects with low attendance'"
+                onkeypress="if(event.key==='Enter') sendAICommand()">
+            <button onclick="sendAICommand()"><i class="fas fa-paper-plane"></i> Ask</button>
+        </div>
+        
+        <div class="suggested-questions">
+            <button onclick="setAIQuery('Show projects with low attendance')">📊 Low Attendance</button>
+            <button onclick="setAIQuery('List inactive learners')">👤 Inactive</button>
+            <button onclick="setAIQuery('Show missing POEs')">📄 Missing POE</button>
+            <button onclick="setAIQuery('What are the high risk projects?')">⚠️ High Risk</button>
+            <button onclick="setAIQuery('Show open tickets')">🎫 Tickets</button>
+            <button onclick="setAIQuery('Give me a system summary')">📋 Summary</button>
+            <button onclick="setAIQuery('What is the QCTO compliance status?')">🔒 Compliance</button>
+        </div>
+        
+        <div id="aiResponse" class="ai-response">
+            <i class="fas fa-lightbulb" style="color:#9f7734;"></i> 
+            Type a question above to get AI-powered insights about the LMS.
+        </div>
+    </div>
+
+</div>
+
+<!-- ===== JAVASCRIPT ===== -->
+<script>
+    // ===== SIDEBAR TOGGLE =====
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.toggle('open');
+        overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+    }
+
+    // ===== LOGOUT =====
+    function logout() { 
+        if (confirm('Are you sure you want to logout?')) {
+            window.location.href = '/logout/'; 
+        }
+    }
+
+    // ===== GET CSRF TOKEN =====
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // ===== SET AI QUERY =====
+    function setAIQuery(query) {
+        document.getElementById('aiCommandInput').value = query;
+        sendAICommand();
+    }
+
+    // ===== SEND AI COMMAND =====
+    function sendAICommand() {
+        const input = document.getElementById('aiCommandInput');
+        const query = input.value.trim();
+        const responseDiv = document.getElementById('aiResponse');
+        
+        if (!query) {
+            responseDiv.className = 'ai-response error';
+            responseDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> Please enter a question.';
+            return;
+        }
+        
+        responseDiv.className = 'ai-response loading';
+        responseDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing your data...';
+        
+        fetch('/api/ai-command/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ query: query })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                responseDiv.className = 'ai-response error';
+                responseDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error: ' + data.error;
+                return;
+            }
+            
+            responseDiv.className = 'ai-response success';
+            responseDiv.innerHTML = renderAIResponse(data);
+            input.value = '';
+        })
+        .catch(error => {
+            responseDiv.className = 'ai-response error';
+            responseDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error: ' + error.message;
+        });
+    }
+
+    // ===== RENDER AI RESPONSE =====
+    function renderAIResponse(data) {
+        // Attendance Report
+        if (data.type === 'attendance_report') {
+            let html = `<div class="response-title">📊 Attendance Report (Below ${data.threshold}%)</div>`;
+            if (data.projects.length === 0) {
+                html += '<p>✅ All projects have attendance above the threshold.</p>';
+            } else {
+                html += `<p>Found <strong>${data.count}</strong> projects needing attention:</p><ul>`;
+                data.projects.forEach(p => {
+                    html += `<li><strong>${p.name}</strong> - Attendance: <strong>${p.attendance}%</strong> (${p.learners} learners) <span class="badge ${p.risk === 'high' ? 'bg-danger' : 'bg-warning'}">${p.risk}</span></li>`;
+                });
+                html += '</ul>';
+            }
+            return html;
+        }
+
+        // Inactive Learners
+        if (data.type === 'inactive_learners') {
+            let html = `<div class="response-title">👤 Inactive Learners (${data.days}+ days)</div>`;
+            if (data.learners.length === 0) {
+                html += '<p>✅ All learners are active.</p>';
+            } else {
+                html += `<p>Found <strong>${data.count}</strong> inactive learners:</p><ul>`;
+                data.learners.forEach(l => {
+                    const lastLogin = l.last_login ? new Date(l.last_login).toLocaleDateString() : 'Never';
+                    html += `<li><strong>${l.username}</strong> - ${l.email} <span class="text-muted">(Last login: ${lastLogin})</span></li>`;
+                });
+                if (data.count > 20) html += `<li><em>... and ${data.count - 20} more</em></li>`;
+                html += '</ul>';
+            }
+            return html;
+        }
+
+        // Missing POE
+        if (data.type === 'missing_poe') {
+            let html = `<div class="response-title">📄 Missing Portfolio of Evidence</div>`;
+            if (data.learners.length === 0) {
+                html += '<p>✅ All learners have submitted POE.</p>';
+            } else {
+                html += `<p>Found <strong>${data.count}</strong> learners without POE:</p><ul>`;
+                data.learners.forEach(l => {
+                    const name = l.first_name || l.username;
+                    html += `<li><strong>${name}</strong> - ${l.email}</li>`;
+                });
+                if (data.count > 20) html += `<li><em>... and ${data.count - 20} more</em></li>`;
+                html += '</ul>';
+                html += `<div class="mt-2"><a href="/admin/learners/missing-poe/" class="btn btn-sm btn-primary">View All</a></div>`;
+            }
+            return html;
+        }
+
+        // Risk Report
+        if (data.type === 'risk_report') {
+            let html = `<div class="response-title">⚠️ High Risk Projects</div>`;
+            if (data.projects.length === 0) {
+                html += '<p>✅ No high risk projects found.</p>';
+            } else {
+                html += `<p>Found <strong>${data.count}</strong> high risk projects:</p><ul>`;
+                data.projects.forEach(p => {
+                    html += `<li><strong>${p.name}</strong> - Attendance: ${p.attendance}% | POE: ${p.poe}% | Learners: ${p.learners} | Tickets: ${p.open_tickets} <span class="badge bg-danger">HIGH RISK</span></li>`;
+                });
+                html += '</ul>';
+            }
+            return html;
+        }
+
+        // Tickets
+        if (data.type === 'tickets') {
+            let html = `<div class="response-title">🎫 Open Tickets</div>`;
+            if (data.tickets.length === 0) {
+                html += '<p>✅ No open tickets. All issues resolved.</p>';
+            } else {
+                html += `<p>Found <strong>${data.count}</strong> open tickets:</p><ul>`;
+                data.tickets.forEach(t => {
+                    const priorityBadge = t.priority === 'critical' ? 'bg-danger' : 
+                                         t.priority === 'high' ? 'bg-warning' : 
+                                         t.priority === 'medium' ? 'bg-info' : 'bg-secondary';
+                    html += `<li><strong>${t.title}</strong> <span class="badge ${priorityBadge}">${t.priority}</span> ${t.project__title ? `<span class="text-muted">(${t.project__title})</span>` : ''} <span class="text-muted small">Created: ${new Date(t.created_at).toLocaleDateString()}</span></li>`;
+                });
+                html += '</ul>';
+            }
+            return html;
+        }
+
+        // Compliance
+        if (data.type === 'compliance') {
+            return `
+                <div class="response-title">🔒 QCTO Compliance Status</div>
+                <ul>
+                    <li><strong>Total Learners:</strong> ${data.total_learners}</li>
+                    <li><strong>POPIA Consent:</strong> ${data.popia_consent}</li>
+                    <li><strong>Attendance Compliance (80%+):</strong> ${data.attendance_compliance}</li>
+                    <li><strong>POE Compliance:</strong> ${data.poe_compliance}</li>
+                </ul>
+            `;
+        }
+
+        // Summary
+        if (data.type === 'summary') {
+            let stats = data.stats;
+            let html = `
+                <div class="response-title">📋 System Summary</div>
+                <div class="row">
+                    <div class="col-6">
+                        <strong>Projects:</strong> ${stats.total_projects}<br>
+                        <strong>Learners:</strong> ${stats.total_learners}<br>
+                        <strong>Attendance:</strong> ${stats.overall_attendance}%
+                    </div>
+                    <div class="col-6">
+                        <strong>Open Tickets:</strong> ${stats.open_tickets}<br>
+                        <strong>AI Queries Today:</strong> ${stats.ai_queries_today}
+                    </div>
+                </div>
+            `;
+            if (data.urgent_actions && data.urgent_actions.length > 0) {
+                html += `<div class="mt-2"><strong>⚠️ Urgent Actions:</strong> ${data.urgent_actions.length}</div>`;
+            }
+            return html;
+        }
+
+        // Help / Default
+        if (data.type === 'help' || data.suggestions) {
+            let html = `<div class="response-title">🤖 How can I help?</div><p>${data.message}</p>`;
+            if (data.suggestions) {
+                html += '<div><strong>Try asking:</strong></div><ul>';
+                data.suggestions.forEach(s => {
+                    html += `<li><a href="#" onclick="setAIQuery('${s}');return false;">${s}</a></li>`;
+                });
+                html += '</ul>';
+            }
+            return html;
+        }
+
+        // Default fallback
+        return `<div class="response-title">🤖 Response</div><p>${data.message || JSON.stringify(data)}</p>`;
+    }
+
+    // ===== POPIA CONSENT =====
+    function providePopiaConsent() {
+        fetch('/api/popia-consent/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ consent: true })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error.message);
+        });
+    }
+
+    // ===== AUTO-REFRESH AI QUERY COUNT =====
+    // Update the AI query count every 30 seconds
+    setInterval(() => {
+        fetch('/api/ai-query-count/')
+            .then(r => r.json())
+            .then(data => {
+                const badge = document.querySelector('.stats-badge .fa-robot').parentElement;
+                if (badge) {
+                    badge.textContent = ' 🤖 ' + data.count + ' AI queries today';
+                }
+            })
+            .catch(() => {});
+    }, 30000);
+</script>
+</body>
+</html>

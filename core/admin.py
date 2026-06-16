@@ -1,8 +1,9 @@
+# core/admin.py
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.db.models import Count
-from .models import Opportunity, Application
+from .models import Opportunity, Application, TenderOpportunity, SharedDocument, DocumentCategory, DocumentDownloadLog
 import csv
 from django.http import HttpResponse
 import xlwt
@@ -13,7 +14,8 @@ from .models import (
     Submission, Progress, Certificate, Notification, Announcement, 
     CourseGroup, Attendance, LearningModule, LessonModule, UserModuleProgress,
     LessonInteraction, Badge, UserBadge, DailyStreak, LearnerProfile,
-    LearnerDocument, LogbookEntry, BackupLog, AuditLog, ForumTopic, ForumPost
+    LearnerDocument, LogbookEntry, BackupLog, AuditLog, ForumTopic, ForumPost,
+    TenderOpportunity, SharedDocument, DocumentCategory, DocumentDownloadLog  
 )
 
 # ==================== USER ADMIN ====================
@@ -47,7 +49,7 @@ class CourseAdmin(admin.ModelAdmin):
     list_filter = ('level', 'status', 'created_at')
     search_fields = ('title', 'description')
     prepopulated_fields = {'slug': ('title',)}
-    readonly_fields = ('created_at',)  # Remove 'updated_at' from here
+    readonly_fields = ('created_at',)
     
     fieldsets = (
         ('Course Information', {
@@ -57,10 +59,11 @@ class CourseAdmin(admin.ModelAdmin):
             'fields': ('price', 'thumbnail', 'featured_image')
         }),
         ('Metadata', {
-            'fields': ('created_at',),  # Only include fields that exist
+            'fields': ('created_at',),
             'classes': ('collapse',)
         }),
     )
+
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
     list_display = ('title', 'course', 'duration', 'order')
@@ -75,15 +78,14 @@ class LessonAdmin(admin.ModelAdmin):
         ('Media', {
             'fields': ('video_url', 'video_file', 'document', 'attachment')
         }),
-        # Remove the Metadata fieldset if created_at and updated_at don't exist
     )
+
 # ==================== QUIZ SYSTEM ====================
 @admin.register(Quiz)
 class QuizAdmin(admin.ModelAdmin):
     list_display = ('lesson', 'title', 'passing_score', 'time_limit')
     list_filter = ('lesson__course',)
     search_fields = ('title', 'description')
-    # Remove filter_horizontal if it's not a many-to-many field
     
     fieldsets = (
         ('Quiz Information', {
@@ -338,7 +340,6 @@ class LearnerProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'host_company_name', 'current_course', 'certificate_issued', 'popia_consent')
     list_filter = ('certificate_issued', 'popia_consent')
     search_fields = ('user__username', 'user__email', 'host_company_name')
-    # Remove filter_horizontal if assigned_modules doesn't exist
     
     fieldsets = (
         ('Learner Information', {
@@ -543,6 +544,66 @@ class ForumPostAdmin(admin.ModelAdmin):
     )
 
 
+# ==================== TENDER OPPORTUNITY ====================
+@admin.register(TenderOpportunity)
+class TenderOpportunityAdmin(admin.ModelAdmin):
+    list_display = ('title', 'status', 'category', 'closing_date', 'ai_relevance_score', 'created_at')
+    list_filter = ('status', 'category', 'closing_date')
+    search_fields = ('title', 'description', 'source', 'tender_id', 'internal_notes')
+    readonly_fields = ('created_at', 'updated_at', 'ai_relevance_score', 'ai_confidence')
+    ordering = ['-closing_date']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('title', 'description', 'status', 'category')
+        }),
+        ('Dates', {
+            'fields': ('closing_date', 'opening_date', 'published_date', 'follow_up_date', 'follow_up_notes')
+        }),
+        ('Location & Value', {
+            'fields': ('location', 'estimated_value', 'bidder_deposit')
+        }),
+        ('Source', {
+            'fields': ('source', 'document_url', 'tender_id')
+        }),
+        ('AI & Notes', {
+            'fields': ('ai_relevance_score', 'ai_confidence', 'ai_match_reasons', 'internal_notes')
+        }),
+        ('Assignment', {
+            'fields': ('assigned_to', 'department')
+        }),
+        ('Documents', {
+            'fields': ('local_document',)
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at', 'created_by'),
+            'classes': ('collapse',)
+        })
+    )
+
+
+# ==================== SHARED DOCUMENTS ====================
+@admin.register(SharedDocument)
+class SharedDocumentAdmin(admin.ModelAdmin):
+    list_display = ('title', 'uploaded_by', 'uploaded_at', 'visibility', 'download_count')
+    list_filter = ('visibility', 'uploaded_at')
+    search_fields = ('title', 'description', 'tags', 'file_name')
+    readonly_fields = ('uploaded_at', 'download_count')
+
+
+@admin.register(DocumentCategory)
+class DocumentCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+    search_fields = ('name', 'description')
+
+
+@admin.register(DocumentDownloadLog)
+class DocumentDownloadLogAdmin(admin.ModelAdmin):
+    list_display = ('document', 'user', 'downloaded_at', 'ip_address')
+    list_filter = ('downloaded_at',)
+    search_fields = ('document__title', 'user__username', 'ip_address')
+    readonly_fields = ('downloaded_at',)
+# ==================== OPPORTUNITY & APPLICATION ====================
 class ApplicationInline(admin.TabularInline):
     model = Application
     fields = ('full_name', 'email', 'submitted_at', 'status', 'score')

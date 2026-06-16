@@ -1,5 +1,10 @@
 # core/ai_assistant.py
 import re
+from django.db.models import Q
+from django.utils import timezone
+from datetime import timedelta
+from .models import User, TenderOpportunity, Attendance, PortfolioOfEvidence, ForumTopic, AuditLog
+from .portal_helpers import calculate_project_health, get_urgent_actions, get_overall_stats
 
 class AIAdminAssistant:
     def __init__(self):
@@ -112,3 +117,219 @@ class AIAdminAssistant:
             "data": {"message": "I didn't understand. Try 'Help' to see what I can do."},
             "confidence": 0.30
         }
+
+
+def process_operation_query(query, user):
+    """
+    Process operational queries from staff
+    """
+    query_lower = query.lower()
+    
+    # Check for attendance queries
+    if 'attendance' in query_lower and ('below' in query_lower or 'under' in query_lower):
+        threshold = extract_threshold(query)
+        return get_projects_below_attendance(threshold)
+    
+    # Check for inactive learners
+    if 'inactive' in query_lower or 'not active' in query_lower:
+        days = extract_days(query)
+        return get_inactive_learners(days)
+    
+    # Check for POE queries
+    if 'poe' in query_lower and ('missing' in query_lower or 'outstanding' in query_lower):
+        return get_missing_poe_learners()
+    
+    # Check for risk queries
+    if 'risk' in query_lower or 'high risk' in query_lower:
+        return get_high_risk_projects()
+    
+    # Check for ticket queries
+    if 'ticket' in query_lower or 'issue' in query_lower:
+        return get_open_tickets()
+    
+    # Check for compliance queries
+    if 'compliance' in query_lower or 'qcto' in query_lower:
+        return get_compliance_status()
+    
+    # General summary
+    if 'summary' in query_lower or 'overview' in query_lower:
+        return get_system_summary()
+    
+    # Default: Return help
+    return {
+        'type': 'help',
+        'message': 'I can help with:\n- Attendance reports\n- Inactive learners\n- POE status\n- Risk analysis\n- Ticket overview\n- Compliance status',
+        'suggestions': [
+            'Show projects with low attendance',
+            'List inactive learners',
+            'Show missing POEs',
+            'What are the high risk projects?',
+            'Show open tickets',
+            'Give me a system summary'
+        ]
+    }
+
+
+def extract_threshold(query):
+    """Extract threshold from query (e.g., 'below 75%')"""
+    import re
+    matches = re.findall(r'below\s+(\d+)', query.lower())
+    if matches:
+        return int(matches[0])
+    return 80  # Default
+
+
+def extract_days(query):
+    """Extract days from query"""
+    import re
+    matches = re.findall(r'(\d+)\s+days?', query.lower())
+    if matches:
+        return int(matches[0])
+    return 7  # Default
+
+
+def get_projects_below_attendance(threshold=80):
+    """Find projects with attendance below threshold"""
+    projects = TenderOpportunity.objects.filter(status__in=['new', 'viewed', 'active'])
+    results = []
+    
+    for project in projects:
+        health = calculate_project_health(project)
+        if health['attendance'] < threshold and health['learners'] > 0:
+            results.append({
+                'name': project.title,
+                'attendance': health['attendance'],
+                'learners': health['learners'],
+                'risk': health['risk']
+            })
+    
+    return {
+        'type': 'attendance_report',
+        'threshold': threshold,
+        'projects': results,
+        'count': len(results),
+        'message': f'Found {len(results)} projects with attendance below {threshold}%'
+    }
+
+
+def get_inactive_learners(days=7):
+    """Get learners inactive for X days"""
+    cutoff = timezone.now() - timedelta(days=days)
+    learners = User.objects.filter(
+        role='student',
+        is_approved=True,
+        last_login__lt=cutoff
+    ).values('id', 'username', 'email', 'last_login')
+    
+    return {
+        'type': 'inactive_learners',
+        'days': days,
+        'learners': list(learners)[:20],
+        'count': learners.count(),
+        'message': f'Found {learners.count()} learners inactive for {days}+ days'
+    }
+
+
+def get_missing_poe_learners():
+    """Get learners without POE submission"""
+    learners_with_poe = PortfolioOfEvidence.objects.values_list('student', flat=True).distinct()
+    learners = User.objects.filter(
+        role='student',
+        is_approved=True
+    ).exclude(
+        id__in=learners_with_poe
+    ).values('id', 'username', 'email', 'first_name', 'last_name')
+    
+    return {
+        'type': 'missing_poe',
+        'learners': list(learners)[:20],
+        'count': learners.count(),
+        'message': f'Found {learners.count()} learners without POE'
+    }
+
+
+def get_high_risk_projects():
+    """Get projects marked as high risk"""
+    projects = TenderOpportunity.objects.filter(status__in=['new', 'viewed', 'active'])
+    results = []
+    
+    for project in projects:
+        health = calculate_project_health(project)
+        if health['risk'] == 'high' and health['learners'] > 0:
+            results.append({
+                'name': project.title,
+                'attendance': health['attendance'],
+                'poe': health['poe_completion'],
+                'learners': health['learners'],
+                'open_tickets': health['open_tickets']
+            })
+    
+    return {
+        'type': 'risk_report',
+        'projects': results,
+        'count': len(results),
+        'message': f'Found {len(results)} high risk projects'
+    }
+
+
+def get_open_tickets():
+    """Get open tickets"""
+    tickets = ForumTopic.objects.filter(
+        is_ticket=True,
+        is_resolved=False
+    ).select_related('project').values(
+        'id', 'title', 'project__title', 'created_at', 'priority'
+    )
+    
+    return {
+        'type': 'tickets',
+        'tickets': list(tickets)[:20],
+        'count': tickets.count(),
+        'message': f'Found {tickets.count()} open tickets'
+    }
+
+
+def get_compliance_status():
+    """Get overall compliance status"""
+    learners = User.objects.filter(role='student', is_approved=True)
+    total_learners = learners.count()
+    
+    # POPIA consent
+    from .models import LearnerProfile
+    consented = LearnerProfile.objects.filter(popia_consent=True).count()
+    
+    # Attendance compliance (80%+)
+    projects = TenderOpportunity.objects.filter(status__in=['new', 'viewed', 'active'])
+    compliant_projects = 0
+    for project in projects:
+        health = calculate_project_health(project)
+        if health['attendance'] >= 80:
+            compliant_projects += 1
+    
+    # POE compliance
+    poe_submitted = PortfolioOfEvidence.objects.filter(
+        student__in=learners,
+        status='submitted'
+    ).count()
+    
+    return {
+        'type': 'compliance',
+        'total_learners': total_learners,
+        'popia_consent': f"{round((consented/total_learners*100) if total_learners > 0 else 0, 1)}%",
+        'attendance_compliance': f"{round((compliant_projects/projects.count()*100) if projects.count() > 0 else 0, 1)}%",
+        'poe_compliance': f"{round((poe_submitted/total_learners*100) if total_learners > 0 else 0, 1)}%",
+        'message': 'Compliance status generated'
+    }
+
+
+def get_system_summary():
+    """Get overall system summary"""
+    stats = get_overall_stats()
+    urgent_actions = get_urgent_actions()
+    
+    return {
+        'type': 'summary',
+        'stats': stats,
+        'urgent_actions': urgent_actions,
+        'message': f"System Summary: {stats['total_projects']} projects, {stats['total_learners']} learners, {stats['open_tickets']} open tickets"
+    }

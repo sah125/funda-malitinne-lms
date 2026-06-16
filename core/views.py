@@ -2,6 +2,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
+from .portal_helpers import calculate_project_health, get_urgent_actions, get_overall_stats
 from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse, FileResponse, Http404
 from django.utils import timezone
@@ -11,13 +12,16 @@ from django.utils.crypto import get_random_string
 from django.db.models import Count, Q, Avg, F  # ADDED F here
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.text import get_valid_filename
+from datetime import timedelta
+from django.db.models import Q
+from django.http import HttpResponseForbidden, FileResponse, Http404
 import json
 import csv
 import io
 import mimetypes
 import os
 import time
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from django.conf import settings
 
 from .models import Opportunity, Application
@@ -31,7 +35,8 @@ from .models import (
     LessonModule, UserModuleProgress, LessonInteraction, DailyStreak, Badge, UserBadge,
     ForumTopic, ForumPost, ObservationChecklistItem, StudentChecklistResult,
     AssessorSignOff, ModuleEvidence, PortfolioOfEvidence, SummativeAssessment,
-    SummativeAssessmentSubmission
+    SummativeAssessmentSubmission, Task, Meeting, StaffAnnouncement,
+    TenderOpportunity, SharedDocument, DocumentCategory, DocumentDownloadLog
 )
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
@@ -91,11 +96,369 @@ def clients_page(request):
     """Display clients and testimonials page"""
     return render(request, 'malitinne/clients.html')
 
-def lesson_discussions(request, lesson_id):
-    lesson = get_object_or_404(Lesson, id=lesson_id)
-    return render(request, 'discussion/lesson_discussions.html', {
-        'lesson': lesson
+
+# ==================== STAFF PORTAL (PHASE 1) ====================
+
+@login_required
+def staff_portal(request):
+    if request.user.role not in ['admin', 'instructor']:
+        messages.error(request, 'You do not have access to the staff portal.')
+        return redirect('student_dashboard')
+
+    now = timezone.now()
+
+    # Existing data
+    my_tasks = Task.objects.filter(assigned_to=request.user).exclude(status='done').order_by('due_date')[:8]
+    upcoming_meetings = Meeting.objects.filter(
+        Q(organizer=request.user) | Q(attendees=request.user),
+        start_time__gte=now
+    ).distinct().order_by('start_time')[:5]
+    notifications = request.user.notifications.filter(is_read=False)[:5]
+    announcements = StaffAnnouncement.objects.all()[:5]
+
+    # NEW: Project Health Data
+    projects = TenderOpportunity.objects.filter(status__in=['new', 'viewed', 'active'])
+    projects_health = []
+    for project in projects:
+        health = calculate_project_health(project)
+        if health['learners'] > 0:  # Only show projects with learners
+            projects_health.append(health)
+
+    # Sort by risk level (high first)
+    risk_order = {'high': 0, 'medium': 1, 'low': 2}
+    projects_health.sort(key=lambda x: risk_order.get(x['risk'], 3))
+
+    # NEW: Urgent Actions
+    urgent_actions = get_urgent_actions()
+
+    # NEW: Overall Stats
+    stats = get_overall_stats()
+
+    # Track AI queries for this session
+    ai_queries_today = AuditLog.objects.filter(
+        action='ai_query',
+        timestamp__date=now.date()
+    ).count()
+
+    # Check POPIA consent for user (if learner profile exists)
+    try:
+        profile = LearnerProfile.objects.get(user=request.user)
+        has_popia_consent = profile.popia_consent
+    except LearnerProfile.DoesNotExist:
+        has_popia_consent = False
+
+    context = {
+        # Existing
+        'my_tasks': my_tasks,
+        'upcoming_meetings': upcoming_meetings,
+        'notifications': notifications,
+        'notification_count': notifications.count(),
+        'announcements': announcements,
+        'active_learners': User.objects.filter(role='student', is_approved=True).count(),
+        'total_courses': Course.objects.filter(status='published').count(),
+        'pending_gradings': Submission.objects.filter(grade__isnull=True).count(),
+        'active_opportunities': Opportunity.objects.filter(status='published').count(),
+        'applications_this_month': Application.objects.filter(
+            submitted_at__year=now.year, submitted_at__month=now.month
+        ).count(),
+        
+        # NEW
+        'projects_health': projects_health,
+        'urgent_actions': urgent_actions,
+        'stats': stats,
+        'ai_queries_today': ai_queries_today,
+        'has_popia_consent': has_popia_consent,
+        'show_popica_banner': not has_popia_consent and request.user.role == 'student',
+    }
+    return render(request, 'staff_portal.html', context)
+
+# ==================== TENDER MANAGEMENT VIEWS ====================
+
+@login_required
+def tender_dashboard(request):
+    """Dashboard for viewing opportunities/tenders"""
+    if request.user.role not in ['instructor', 'admin']:
+        return redirect('student_dashboard')
+    
+    tenders = TenderOpportunity.objects.filter(
+        Q(status='new') | Q(status='viewed'),
+        closing_date__gte=timezone.now().date()
+    ).order_by('closing_date', '-ai_relevance_score')
+    
+    total = tenders.count()
+    urgent = tenders.filter(closing_date__lte=timezone.now().date() + timedelta(days=7)).count()
+    upcoming = tenders.filter(
+        closing_date__gt=timezone.now().date() + timedelta(days=7),
+        closing_date__lte=timezone.now().date() + timedelta(days=30)
+    ).count()
+    ongoing = tenders.filter(closing_date__gt=timezone.now().date() + timedelta(days=30)).count()
+    
+    context = {
+        'tenders': tenders[:20],
+        'total': total,
+        'urgent': urgent,
+        'upcoming': upcoming,
+        'ongoing': ongoing,
+        'today': timezone.now().date(),
+    }
+    return render(request, 'tender_dashboard.html', context)
+
+
+@login_required
+def run_tender_crawl(request):
+    """Manually trigger tender crawling"""
+    if request.user.role != 'admin':
+        messages.error(request, 'Admin access required')
+        return redirect('tender_dashboard')
+    
+    messages.info(request, 'Tender crawler will be implemented in the next step')
+    return redirect('tender_dashboard')
+
+
+@login_required
+def tender_detail(request, tender_id):
+    """View tender details and update status"""
+    tender = get_object_or_404(TenderOpportunity, id=tender_id)
+    
+    if request.user.role not in ['instructor', 'admin']:
+        return redirect('student_dashboard')
+    
+    if request.method == 'POST':
+        tender.status = request.POST.get('status')
+        tender.internal_notes = request.POST.get('notes', '')
+        tender.follow_up_date = request.POST.get('follow_up_date') or None
+        tender.follow_up_notes = request.POST.get('follow_up_notes', '')
+        
+        if request.FILES.get('document'):
+            tender.local_document = request.FILES['document']
+        
+        tender.save()
+        messages.success(request, 'Tender updated successfully')
+    
+    return render(request, 'tender_detail.html', {'tender': tender})
+
+
+# ==================== SHARED DOCUMENT DRIVE VIEWS ====================
+
+@login_required
+def shared_drive(request):
+    """Shared document drive for staff"""
+    if request.user.role not in ['instructor', 'admin']:
+        return redirect('student_dashboard')
+    
+    # Get documents based on visibility
+    documents = SharedDocument.objects.filter(
+        Q(visibility='all_staff') |
+        Q(visibility='management', uploaded_by__role='admin') |
+        Q(visibility='private', uploaded_by=request.user)
+    ).distinct().order_by('-uploaded_at')
+    
+    # Apply filters
+    category = request.GET.get('category')
+    if category:
+        documents = documents.filter(category__slug=category)
+    
+    search = request.GET.get('search')
+    if search:
+        documents = documents.filter(
+            Q(title__icontains=search) | 
+            Q(description__icontains=search) |
+            Q(tags__icontains=search)
+        )
+    
+    categories = DocumentCategory.objects.all()
+    
+    context = {
+        'documents': documents,
+        'categories': categories,
+        'current_category': category,
+        'search_query': search,
+    }
+    return render(request, 'shared_drive.html', context)
+
+
+@login_required
+def upload_document(request):
+    """Upload document to shared drive"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    if request.user.role not in ['instructor', 'admin']:
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    title = request.POST.get('title')
+    description = request.POST.get('description', '')
+    category_id = request.POST.get('category')
+    visibility = request.POST.get('visibility', 'all_staff')
+    tags = request.POST.get('tags', '')
+    
+    if not title or not request.FILES.get('file'):
+        return JsonResponse({'error': 'Title and file required'}, status=400)
+    
+    file = request.FILES['file']
+    
+    doc = SharedDocument.objects.create(
+        title=title,
+        description=description,
+        file=file,
+        file_name=file.name,
+        file_size=file.size,
+        mime_type=file.content_type,
+        visibility=visibility,
+        tags=tags,
+        uploaded_by=request.user,
+        category_id=category_id if category_id else None
+    )
+    
+    # Notify staff
+    staff_users = User.objects.filter(role__in=['instructor', 'admin'])
+    for staff in staff_users:
+        send_notification(
+            staff,
+            f'New Document: {title}',
+            f'{request.user.username} shared "{title}" in the document drive.',
+            '/shared-drive/'
+        )
+    
+    return JsonResponse({
+        'success': True,
+        'document': {
+            'id': doc.id,
+            'title': doc.title,
+            'file_url': doc.file.url,
+            'file_name': doc.file_name,
+            'uploaded_at': doc.uploaded_at.strftime('%Y-%m-%d %H:%M')
+        }
     })
+
+
+@login_required
+def download_document(request, doc_id):
+    """Download document from shared drive with logging"""
+    doc = get_object_or_404(SharedDocument, id=doc_id)
+    
+    # Check permissions
+    if doc.visibility == 'all_staff':
+        pass  # OK
+    elif doc.visibility == 'management' and request.user.role != 'admin':
+        return HttpResponseForbidden("You don't have permission to download this document")
+    elif doc.visibility == 'private' and doc.uploaded_by != request.user:
+        return HttpResponseForbidden("This document is private")
+    
+    # Log download
+    DocumentDownloadLog.objects.create(
+        document=doc,
+        user=request.user,
+        ip_address=get_client_ip(request)
+    )
+    
+    # Increment download count
+    doc.download_count += 1
+    doc.save()
+    
+    # Serve file
+    if doc.file and os.path.isfile(doc.file.path):
+        return FileResponse(
+            open(doc.file.path, 'rb'),
+            as_attachment=True,
+            filename=doc.file_name
+        )
+    
+    raise Http404("File not found")
+
+
+@login_required
+def delete_document(request, doc_id):
+    """Delete document (admin only or document owner)"""
+    if request.method != 'DELETE':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    doc = get_object_or_404(SharedDocument, id=doc_id)
+    
+    # Only admin or uploader can delete
+    if request.user.role != 'admin' and doc.uploaded_by != request.user:
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    # Delete file from disk
+    if doc.file and os.path.isfile(doc.file.path):
+        os.remove(doc.file.path)
+    
+    doc.delete()
+    return JsonResponse({'success': True})
+
+
+# ==================== AI COMMAND API ====================
+
+@login_required
+def ai_command_api(request):
+    """
+    AI Command API for staff portal operations queries
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+    
+    if request.user.role not in ['admin', 'instructor']:
+        return JsonResponse({'error': 'Staff access required'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        query = data.get('query', '')
+        
+        if not query:
+            return JsonResponse({'error': 'No query provided'}, status=400)
+        
+        # Import and use the AI functions
+        from .ai_assistant import process_operation_query
+        
+        # Process the query
+        response = process_operation_query(query, request.user)
+        
+        # Log the query
+        AuditLog.objects.create(
+            user=request.user,
+            action='ai_query',
+            details={'query': query[:200], 'response_type': response.get('type', 'general')},
+            ip_address=get_client_ip(request)
+        )
+        
+        return JsonResponse(response)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def popia_consent_api(request):
+    """
+    API endpoint for providing POPIA consent
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        consent = data.get('consent', False)
+        
+        if not consent:
+            return JsonResponse({'error': 'Consent must be true'}, status=400)
+        
+        profile, created = LearnerProfile.objects.get_or_create(user=request.user)
+        profile.popia_consent = True
+        profile.popia_consent_date = timezone.now()
+        profile.save()
+        
+        AuditLog.objects.create(
+            user=request.user,
+            action='popia_consent',
+            details={'consent_given': True},
+            ip_address=get_client_ip(request)
+        )
+        
+        return JsonResponse({'success': True, 'message': 'POPIA consent recorded'})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 # ==================== DISCUSSION REPLY FUNCTIONS ====================
 
@@ -1293,6 +1656,22 @@ def delete_announcement(request, announcement_id):
     return JsonResponse({'success': True})
 
 # ==================== FORUM SYSTEM ====================
+def lesson_discussions(request, lesson_id):
+    """View all discussions for a lesson"""
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    
+    # Check permissions
+    if request.user.is_authenticated:
+        if request.user.role == 'student' and request.user not in lesson.course.students.all():
+            messages.error(request, 'You are not enrolled in this course.')
+            return redirect('course_detail', course_id=lesson.course.id)
+    
+    topics = ForumTopic.objects.filter(lesson=lesson).order_by('-is_pinned', '-created_at')
+    
+    return render(request, 'discussion/lesson_discussions.html', {
+        'lesson': lesson,
+        'topics': topics
+    })
 
 @login_required
 def discussion_detail(request, topic_id):
