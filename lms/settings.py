@@ -3,7 +3,7 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-funda-malitinne-2026'
-DEBUG = True           # Enable Django's dev server features locally
+DEBUG = False           # Enable Django's dev server features locally
 ALLOWED_HOSTS = ['malitinne.co.za', 'www.malitinne.co.za', '127.0.0.1']
 
 INSTALLED_APPS = [
@@ -51,10 +51,22 @@ TEMPLATES = [
 WSGI_APPLICATION = 'lms.wsgi.application'
 
 # Database - SQLite (simple, no extra packages needed)
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.sqlite3',
+#        'NAME': BASE_DIR / 'db.sqlite3',
+#    }
+#}
+
+# PostgreSQL Configuration
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'funda_malitinne_lms',
+        'USER': 'postgres',
+        'PASSWORD': 'Sah@@@782',
+        'HOST': '102.202.192.45',  # Your VPS IP
+        'PORT': '5432',
     }
 }
 
