@@ -2,10 +2,16 @@ from pathlib import Path
 import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = 'django-insecure-funda-malitinne-2026'
-DEBUG = False           # Enable Django's dev server features locally
-ALLOWED_HOSTS = ['malitinne.co.za', 'www.malitinne.co.za', '127.0.0.1']
 
+# ===== SECURITY =====
+SECRET_KEY = 'django-insecure-funda-malitinne-2026'
+
+# ⭐ CHANGE THIS TO True FOR DEVELOPMENT
+DEBUG = True  # Changed from False to True for static file serving
+
+ALLOWED_HOSTS = ['malitinne.co.za', 'www.malitinne.co.za', '127.0.0.1', 'localhost', '102.202.192.45']
+
+# ===== APPLICATIONS =====
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -19,6 +25,7 @@ INSTALLED_APPS = [
     'core',
 ]
 
+# ===== MIDDLEWARE =====
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -50,26 +57,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'lms.wsgi.application'
 
-# Database - SQLite (simple, no extra packages needed)
-#DATABASES = {
-#    'default': {
-#        'ENGINE': 'django.db.backends.sqlite3',
-#        'NAME': BASE_DIR / 'db.sqlite3',
-#    }
-#}
-
-# PostgreSQL Configuration
+# ===== DATABASE - PostgreSQL =====
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'funda_malitinne_lms',
         'USER': 'postgres',
         'PASSWORD': 'Sah@@@782',
-        'HOST': '102.202.192.45',  # Your VPS IP
+        'HOST': '102.202.192.45',
         'PORT': '5432',
     }
 }
 
+# ===== AUTHENTICATION =====
 AUTH_USER_MODEL = 'core.User'
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -79,24 +79,28 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+# ===== INTERNATIONALIZATION =====
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
+# ===== STATIC & MEDIA FILES (FIXED) =====
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']  # Where your static files live
+STATIC_ROOT = BASE_DIR / 'staticfiles'    # Where collectstatic puts them
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = BASE_DIR / 'media'           # User uploaded files
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# ===== LOGIN URLs =====
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
 
+# ===== REST FRAMEWORK =====
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.SessionAuthentication',
@@ -106,6 +110,7 @@ REST_FRAMEWORK = {
     ),
 }
 
+# ===== CORS =====
 CORS_ALLOW_ALL_ORIGINS = True
 
 CSRF_TRUSTED_ORIGINS = [
@@ -113,16 +118,16 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
 ]
 
-# Email Configuration (prints to console for testing)
-# Email Configuration - Gmail SMTP
+# ===== EMAIL =====
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'sah.sakhile@gmail.com'  # Gmail
-EMAIL_HOST_PASSWORD = 'nmxn rajn grax djaz'  # Replace with Gmail App Password
+EMAIL_HOST_USER = 'sah.sakhile@gmail.com'
+EMAIL_HOST_PASSWORD = 'nmxn rajn grax djaz'
 DEFAULT_FROM_EMAIL = 'Funda Malitinne <sah.sakhile@gmail.com>'
-# Logging Configuration for Development
+
+# ===== LOGGING =====
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -146,12 +151,12 @@ LOGGING = {
     },
 }
 
-# Celery Configuration (for development - uses eager execution)
+# ===== CELERY =====
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 
-# Cache Configuration (Optional - uses database if Redis unavailable)
+# ===== CACHE =====
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -160,5 +165,4 @@ CACHES = {
 }
 
 # Create logs directory if it doesn't exist
-import os
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)
