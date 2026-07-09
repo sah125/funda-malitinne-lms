@@ -447,7 +447,7 @@
         <div class="step-number">3</div>
         <div class="step-title">Quiz & Confirm</div>
       </div>
-      <a href="{% url 'lesson_discussions' lesson.id %}" class="step-modern" style="text-decoration: none; cursor: pointer;">
+      <a href="{% url 'discussion_detail' lesson.id %}" class="step-modern" style="text-decoration: none; cursor: pointer;">
         <div class="step-number"><i class="fas fa-comments"></i></div>
         <div class="step-title">Discussions</div>
       </a>
@@ -512,7 +512,7 @@
         <div class="card-header">
           <h3><i class="fas fa-question-circle" style="color: #9f7734;"></i> Step 3: Quiz - Verify Your Learning</h3>
           <div style="margin-top: 1rem; font-size: 0.95rem; color: #666;">
-            {% with attempt=lesson.quiz.attempts.filter(student=request.user).first %}
+            {% with attempt=quiz_attempt %}
               {% if attempt and attempt.passed %}
                 <span style="color: #10b981; font-weight: 600;"><i class="fas fa-check-circle"></i> Completed - {{ attempt.percentage|floatformat:0 }}%</span>
               {% elif attempt %}

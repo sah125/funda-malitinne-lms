@@ -1,4 +1,12 @@
 # ==================== FIXED IMPORTS ====================
+import pandas as pd
+from django.core.paginator import Paginator
+from django.db.models import Q, Count
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse, HttpResponse
+from django.contrib.admin.views.decorators import staff_member_required
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
@@ -811,6 +819,14 @@ def lesson_detail(request, lesson_id):
     
     progress, created = Progress.objects.get_or_create(student=request.user, course=course)
     
+    # ===== FIX: Get quiz attempt in view instead of template =====
+    quiz_attempt = None
+    if hasattr(lesson, 'quiz'):
+        quiz_attempt = QuizAttempt.objects.filter(
+            quiz=lesson.quiz,
+            student=request.user
+        ).first()
+    
     if request.method == 'POST' and 'complete' in request.POST:
         if lesson not in progress.completed_lessons.all():
             progress.completed_lessons.add(lesson)
@@ -828,7 +844,8 @@ def lesson_detail(request, lesson_id):
     return render(request, 'lesson_detail.html', {
         'lesson': lesson,
         'course': course,
-        'progress': progress
+        'progress': progress,
+        'quiz_attempt': quiz_attempt,  # ← Pass to template
     })
 
 @login_required
@@ -2708,6 +2725,400 @@ def application_success(request, application_number):
     application = get_object_or_404(Application, application_number=application_number)
     return render(request, 'malitinne/application_success.html', {'application': application})
 
+
+# ==================== LEARNER MANAGEMENT HUB ====================
+
+import pandas as pd
+from django.core.paginator import Paginator
+from django.db.models import Q, Count
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse, HttpResponse
+from django.contrib.admin.views.decorators import staff_member_required
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
+import json
+from datetime import datetime
+
+@staff_member_required
+def learner_management_hub(request):
+    """Central hub for managing all learners (10,000+)"""
+    
+    # Get filter parameters
+    search_query = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '')
+    project_filter = request.GET.get('project', '')
+    department_filter = request.GET.get('department', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    sort_by = request.GET.get('sort', '-date_joined')
+    page = request.GET.get('page', 1)
+    
+    # Base queryset - all users with role='student' or 'learner'
+    learners = User.objects.filter(
+        Q(role='student') | Q(role='learner')
+    ).select_related('learner_profile').prefetch_related(
+        'enrolled_courses', 
+        'progress',
+        'certificates'
+    )
+    
+    # Apply filters
+    if search_query:
+        learners = learners.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(id_number__icontains=search_query) |
+            Q(phone__icontains=search_query)
+        )
+    
+    if status_filter:
+        if status_filter == 'active':
+            learners = learners.filter(is_active=True, is_approved=True)
+        elif status_filter == 'inactive':
+            learners = learners.filter(is_active=False)
+        elif status_filter == 'pending':
+            learners = learners.filter(is_approved=False, is_active=True)
+        elif status_filter == 'blocked':
+            learners = learners.filter(is_active=False, is_approved=True)
+    
+    if project_filter:
+        learners = learners.filter(enrolled_courses__id=project_filter)
+    
+    if department_filter:
+        learners = learners.filter(department=department_filter)
+    
+    if date_from:
+        learners = learners.filter(date_joined__gte=date_from)
+    
+    if date_to:
+        learners = learners.filter(date_joined__lte=date_to)
+    
+    # Annotate with additional stats
+    learners = learners.annotate(
+        course_count=Count('enrolled_courses', distinct=True),
+        certificate_count=Count('certificates', distinct=True)
+    )
+    
+    # Order by
+    if sort_by:
+        learners = learners.order_by(sort_by)
+    
+    # Paginate (50 per page for performance)
+    paginator = Paginator(learners, 50)
+    page_obj = paginator.get_page(page)
+    
+    # Get filter options
+    projects = Course.objects.filter(status='published').values_list('id', 'title')
+    departments = User.DEPARTMENT_CHOICES
+    
+    # Statistics
+    stats = {
+        'total_learners': User.objects.filter(role__in=['student', 'learner']).count(),
+        'active_learners': User.objects.filter(
+            role__in=['student', 'learner'], 
+            is_active=True, 
+            is_approved=True
+        ).count(),
+        'pending_approval': User.objects.filter(
+            role__in=['student', 'learner'], 
+            is_approved=False
+        ).count(),
+        'inactive_learners': User.objects.filter(
+            role__in=['student', 'learner'], 
+            is_active=False
+        ).count(),
+        'total_projects': Course.objects.filter(status='published').count(),
+    }
+    
+    context = {
+        'learners': page_obj,
+        'stats': stats,
+        'projects': projects,
+        'departments': departments,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'project_filter': project_filter,
+        'department_filter': department_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'sort_by': sort_by,
+        'total_learners_count': learners.count(),
+        'notification_count': Notification.objects.filter(user=request.user, is_read=False).count(),
+    }
+    
+    return render(request, 'learner_management_hub.html', context)
+
+
+@staff_member_required
+def learner_detail_view(request, user_id):
+    """View detailed profile of a specific learner"""
+    learner = get_object_or_404(
+        User.objects.filter(role__in=['student', 'learner']),
+        id=user_id
+    )
+    
+    # Get all progress data
+    progress_data = Progress.objects.filter(student=learner).select_related('course')
+    
+    # Get enrollments
+    enrollments = learner.enrolled_courses.all()
+    
+    # Get certificates
+    certificates = Certificate.objects.filter(student=learner).select_related('course')
+    
+    # Get assessment history (from QCTO models if they exist)
+    assessments = []
+    if hasattr(learner, 'sign_offs'):
+        assessments = learner.sign_offs.all().select_related('module', 'assessor')
+    
+    # Get logbook entries
+    logbook_entries = []
+    if hasattr(learner, 'logbook_entries'):
+        logbook_entries = learner.logbook_entries.all().order_by('-entry_date')[:20]
+    
+    # Calculate overall progress
+    overall_progress = 0
+    if progress_data.exists():
+        total_courses = progress_data.count()
+        completed_courses = progress_data.filter(completed_at__isnull=False).count()
+        overall_progress = int((completed_courses / total_courses) * 100) if total_courses > 0 else 0
+    
+    # Get profile completion
+    profile_completion = 0
+    if hasattr(learner, 'learner_profile'):
+        profile_completion = learner.learner_profile.get_completion_percentage()
+    
+    context = {
+        'learner': learner,
+        'progress_data': progress_data,
+        'enrollments': enrollments,
+        'certificates': certificates,
+        'assessments': assessments,
+        'logbook_entries': logbook_entries,
+        'overall_progress': overall_progress,
+        'profile_completion': profile_completion,
+        'notification_count': Notification.objects.filter(user=request.user, is_read=False).count(),
+    }
+    
+    return render(request, 'learner_detail.html', context)
+
+@login_required
+def ai_query_count_api(request):
+    """Get the number of AI queries today for the current user"""
+    from django.utils import timezone
+    today = timezone.now().date()
+    
+    # Count AI queries from today (you'll need to track this)
+    # For now, return a default value
+    count = 0
+    
+    # If you have a model tracking AI queries, use it:
+    # from core.models import AIQueryLog
+    # count = AIQueryLog.objects.filter(
+    #     user=request.user,
+    #     created_at__date=today
+    # ).count()
+    
+    return JsonResponse({'count': count})
+
+@login_required
+def discussions_list(request):
+    """View all forum discussions"""
+    from core.models import ForumTopic
+    
+    topics = ForumTopic.objects.all().order_by('-created_at')
+    
+    context = {
+        'topics': topics,
+        'notification_count': Notification.objects.filter(user=request.user, is_read=False).count(),
+    }
+    return render(request, 'discussions_list.html', context)
+
+@staff_member_required
+@csrf_exempt
+def bulk_upload_learners(request):
+    """Bulk upload learners from Excel/CSV file"""
+    if request.method == 'POST' and request.FILES.get('file'):
+        try:
+            file = request.FILES['file']
+            
+            # Read the file
+            if file.name.endswith('.csv'):
+                df = pd.read_csv(file)
+            else:
+                df = pd.read_excel(file)
+            
+            # Expected columns mapping
+            required_columns = [
+                'username', 'email', 'first_name', 'last_name'
+            ]
+            
+            # Validate required columns
+            missing_cols = [col for col in required_columns if col not in df.columns]
+            if missing_cols:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Missing columns: {", ".join(missing_cols)}'
+                }, status=400)
+            
+            results = {
+                'success': 0,
+                'failed': 0,
+                'errors': [],
+                'created': [],
+                'updated': []
+            }
+            
+            # Process each row
+            for index, row in df.iterrows():
+                try:
+                    username = str(row.get('username', '')).strip()
+                    email = str(row.get('email', '')).strip()
+                    
+                    if not username or not email:
+                        results['failed'] += 1
+                        results['errors'].append(f'Row {index+2}: Missing username or email')
+                        continue
+                    
+                    # Check if user exists
+                    user, created = User.objects.get_or_create(
+                        username=username,
+                        defaults={
+                            'email': email,
+                            'first_name': str(row.get('first_name', '')).strip()[:150],
+                            'last_name': str(row.get('last_name', '')).strip()[:150],
+                            'role': 'student',
+                            'is_active': True,
+                            'is_approved': True,
+                        }
+                    )
+                    
+                    if not created:
+                        # Update existing user
+                        user.email = email
+                        user.first_name = str(row.get('first_name', '')).strip()[:150]
+                        user.last_name = str(row.get('last_name', '')).strip()[:150]
+                        user.save()
+                        results['updated'].append(username)
+                    else:
+                        results['created'].append(username)
+                    
+                    # Update additional fields if they exist
+                    if 'phone' in df.columns:
+                        user.phone = str(row.get('phone', '')).strip()[:20]
+                    
+                    if 'id_number' in df.columns:
+                        user.id_number = str(row.get('id_number', '')).strip()[:20]
+                    
+                    if 'department' in df.columns and row.get('department'):
+                        dept = str(row.get('department', '')).strip()
+                        # Validate department choice
+                        dept_choices = dict(User.DEPARTMENT_CHOICES)
+                        if dept in dept_choices:
+                            user.department = dept
+                    
+                    if 'date_of_birth' in df.columns and pd.notna(row.get('date_of_birth')):
+                        try:
+                            user.date_of_birth = pd.to_datetime(row['date_of_birth']).date()
+                        except:
+                            pass
+                    
+                    user.save()
+                    
+                    # Create learner profile if not exists
+                    if not hasattr(user, 'learner_profile'):
+                        from core.models import LearnerProfile
+                        LearnerProfile.objects.create(user=user)
+                    
+                    results['success'] += 1
+                    
+                except Exception as e:
+                    results['failed'] += 1
+                    results['errors'].append(f'Row {index+2}: {str(e)}')
+            
+            return JsonResponse({
+                'success': True,
+                'results': results
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+    
+    return JsonResponse({'success': False, 'error': 'No file uploaded'}, status=400)
+
+
+@staff_member_required
+def export_learners(request):
+    """Export learner data to Excel"""
+    import io
+    from openpyxl import Workbook
+    
+    # Get filters
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    
+    learners = User.objects.filter(role__in=['student', 'learner'])
+    
+    if search_query:
+        learners = learners.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
+    
+    if status_filter:
+        if status_filter == 'active':
+            learners = learners.filter(is_active=True, is_approved=True)
+        elif status_filter == 'inactive':
+            learners = learners.filter(is_active=False)
+        elif status_filter == 'pending':
+            learners = learners.filter(is_approved=False)
+    
+    # Create Excel workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Learners"
+    
+    # Headers
+    headers = [
+        'Username', 'Email', 'First Name', 'Last Name', 'Phone',
+        'ID Number', 'Department', 'Status', 'Approved',
+        'Date Joined', 'Last Login', 'Courses Enrolled', 'Certificates'
+    ]
+    ws.append(headers)
+    
+    # Data
+    for learner in learners:
+        ws.append([
+            learner.username,
+            learner.email,
+            learner.first_name,
+            learner.last_name,
+            learner.phone or '',
+            learner.id_number or '',
+            learner.get_department_display() or '',
+            'Active' if learner.is_active else 'Inactive',
+            'Yes' if learner.is_approved else 'No',
+            learner.date_joined.strftime('%Y-%m-%d') if learner.date_joined else '',
+            learner.last_login.strftime('%Y-%m-%d %H:%M') if learner.last_login else '',
+            learner.enrolled_courses.count(),
+            learner.certificates.count(),
+        ])
+    
+    # Save to response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename=learners_export.xlsx'
+    wb.save(response)
+    return response
+
 # ==================== PRACTICAL SKILLS & OBSERVATION CHECKLIST ====================
 
 @login_required
@@ -3244,6 +3655,35 @@ def assessor_signoff(request, module_id):
         'signed_at': signoff.signed_at.strftime('%Y-%m-%d %H:%M'),
         'message': f'Module signed off as {outcome.replace("_", " ").upper()}'
     })
+
+
+@login_required
+def ai_query_count_api(request):
+    """Get the number of AI queries today for the current user."""
+    today = timezone.now().date()
+    count = 0
+
+    # If you have a model tracking AI queries, use it here.
+    # Example:
+    # count = AIQueryLog.objects.filter(
+    #     user=request.user,
+    #     created_at__date=today
+    # ).count()
+
+    return JsonResponse({'count': count})
+
+
+@login_required
+def discussions_list(request):
+    """View all forum discussions."""
+    topics = ForumTopic.objects.all().order_by('-created_at')
+
+    context = {
+        'topics': topics,
+        'notification_count': Notification.objects.filter(user=request.user, is_read=False).count(),
+    }
+    return render(request, 'discussions_list.html', context)
+
 
 # ==================== ERROR HANDLERS ====================
 

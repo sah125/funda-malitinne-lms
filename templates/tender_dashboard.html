@@ -1,146 +1,23 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tender Intelligence - Funda Malitinne</title>
-    <link rel="icon" type="image/x-icon" href="/static/Malitinne-logo-v.ico">
+    <link rel="icon" type="image/x-icon" href="{% static 'Malitinne-logo-v.ico' %}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: #f0f2f5; }
-
-        .sidebar {
-            position: fixed; left: 0; top: 0; width: 280px; height: 100%;
-            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-            color: white; z-index: 1000; overflow-y: auto;
-        }
-        .sidebar-header { padding: 25px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-header h3 { font-weight: 700; margin: 0; font-size: 1.3rem; }
-        .sidebar-header p { font-size: 11px; opacity: 0.7; margin: 5px 0 0; }
-        .sidebar-menu { padding: 20px 0; }
-        .sidebar-menu-item {
-            padding: 12px 25px; display: flex; align-items: center; gap: 12px;
-            color: rgba(255,255,255,0.8); text-decoration: none; transition: all 0.3s; cursor: pointer;
-        }
-        .sidebar-menu-item:hover { background: rgba(255,255,255,0.1); color: white; border-left: 3px solid #9f7734; }
-        .sidebar-menu-item.active { background: rgba(159,119,52,0.2); border-left: 3px solid #9f7734; color: white; }
-        .sidebar-menu-item i { width: 24px; font-size: 1.1rem; }
-
-        .main-content { margin-left: 280px; padding: 20px; }
-
-        .top-bar {
-            background: white; border-radius: 15px; padding: 20px 25px; margin-bottom: 25px;
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05); flex-wrap: wrap; gap: 12px;
-        }
-        .top-bar h4 { margin: 0; font-weight: 700; color: #1a1a2e; }
-        .top-bar p { margin: 4px 0 0; color: #666; font-size: 0.85rem; }
-
-        .btn-crawl {
-            background: linear-gradient(135deg, #1a1a2e, #2d2d4e); color: white;
-            border: none; border-radius: 10px; padding: 9px 20px;
-            font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.3s;
-            display: flex; align-items: center; gap: 8px; text-decoration: none;
-        }
-        .btn-crawl:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); color: white; }
-
-        .stats-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 25px; }
-        .stat-card {
-            background: white; border-radius: 16px; padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid;
-        }
-        .stat-card:hover { transform: translateY(-3px); }
-        .stat-label { font-size: 0.75rem; color: #999; text-transform: uppercase; letter-spacing: 1px; }
-        .stat-number { font-size: 2rem; font-weight: 700; margin-top: 6px; }
-
-        .filter-bar {
-            background: white; border-radius: 14px; padding: 14px 20px; margin-bottom: 20px;
-            display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        }
-        .filter-bar select, .filter-bar input {
-            border: 1.5px solid #e0e0e0; border-radius: 8px; padding: 7px 12px;
-            font-size: 0.82rem; outline: none; font-family: 'Inter', sans-serif;
-        }
-        .filter-bar select:focus, .filter-bar input:focus { border-color: #9f7734; }
-
-        .tender-list { display: flex; flex-direction: column; gap: 14px; }
-
-        .tender-card {
-            background: white; border-radius: 16px; padding: 20px 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04); border-left: 5px solid #e0e0e0;
-            transition: all 0.25s; cursor: pointer;
-        }
-        .tender-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.1); transform: translateX(4px); }
-        .tender-card.high-fit { border-left-color: #059669; }
-        .tender-card.medium-fit { border-left-color: #f59e0b; }
-        .tender-card.low-fit { border-left-color: #6b7280; }
-        .tender-card.urgent { border-left-color: #dc2626; }
-
-        .tender-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
-        .tender-title { font-weight: 700; font-size: 0.95rem; color: #1a1a2e; flex: 1; }
-        .tender-badges { display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
-
-        .badge-fit {
-            padding: 3px 10px; border-radius: 20px; font-size: 0.68rem;
-            font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
-        }
-        .badge-high { background: #d1fae5; color: #065f46; }
-        .badge-medium { background: #fef3c7; color: #92400e; }
-        .badge-low { background: #f3f4f6; color: #6b7280; }
-        .badge-score { background: #1a1a2e; color: white; }
-        .badge-urgent { background: #fee2e2; color: #991b1b; }
-
-        .tender-meta { font-size: 0.78rem; color: #888; display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
-        .tender-meta span { display: flex; align-items: center; gap: 5px; }
-
-        .tender-description { font-size: 0.82rem; color: #555; line-height: 1.6; margin-bottom: 10px; }
-
-        .keyword-pills { display: flex; gap: 5px; flex-wrap: wrap; }
-        .kw-pill { background: #f0f0eb; color: #7a5828; border-radius: 10px; padding: 2px 8px; font-size: 0.68rem; font-weight: 600; }
-
-        .tender-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0f0f0; }
-        .days-left { font-weight: 700; font-size: 0.82rem; }
-        .days-left.urgent { color: #dc2626; }
-        .days-left.soon { color: #f59e0b; }
-        .days-left.ok { color: #059669; }
-
-        .btn-view-tender {
-            background: #9f7734; color: white; border: none; border-radius: 8px;
-            padding: 6px 16px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
-            text-decoration: none; transition: background 0.2s;
-        }
-        .btn-view-tender:hover { background: #7a5828; color: white; }
-
-        .empty-tenders { text-align: center; padding: 60px 20px; background: white; border-radius: 16px; color: #999; }
-        .empty-tenders i { font-size: 3rem; color: #d0d0cc; margin-bottom: 16px; }
-
-        .coming-soon-banner {
-            background: linear-gradient(135deg, #1a1a2e, #2d2d4e);
-            border-radius: 16px; padding: 24px; margin-bottom: 20px;
-            display: flex; align-items: center; gap: 16px; color: white;
-        }
-        .coming-soon-banner i { font-size: 2rem; color: #9f7734; flex-shrink: 0; }
-        .coming-soon-banner h6 { margin: 0 0 4px; font-weight: 700; }
-        .coming-soon-banner p { margin: 0; font-size: 0.82rem; opacity: 0.7; }
-
-        @media (max-width: 1024px) { .stats-strip { grid-template-columns: 1fr 1fr; } }
-        @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); }
-            .main-content { margin-left: 0; }
-            .stats-strip { grid-template-columns: 1fr 1fr; }
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
 </head>
 <body>
 
-<div class="sidebar">
+<!-- ===== SIDEBAR ===== -->
+<nav class="sidebar" id="sidebar">
     <div class="sidebar-header">
-        <h3><i class="fas fa-graduation-cap"></i> Funda Malitinne</h3>
-        <p>Staff Portal</p>
+        <h3><i class="fas fa-chess-king"></i> Funda Malitinne</h3>
+        <p>Operations Command Center</p>
     </div>
     <div class="sidebar-menu">
         <div class="sidebar-menu-item" onclick="window.location.href='/staff-portal/'">
@@ -151,35 +28,63 @@
         </div>
         <div class="sidebar-menu-item active">
             <i class="fas fa-file-contract"></i> Tenders
+            <span class="badge-count">{{ urgent }}</span>
         </div>
         {% if user.role == 'admin' %}
         <div class="sidebar-menu-item" onclick="window.location.href='/admin-dashboard/'">
-            <i class="fas fa-tachometer-alt"></i> Admin Dashboard
+            <i class="fas fa-user-cog"></i> Admin Panel
         </div>
         {% endif %}
         <div class="sidebar-menu-item" onclick="window.location.href='/lms/'">
             <i class="fas fa-graduation-cap"></i> LMS Portal
         </div>
-        <div class="sidebar-menu-item" onclick="window.location.href='/logout/'">
+        <div class="sidebar-menu-item" onclick="window.location.href='/discussions/'">
+            <i class="fas fa-comments"></i> Discussions
+        </div>
+        <div class="sidebar-menu-item" onclick="logout()" style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.05);padding-top:15px;">
             <i class="fas fa-sign-out-alt"></i> Logout
         </div>
     </div>
-</div>
+    <div class="sidebar-footer">
+        <i class="fas fa-shield-alt"></i> POPIA Compliant<br>
+        v2.0 &bull; QCTO Ready
+    </div>
+</nav>
 
+<!-- ===== OVERLAY FOR MOBILE ===== -->
+<div id="sidebarOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:999;" onclick="toggleSidebar()"></div>
+
+<!-- ===== MAIN CONTENT ===== -->
 <div class="main-content">
+    
+    <!-- ===== TOP BAR ===== -->
     <div class="top-bar">
-        <div>
-            <h4><i class="fas fa-file-contract" style="color:#9f7734;margin-right:8px;"></i>Tender Intelligence</h4>
-            <p>AI-scored tenders matched to Malitinne's services — updated regularly</p>
+        <div class="d-flex align-items-center gap-2">
+            <button class="mobile-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="welcome-text">
+                <h4><i class="fas fa-file-contract" style="color:#9f7734;margin-right:8px;"></i> Tender Intelligence</h4>
+                <p>AI-scored tenders matched to Malitinne's services — updated regularly</p>
+            </div>
         </div>
-        {% if user.role == 'admin' %}
-        <a href="/tender-crawl/" class="btn-crawl">
-            <i class="fas fa-sync-alt"></i> Refresh Tenders
-        </a>
-        {% endif %}
+        <div class="top-bar-right">
+            <div class="notification-bell" onclick="window.location.href='/notifications/'">
+                <i class="fas fa-bell fa-lg" style="color:#666;"></i>
+                {% if notification_count > 0 %}
+                <span class="badge bg-danger rounded-pill">{{ notification_count }}</span>
+                {% endif %}
+            </div>
+            <div class="user-avatar" title="{{ user.username }}">{{ user.username|slice:":1"|upper }}</div>
+            {% if user.role == 'admin' %}
+            <a href="/tender-crawl/" class="btn-crawl">
+                <i class="fas fa-sync-alt"></i> Refresh Tenders
+            </a>
+            {% endif %}
+        </div>
     </div>
 
-    <!-- Coming soon notice for crawler -->
+    <!-- ===== COMING SOON BANNER ===== -->
     <div class="coming-soon-banner">
         <i class="fas fa-robot"></i>
         <div>
@@ -188,27 +93,31 @@
         </div>
     </div>
 
-    <!-- Stats -->
-    <div class="stats-strip">
+    <!-- ===== STATS STRIP ===== -->
+    <div class="stats-grid">
         <div class="stat-card" style="border-left-color:#dc2626;">
+            <div class="stat-icon"><i class="fas fa-clock"></i></div>
             <div class="stat-label">Urgent (≤7 days)</div>
-            <div class="stat-number" style="color:#dc2626;">{{ urgent }}</div>
+            <div class="stat-number danger">{{ urgent }}</div>
         </div>
         <div class="stat-card" style="border-left-color:#f59e0b;">
+            <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
             <div class="stat-label">Closing Soon (30 days)</div>
-            <div class="stat-number" style="color:#f59e0b;">{{ upcoming }}</div>
+            <div class="stat-number warning">{{ upcoming }}</div>
         </div>
         <div class="stat-card" style="border-left-color:#059669;">
+            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
             <div class="stat-label">Active Tenders</div>
-            <div class="stat-number" style="color:#059669;">{{ ongoing }}</div>
+            <div class="stat-number success">{{ ongoing }}</div>
         </div>
         <div class="stat-card" style="border-left-color:#9f7734;">
+            <div class="stat-icon"><i class="fas fa-database"></i></div>
             <div class="stat-label">Total Tracked</div>
             <div class="stat-number" style="color:#9f7734;">{{ total }}</div>
         </div>
     </div>
 
-    <!-- Filter bar -->
+    <!-- ===== FILTER BAR ===== -->
     <div class="filter-bar">
         <form method="GET" style="display:flex;gap:10px;flex-wrap:wrap;width:100%;align-items:center;">
             <select name="status">
@@ -225,22 +134,21 @@
                 <option value="low" {% if request.GET.fit == 'low' %}selected{% endif %}>Low Fit</option>
             </select>
             <input type="text" name="search" placeholder="Search tenders..." value="{{ request.GET.search|default:'' }}">
-            <button type="submit" style="background:#1a1a2e;color:white;border:none;border-radius:8px;padding:8px 16px;font-size:0.82rem;cursor:pointer;">Filter</button>
+            <button type="submit" class="btn-filter">Filter</button>
             {% if request.GET.search or request.GET.status or request.GET.fit %}
-            <a href="/tender-dashboard/" style="font-size:0.8rem;color:#999;text-decoration:none;">Clear</a>
+            <a href="/tender-dashboard/" class="btn-clear">Clear</a>
             {% endif %}
         </form>
     </div>
 
-    <!-- Tender list -->
+    <!-- ===== TENDER LIST ===== -->
     <div class="tender-list">
         {% for tender in tenders %}
-        {% with days_left=tender.closing_date|timeuntil %}
         <div class="tender-card
             {% if tender.ai_relevance_score >= 5 %}high-fit
             {% elif tender.ai_relevance_score >= 3 %}medium-fit
             {% else %}low-fit{% endif %}
-            {% if tender.closing_date <= today %}urgent{% endif %}">
+            {% if tender.is_urgent %}urgent{% endif %}">
 
             <div class="tender-header">
                 <div class="tender-title">{{ tender.title }}</div>
@@ -255,7 +163,7 @@
                     <span class="badge-fit badge-low">Low Fit</span>
                     {% endif %}
                     {% endif %}
-                    {% if tender.closing_date <= today %}
+                    {% if tender.is_urgent %}
                     <span class="badge-fit badge-urgent">Urgent</span>
                     {% endif %}
                 </div>
@@ -263,7 +171,7 @@
 
             <div class="tender-meta">
                 {% if tender.department %}<span><i class="fas fa-building"></i> {{ tender.department }}</span>{% endif %}
-                {% if tender.province %}<span><i class="fas fa-map-marker-alt"></i> {{ tender.province }}</span>{% endif %}
+                {% if tender.location %}<span><i class="fas fa-map-marker-alt"></i> {{ tender.location }}</span>{% endif %}
                 {% if tender.reference_number %}<span><i class="fas fa-hashtag"></i> {{ tender.reference_number }}</span>{% endif %}
                 <span><i class="fas fa-calendar-times"></i> Closes {{ tender.closing_date|date:"M d, Y" }}</span>
                 {% if tender.category %}<span><i class="fas fa-tag"></i> {{ tender.category }}</span>{% endif %}
@@ -283,12 +191,15 @@
 
             <div class="tender-footer">
                 <div class="days-left
-                    {% if tender.closing_date <= today %}urgent
-                    {% elif tender.closing_date <= today|date:'Y-m-d'|add:'+7' %}urgent
-                    {% elif tender.closing_date <= today|date:'Y-m-d'|add:'+30' %}soon
+                    {% if tender.is_urgent %}urgent
+                    {% elif tender.days_until_close <= 30 %}soon
                     {% else %}ok{% endif %}">
                     <i class="fas fa-clock"></i>
-                    Closes {{ tender.closing_date|date:"M d, Y" }}
+                    {% if tender.days_until_close < 0 %}
+                        Closed {{ tender.closing_date|date:"M d, Y" }}
+                    {% else %}
+                        {{ tender.days_until_close }} days remaining
+                    {% endif %}
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <span style="font-size:0.75rem;padding:3px 10px;border-radius:10px;background:#f0f0eb;color:#555;">{{ tender.get_status_display }}</span>
@@ -296,22 +207,57 @@
                 </div>
             </div>
         </div>
-        {% endwith %}
         {% empty %}
-        <div class="empty-tenders">
-            <i class="fas fa-file-contract"></i>
-            <h5>No tenders yet</h5>
-            <p>Tenders will appear here once the AI scanner is set up in Phase 2, or you can add them manually via Django Admin.</p>
-            {% if user.role == 'admin' %}
-            <a href="/admin/core/tenderopportunity/add/" class="btn-crawl" style="display:inline-flex;margin-top:12px;">
-                <i class="fas fa-plus"></i> Add Tender Manually
-            </a>
-            {% endif %}
+        <div class="data-card">
+            <div class="data-card-body">
+                <div class="empty-state">
+                    <i class="fas fa-file-contract"></i>
+                    <h5>No tenders yet</h5>
+                    <p>Tenders will appear here once the AI scanner is set up in Phase 2, or you can add them manually via Django Admin.</p>
+                    {% if user.role == 'admin' %}
+                    <a href="/admin/core/tenderopportunity/add/" class="btn-crawl" style="display:inline-flex;margin-top:12px;">
+                        <i class="fas fa-plus"></i> Add Tender Manually
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
         </div>
         {% endfor %}
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- ===== JAVASCRIPT ===== -->
+<script>
+    // ===== SIDEBAR TOGGLE =====
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.toggle('open');
+        overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+    }
+
+    // ===== LOGOUT =====
+    function logout() { 
+        if (confirm('Are you sure you want to logout?')) {
+            window.location.href = '/logout/'; 
+        }
+    }
+
+    // ===== GET CSRF TOKEN =====
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
 </body>
 </html>

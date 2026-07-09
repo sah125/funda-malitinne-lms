@@ -5,6 +5,8 @@ from django.contrib.sitemaps.views import sitemap
 from django.views.generic import TemplateView
 from core import views
 from core.sitemaps import sitemaps
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     # ===== ADMIN =====
@@ -145,8 +147,24 @@ urlpatterns = [
     
     # ===== SITEMAP =====
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
+
+    # ===== LEARNER MANAGEMENT =====
+    path('learner-hub/', views.learner_management_hub, name='learner_hub'),
+    path('learner-hub/bulk-upload/', views.bulk_upload_learners, name='bulk_upload_learners'),
+    path('learner-detail/<int:user_id>/', views.learner_detail_view, name='learner_detail'),
+    path('export-learners/', views.export_learners, name='export_learners'),
+
+
+    # Add to urlpatterns:
+    path('api/ai-query-count/', views.ai_query_count_api, name='ai_query_count_api'),
+    path('discussions/', views.discussions_list, name='discussions_list'),
 ]
 
-# ===== ERROR HANDLERS =====
 handler404 = 'core.views.custom_404'
 handler500 = 'core.views.custom_500'
+
+
+# Serve static and media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
