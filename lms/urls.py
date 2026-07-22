@@ -4,6 +4,7 @@ from django.urls import path, include
 from django.contrib.sitemaps.views import sitemap
 from django.views.generic import TemplateView
 from core import views
+from core.api import HealthCheckView
 from core.sitemaps import sitemaps
 from django.conf import settings
 from django.conf.urls.static import static
@@ -11,6 +12,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     # ===== ADMIN =====
     path('admin/', admin.site.urls),
+    path('health/', HealthCheckView.health_check, name='health_check'),
     
     # ===== COMPANY WEBSITE =====
     path('', views.company_home, name='company_home'),
