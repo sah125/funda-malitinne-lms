@@ -11,3 +11,4 @@
 *.toml text eol=lf
 *.cfg text eol=lf
 *.ini text eol=lf
+requirements.txt diff
