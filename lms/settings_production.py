@@ -99,7 +99,8 @@ DATABASES = {
         'PASSWORD': env('DB_PASSWORD'),   # REQUIRED — no default
         'HOST': env('DB_HOST', default='localhost'),
         'PORT': env('DB_PORT', default='5432'),
-        'CONN_MAX_AGE': 600,
+        'CONN_MAX_AGE': 60,
+        'CONN_HEALTH_CHECKS': True,
         'ATOMIC_REQUESTS': True,
     }
 }

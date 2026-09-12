@@ -11,6 +11,8 @@ app = Celery('lms')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 app.conf.imports = ('core.tasks',)
+app.conf.worker_max_tasks_per_child = 200
+app.conf.worker_max_memory_per_child = 500_000  # 500 MB, kills+restarts worker if exceeded
 app.conf.beat_schedule = {
     'close-expired-opportunities-daily': {
         'task': 'core.tasks.close_expired_opportunities',
