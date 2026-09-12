@@ -11,6 +11,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from .portal_helpers import calculate_project_health, get_urgent_actions, get_overall_stats
+from .permissions import is_admin, is_instructor
 from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse, FileResponse, Http404
 from django.utils import timezone
@@ -50,12 +51,6 @@ from reportlab.pdfgen import canvas
 from io import BytesIO
 
 # ==================== HELPER FUNCTIONS ====================
-
-def is_instructor(user):
-    return user.is_authenticated and user.role == 'instructor'
-
-def is_admin(user):
-    return user.is_authenticated and user.role == 'admin'
 
 def send_notification(user, title, message, link=None):
     Notification.objects.create(

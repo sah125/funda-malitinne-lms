@@ -1,4 +1,56 @@
+from functools import wraps
+
+from django.core.exceptions import PermissionDenied
 from rest_framework import permissions
+
+
+def is_instructor(user):
+    return user.is_authenticated and user.role == 'instructor'
+
+
+def is_admin(user):
+    return user.is_authenticated and user.role == 'admin'
+
+
+def is_staff_role(user):
+    return user.is_authenticated and user.role in ('admin', 'instructor')
+
+
+def can_manage_course(user, course):
+    return user.role == 'admin' or course.instructor_id == user.id
+
+
+def can_view_course(user, course):
+    if user.role == 'admin':
+        return True
+    if user.role == 'instructor':
+        return course.instructor_id == user.id
+    return course.students.filter(id=user.id).exists()
+
+
+def instructor_owns_course(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        from .models import Course
+
+        course_id = kwargs.get('course_id')
+        if course_id:
+            course = Course.objects.filter(id=course_id).first()
+            if not course or not can_manage_course(request.user, course):
+                raise PermissionDenied
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
+
+
+def admin_required(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not is_admin(request.user):
+            raise PermissionDenied
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
 
 class IsInstructor(permissions.BasePermission):
     """Permission to check if user is an instructor"""
