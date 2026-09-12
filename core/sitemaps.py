@@ -1,7 +1,8 @@
 # core/sitemaps.py
 from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
-from .models import Opportunity, Course, TenderOpportunity
+
+from .models import Course, Opportunity, TenderOpportunity
 
 
 class StaticViewSitemap(Sitemap):

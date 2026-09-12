@@ -6,12 +6,18 @@ curriculum into the Funda Malitinne LMS.
 Run with: python manage.py load_office_admin_course
 """
 
-import os
-from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 from django.utils import timezone
+
 from core.models import (
-    Course, LearningModule, Lesson, Quiz, QuizQuestion, Assignment, User
+    Assignment,
+    Course,
+    LearningModule,
+    Lesson,
+    Quiz,
+    QuizQuestion,
+    User,
 )
 
 User = get_user_model()
