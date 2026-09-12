@@ -637,6 +637,9 @@ class ForumTopic(models.Model):
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_pinned = models.BooleanField(default=False)
+    is_closed = models.BooleanField(default=False)
+    views_count = models.PositiveIntegerField(default=0)
 
     # NEW FIELDS FOR TICKETING
     is_ticket = models.BooleanField(default=False)
@@ -675,6 +678,10 @@ class ForumTopic(models.Model):
     def __str__(self):
         return f"{self.lesson.title} - {self.title}"
 
+    @property
+    def reply_count(self):
+        return self.posts.count()
+
 
 class ForumPost(models.Model):
     """Forum post/reply to a topic"""
@@ -691,6 +698,7 @@ class ForumPost(models.Model):
         related_name='posts'
     )
     likes_count = models.IntegerField(default=0)
+    liked_by = models.ManyToManyField(User, blank=True, related_name='liked_forum_posts')
     
     class Meta:
         ordering = ['created_at']
@@ -699,6 +707,10 @@ class ForumPost(models.Model):
     
     def __str__(self):
         return f"Post by {self.author.username} on {self.topic.title}"
+
+    @property
+    def is_edited(self):
+        return self.updated_at > self.created_at
 
 
 #------------------------------- oportunity ------------------------------#
@@ -1164,6 +1176,35 @@ class TenderOpportunity(models.Model):
         from django.utils import timezone
         return self.closing_date >= timezone.now().date() and self.status not in ['expired', 'lost']
 
+    
+
+class LoginAttempt(models.Model):
+    """Track login attempts from web and SSH"""
+    ATTEMPT_TYPES = [
+        ('web', 'Web Login'),
+        ('ssh', 'SSH Login'),
+    ]
+    
+    username = models.CharField(max_length=150, null=True, blank=True)
+    ip_address = models.GenericIPAddressField()
+    user_agent = models.TextField(blank=True)
+    attempt_type = models.CharField(max_length=10, choices=ATTEMPT_TYPES, default='web')
+    success = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    country = models.CharField(max_length=100, blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['timestamp']),
+            models.Index(fields=['ip_address']),
+            models.Index(fields=['success']),
+            models.Index(fields=['attempt_type']),
+        ]
+    
+    def __str__(self):
+        return f"{self.username} - {self.ip_address} - {self.attempt_type} - {'SUCCESS' if self.success else 'FAILED'}"
 
 # ==================== SHARED DOCUMENT DRIVE (PHASE 3) ====================
 
