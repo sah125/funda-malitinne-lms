@@ -1,5 +1,6 @@
 # ==================== FIXED IMPORTS ====================
 import pandas as pd
+from openpyxl import Workbook
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.shortcuts import render, get_object_or_404
@@ -2727,17 +2728,6 @@ def application_success(request, application_number):
 
 # ==================== LEARNER MANAGEMENT HUB ====================
 
-import pandas as pd
-from django.core.paginator import Paginator
-from django.db.models import Q, Count
-from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse, HttpResponse
-from django.contrib.admin.views.decorators import staff_member_required
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib import messages
-import json
-from datetime import datetime
-
 @staff_member_required
 def learner_management_hub(request):
     """Central hub for managing all learners (10,000+)"""
@@ -3054,9 +3044,6 @@ def bulk_upload_learners(request):
 @staff_member_required
 def export_learners(request):
     """Export learner data to Excel"""
-    import io
-    from openpyxl import Workbook
-    
     # Get filters
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('status', '')
