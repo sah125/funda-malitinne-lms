@@ -1,0 +1,19 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "S",      # bandit (security)
+    "RUF",    # ruff-specific
+]
+ignore = [
+    "RUF012",   # Django Meta lists are correct as-is
+    "DTZ007",   # naive datetime for DateField is correct
+    "SIM102",   # nested ifs are fine
+    "BLE001",   # blind Exception in API views is intentional
+    "E501",     # line length - too noisy
+]
