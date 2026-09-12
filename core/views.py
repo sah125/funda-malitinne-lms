@@ -504,54 +504,25 @@ def like_reply(request, reply_id):
     try:
         reply = get_object_or_404(ForumPost, id=reply_id)
         
-        if request.user in reply.likes.all():
-            reply.likes.remove(request.user)
+        if request.user in reply.liked_by.all():
+            reply.liked_by.remove(request.user)
+            reply.likes_count = max(0, reply.likes_count - 1)
             liked = False
         else:
-            reply.likes.add(request.user)
+            reply.liked_by.add(request.user)
+            reply.likes_count += 1
             liked = True
+
+        reply.save(update_fields=['likes_count'])
         
         return JsonResponse({
             'success': True,
             'liked': liked,
-            'likes_count': reply.likes.count()
+            'likes_count': reply.likes_count
         })
         
     except ForumPost.DoesNotExist:
         return JsonResponse({'error': 'Reply not found'}, status=404)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
-@login_required
-def toggle_discussion_close(request, discussion_id):
-    """Toggle close/lock status of a discussion (instructor only)"""
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
-    try:
-        topic = get_object_or_404(ForumTopic, id=discussion_id)
-        
-        if request.user.role == 'instructor':
-            if topic.lesson.course.instructor != request.user:
-                return JsonResponse({'error': 'You do not own this course'}, status=403)
-        elif request.user.role != 'admin':
-            return JsonResponse({'error': 'Permission denied'}, status=403)
-        
-        if hasattr(topic, 'is_locked'):
-            topic.is_locked = not topic.is_locked
-            topic.save()
-            is_closed = topic.is_locked
-        else:
-            return JsonResponse({'error': 'Discussion locking not implemented'}, status=501)
-        
-        return JsonResponse({
-            'success': True,
-            'is_closed': is_closed,
-            'message': f'Discussion {"closed" if is_closed else "reopened"} successfully'
-        })
-        
-    except ForumTopic.DoesNotExist:
-        return JsonResponse({'error': 'Discussion not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -1673,6 +1644,7 @@ def delete_announcement(request, announcement_id):
     return JsonResponse({'success': True})
 
 # ==================== FORUM SYSTEM ====================
+@login_required
 def lesson_discussions(request, lesson_id):
     """View all discussions for a lesson"""
     lesson = get_object_or_404(Lesson, id=lesson_id)
@@ -1683,11 +1655,27 @@ def lesson_discussions(request, lesson_id):
             messages.error(request, 'You are not enrolled in this course.')
             return redirect('course_detail', course_id=lesson.course.id)
     
+    if request.method == 'POST' and 'create_discussion' in request.POST:
+        title = request.POST.get('title', '').strip()
+        content = request.POST.get('content', '').strip()
+        if not title or not content:
+            messages.error(request, 'Title and content are required.')
+        else:
+            topic = ForumTopic.objects.create(
+                lesson=lesson,
+                author=request.user,
+                title=title,
+                content=content,
+            )
+            messages.success(request, 'Discussion posted successfully.')
+            return redirect('discussion_detail', topic_id=topic.id)
+
     topics = ForumTopic.objects.filter(lesson=lesson).order_by('-is_pinned', '-created_at')
     
     return render(request, 'discussion/lesson_discussions.html', {
         'lesson': lesson,
-        'topics': topics
+        'discussions': topics,
+        'topics': topics,
     })
 
 @login_required
@@ -1705,9 +1693,15 @@ def discussion_detail(request, topic_id):
             messages.error(request, 'You do not have permission to view this discussion.')
             return redirect('instructor_dashboard')
     
-    posts = topic.posts.filter(parent=None).order_by('created_at')
+    topic.views_count += 1
+    topic.save(update_fields=['views_count'])
+    posts = topic.posts.filter(parent=None).prefetch_related('posts__author').order_by('created_at')
     
     if request.method == 'POST' and 'add_reply' in request.POST:
+        if topic.is_closed:
+            messages.error(request, 'This discussion is closed.')
+            return redirect('discussion_detail', topic_id=topic.id)
+
         content = request.POST.get('content')
         parent_id = request.POST.get('parent_reply_id')
         
@@ -1749,8 +1743,8 @@ def discussion_detail(request, topic_id):
             'author': post.author,
             'content': post.content,
             'created_at': post.created_at,
-            'likes_count': post.likes.count(),
-            'replies': post.replies.all().order_by('created_at'),
+            'likes_count': post.likes_count,
+            'nested_replies_list': post.posts.all().order_by('created_at'),
             'can_delete': request.user.role == 'instructor' and lesson.course.instructor == request.user
         }
         reply_list.append(reply_data)
@@ -1758,6 +1752,7 @@ def discussion_detail(request, topic_id):
     context = {
         'discussion': topic,
         'lesson': lesson,
+        'replies': reply_list,
         'posts': reply_list,
         'can_delete_discussion': request.user.role == 'instructor' and lesson.course.instructor == request.user
     }
@@ -1794,10 +1789,14 @@ def toggle_discussion_lock(request, discussion_id):
         if request.user.role != 'instructor' or topic.lesson.course.instructor != request.user:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
-        topic.is_locked = not topic.is_locked
+        topic.is_closed = not topic.is_closed
         topic.save()
         
-        return JsonResponse({'success': True, 'is_locked': topic.is_locked})
+        return JsonResponse({
+            'success': True,
+            'is_locked': topic.is_closed,
+            'is_closed': topic.is_closed,
+        })
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
@@ -3285,6 +3284,17 @@ def upload_module_evidence(request, module_id):
     file = request.FILES['file']
     title = request.POST.get('title', file.name)
     description = request.POST.get('description', '')
+
+    student = request.user if request.user.role == 'student' else None
+    student_id = request.POST.get('student_id')
+    if request.user.role == 'instructor':
+        if not student_id:
+            return JsonResponse({'error': 'Student is required'}, status=400)
+        student = get_object_or_404(User, id=student_id, role='student')
+        if module.course.instructor != request.user:
+            return JsonResponse({'error': 'You do not own this course'}, status=403)
+        if student not in module.course.students.all():
+            return JsonResponse({'error': 'Student not in this course'}, status=403)
     
     # Validate file type
     allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 
@@ -3293,20 +3303,13 @@ def upload_module_evidence(request, module_id):
         return JsonResponse({'error': 'Invalid file type. PDF, DOC, or images only.'}, status=400)
     
     evidence = ModuleEvidence.objects.create(
-        student=request.user if request.user.role == 'student' else None,
+        student=student,
         module=module,
         title=title,
         file=file,
         description=description,
         uploaded_at=timezone.now()
     )
-    
-    # If instructor is uploading on behalf of student
-    student_id = request.POST.get('student_id')
-    if request.user.role == 'instructor' and student_id:
-        student = get_object_or_404(User, id=student_id, role='student')
-        evidence.student = student
-        evidence.save()
     
     return JsonResponse({
         'success': True,
@@ -3332,7 +3335,7 @@ def delete_module_evidence(request, evidence_id):
     if request.user.role == 'student' and evidence.student != request.user:
         return JsonResponse({'error': 'Cannot delete other student\'s evidence'}, status=403)
     
-    if request.user.role == 'instructor' and request.user not in evidence.module.course.instructor:
+    if request.user.role == 'instructor' and evidence.module.course.instructor != request.user:
         return JsonResponse({'error': 'You do not own this course'}, status=403)
     
     # Delete file from disk

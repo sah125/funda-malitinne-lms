@@ -103,11 +103,12 @@ urlpatterns = [
     path('api/announcements/<int:announcement_id>/delete/', views.delete_announcement, name='delete_announcement'),
     
     # ===== DISCUSSIONS =====
+    path('lesson/<int:lesson_id>/discussions/', views.lesson_discussions, name='lesson_discussions'),
     path('discussion/<int:topic_id>/', views.discussion_detail, name='discussion_detail'),
     path('api/discussion/<int:discussion_id>/delete/', views.delete_discussion, name='delete_discussion'),
     path('api/discussion/<int:discussion_id>/pin/', views.toggle_discussion_pin, name='toggle_discussion_pin'),
     path('api/discussion/<int:discussion_id>/lock/', views.toggle_discussion_lock, name='toggle_discussion_lock'),
-    path('api/discussion/<int:discussion_id>/toggle-close/', views.toggle_discussion_close, name='toggle_discussion_close'),
+    path('api/discussion/<int:discussion_id>/toggle-close/', views.toggle_discussion_lock, name='toggle_discussion_close'),
     path('api/reply/<int:reply_id>/delete/', views.delete_reply, name='delete_reply'),
     path('api/reply/<int:reply_id>/like/', views.like_reply, name='like_reply'),
     
