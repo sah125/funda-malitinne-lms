@@ -1,6 +1,16 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from core.models import User, Course, Lesson, Quiz, QuizQuestion, Assignment, Announcement
+from django.contrib.auth.forms import UserCreationForm
+
+from core.models import (
+    Announcement,
+    Assignment,
+    Course,
+    Lesson,
+    Quiz,
+    QuizQuestion,
+    User,
+)
+
 
 class UserRegistrationForm(UserCreationForm):
     """Extended user registration form with additional fields"""
@@ -24,17 +34,17 @@ class UserRegistrationForm(UserCreationForm):
         'class': 'form-control',
         'type': 'date'
     }))
-    
+
     class Meta:
         model = User
         fields = ('username', 'email', 'first_name', 'last_name', 'phone', 'date_of_birth', 'password1', 'password2')
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             if field_name not in ('password1', 'password2'):
                 field.widget.attrs.update({'class': 'form-control'})
-    
+
     def clean_email(self):
         email = self.cleaned_data.get('email')
         if User.objects.filter(email=email).exists():

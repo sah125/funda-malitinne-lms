@@ -2,9 +2,10 @@
 Create initial admin user and demo data
 Usage: python manage.py create_demo_data
 """
-from django.core.management.base import BaseCommand
-from core.models import User, Course, Lesson
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
+
+from core.models import User
 
 User = get_user_model()
 

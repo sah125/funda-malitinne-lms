@@ -1,40 +1,46 @@
 # core/ai_assistant.py
 import re
-from django.db.models import Q
-from django.utils import timezone
 from datetime import timedelta
-from .models import User, TenderOpportunity, Attendance, PortfolioOfEvidence, ForumTopic, AuditLog
-from .portal_helpers import calculate_project_health, get_urgent_actions, get_overall_stats
+
+from django.utils import timezone
+
+from .models import ForumTopic, PortfolioOfEvidence, TenderOpportunity, User
+from .portal_helpers import (
+    calculate_project_health,
+    get_overall_stats,
+    get_urgent_actions,
+)
+
 
 class AIAdminAssistant:
     def __init__(self):
         self.user_input = ""
-    
+
     def process(self, user_input):
         self.user_input = user_input.lower().strip()
-        
+
         # Detect commands
         if re.search(r'(show|list|view).*course', self.user_input):
             return self._list_courses()
-        
+
         elif re.search(r'(find|search|get).*student', self.user_input):
             return self._find_student()
-        
+
         elif re.search(r'(update|change|set).*mark|grade', self.user_input):
             return self._update_marks()
-        
+
         elif re.search(r'(enrolled|taking|registered).*course', self.user_input):
             return self._check_enrollment()
-        
+
         elif re.search(r'(stat|dashboard|overview|how many)', self.user_input):
             return self._get_stats()
-        
+
         elif re.search(r'help', self.user_input):
             return self._help()
-        
+
         else:
             return self._unknown()
-    
+
     def _list_courses(self):
         return {
             "action": "list_courses",
@@ -43,11 +49,11 @@ class AIAdminAssistant:
             "data": {"message": "Fetching all courses..."},
             "confidence": 0.95
         }
-    
+
     def _find_student(self):
         name_match = re.search(r'student\s+([A-Za-z]+)', self.user_input)
         name = name_match.group(1) if name_match else None
-        
+
         return {
             "action": "get_student_info",
             "entity": "student",
@@ -55,14 +61,14 @@ class AIAdminAssistant:
             "data": {"message": f"Searching for student {name}..." if name else "Which student would you like to find?"},
             "confidence": 0.90
         }
-    
+
     def _update_marks(self):
         name_match = re.search(r'(?:of|for|to)\s+([A-Za-z]+)', self.user_input)
         marks_match = re.search(r'(\d+(?:\.\d+)?)', self.user_input)
-        
+
         name = name_match.group(1) if name_match else None
         marks = float(marks_match.group(1)) if marks_match else None
-        
+
         return {
             "action": "update_marks",
             "entity": "student",
@@ -73,7 +79,7 @@ class AIAdminAssistant:
             },
             "confidence": 0.85
         }
-    
+
     def _check_enrollment(self):
         return {
             "action": "check_enrollment",
@@ -82,7 +88,7 @@ class AIAdminAssistant:
             "data": {"message": "Checking enrollment status..."},
             "confidence": 0.80
         }
-    
+
     def _get_stats(self):
         return {
             "action": "get_stats",
@@ -91,7 +97,7 @@ class AIAdminAssistant:
             "data": {"message": "Fetching system statistics..."},
             "confidence": 0.98
         }
-    
+
     def _help(self):
         return {
             "action": "help",
@@ -108,7 +114,7 @@ class AIAdminAssistant:
             },
             "confidence": 0.99
         }
-    
+
     def _unknown(self):
         return {
             "action": "unknown",
@@ -124,37 +130,37 @@ def process_operation_query(query, user):
     Process operational queries from staff
     """
     query_lower = query.lower()
-    
+
     # Check for attendance queries
     if 'attendance' in query_lower and ('below' in query_lower or 'under' in query_lower):
         threshold = extract_threshold(query)
         return get_projects_below_attendance(threshold)
-    
+
     # Check for inactive learners
     if 'inactive' in query_lower or 'not active' in query_lower:
         days = extract_days(query)
         return get_inactive_learners(days)
-    
+
     # Check for POE queries
     if 'poe' in query_lower and ('missing' in query_lower or 'outstanding' in query_lower):
         return get_missing_poe_learners()
-    
+
     # Check for risk queries
     if 'risk' in query_lower or 'high risk' in query_lower:
         return get_high_risk_projects()
-    
+
     # Check for ticket queries
     if 'ticket' in query_lower or 'issue' in query_lower:
         return get_open_tickets()
-    
+
     # Check for compliance queries
     if 'compliance' in query_lower or 'qcto' in query_lower:
         return get_compliance_status()
-    
+
     # General summary
     if 'summary' in query_lower or 'overview' in query_lower:
         return get_system_summary()
-    
+
     # Default: Return help
     return {
         'type': 'help',
@@ -192,7 +198,7 @@ def get_projects_below_attendance(threshold=80):
     """Find projects with attendance below threshold"""
     projects = TenderOpportunity.objects.filter(status__in=['new', 'viewed', 'active'])
     results = []
-    
+
     for project in projects:
         health = calculate_project_health(project)
         if health['attendance'] < threshold and health['learners'] > 0:
@@ -202,7 +208,7 @@ def get_projects_below_attendance(threshold=80):
                 'learners': health['learners'],
                 'risk': health['risk']
             })
-    
+
     return {
         'type': 'attendance_report',
         'threshold': threshold,
@@ -220,7 +226,7 @@ def get_inactive_learners(days=7):
         is_approved=True,
         last_login__lt=cutoff
     ).values('id', 'username', 'email', 'last_login')
-    
+
     return {
         'type': 'inactive_learners',
         'days': days,
@@ -239,7 +245,7 @@ def get_missing_poe_learners():
     ).exclude(
         id__in=learners_with_poe
     ).values('id', 'username', 'email', 'first_name', 'last_name')
-    
+
     return {
         'type': 'missing_poe',
         'learners': list(learners)[:20],
@@ -252,7 +258,7 @@ def get_high_risk_projects():
     """Get projects marked as high risk"""
     projects = TenderOpportunity.objects.filter(status__in=['new', 'viewed', 'active'])
     results = []
-    
+
     for project in projects:
         health = calculate_project_health(project)
         if health['risk'] == 'high' and health['learners'] > 0:
@@ -263,7 +269,7 @@ def get_high_risk_projects():
                 'learners': health['learners'],
                 'open_tickets': health['open_tickets']
             })
-    
+
     return {
         'type': 'risk_report',
         'projects': results,
@@ -280,7 +286,7 @@ def get_open_tickets():
     ).select_related('project').values(
         'id', 'title', 'project__title', 'created_at', 'priority'
     )
-    
+
     return {
         'type': 'tickets',
         'tickets': list(tickets)[:20],
@@ -293,11 +299,11 @@ def get_compliance_status():
     """Get overall compliance status"""
     learners = User.objects.filter(role='student', is_approved=True)
     total_learners = learners.count()
-    
+
     # POPIA consent
     from .models import LearnerProfile
     consented = LearnerProfile.objects.filter(popia_consent=True).count()
-    
+
     # Attendance compliance (80%+)
     projects = TenderOpportunity.objects.filter(status__in=['new', 'viewed', 'active'])
     compliant_projects = 0
@@ -305,13 +311,13 @@ def get_compliance_status():
         health = calculate_project_health(project)
         if health['attendance'] >= 80:
             compliant_projects += 1
-    
+
     # POE compliance
     poe_submitted = PortfolioOfEvidence.objects.filter(
         student__in=learners,
         status='submitted'
     ).count()
-    
+
     return {
         'type': 'compliance',
         'total_learners': total_learners,
@@ -326,7 +332,7 @@ def get_system_summary():
     """Get overall system summary"""
     stats = get_overall_stats()
     urgent_actions = get_urgent_actions()
-    
+
     return {
         'type': 'summary',
         'stats': stats,

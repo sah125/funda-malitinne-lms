@@ -1,13 +1,9 @@
 # core/management/commands/load_qcto_project_manager_course.py
-import os
-from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 from django.utils import timezone
-from datetime import datetime, timedelta
-from core.models import (
-    Course, Lesson, Quiz, QuizQuestion, Assignment, 
-    LearningModule, LessonModule, User, Progress
-)
+
+from core.models import Assignment, Course, Lesson, Quiz, QuizQuestion, User
 
 User = get_user_model()
 
@@ -79,7 +75,7 @@ This qualification replaces:
                 'status': 'published'
             }
         )
-        
+
         if created:
             self.stdout.write(self.style.SUCCESS(f"✓ Course created: {course.title}"))
         else:
@@ -530,8 +526,8 @@ MINIMUM DURATION: 100 hours of workplace exposure"""
                 }
             )
             if created:
-                self.stdout.write(self.style.SUCCESS(f"  ✓ Created quiz for KM-01"))
-                
+                self.stdout.write(self.style.SUCCESS("  ✓ Created quiz for KM-01"))
+
                 quiz_questions = [
                     {
                         'order': 1,
@@ -636,7 +632,7 @@ MINIMUM DURATION: 100 hours of workplace exposure"""
                         'correct': 'B'
                     }
                 ]
-                
+
                 for q_data in quiz_questions:
                     QuizQuestion.objects.get_or_create(
                         quiz=quiz,
@@ -654,7 +650,7 @@ MINIMUM DURATION: 100 hours of workplace exposure"""
                     )
                 self.stdout.write(f"    Added {len(quiz_questions)} questions to KM-01 quiz")
             else:
-                self.stdout.write(f"  ○ Quiz already exists for KM-01")
+                self.stdout.write("  ○ Quiz already exists for KM-01")
         else:
             self.stdout.write(self.style.WARNING("  ⚠ KM-01 lesson not found for quiz creation"))
 
@@ -793,14 +789,14 @@ Submit complete closure documentation (10-15 pages).""",
         self.stdout.write("")
         self.stdout.write("QUALIFICATION STATISTICS:")
         self.stdout.write(f"  • Course: {course.title}")
-        self.stdout.write(f"  • SAQA ID: 101869")
-        self.stdout.write(f"  • NQF Level: 05")
-        self.stdout.write(f"  • Total Credits: 240")
+        self.stdout.write("  • SAQA ID: 101869")
+        self.stdout.write("  • NQF Level: 05")
+        self.stdout.write("  • Total Credits: 240")
         self.stdout.write("")
         self.stdout.write("MODULE BREAKDOWN:")
-        self.stdout.write(f"  • Knowledge Modules (KM): 11 modules (80 credits)")
-        self.stdout.write(f"  • Practical Skill Modules (PM): 13 modules (100 credits)")
-        self.stdout.write(f"  • Work Experience Modules (WM): 4 modules (60 credits)")
+        self.stdout.write("  • Knowledge Modules (KM): 11 modules (80 credits)")
+        self.stdout.write("  • Practical Skill Modules (PM): 13 modules (100 credits)")
+        self.stdout.write("  • Work Experience Modules (WM): 4 modules (60 credits)")
         self.stdout.write(f"  • Total Lessons: {Lesson.objects.filter(course=course).count()}")
         self.stdout.write(f"  • Formative Quizzes: {Quiz.objects.filter(lesson__course=course).count()}")
         self.stdout.write(f"  • Practical Assignments: {Assignment.objects.filter(course=course).count()}")
