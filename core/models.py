@@ -1,12 +1,13 @@
-from django.db import models
+import secrets
+
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
-from django.utils import timezone
 from django.core.mail import send_mail
+from django.core.validators import FileExtensionValidator
+from django.db import models
 from django.template.loader import render_to_string
+from django.utils import timezone
 from django.utils.crypto import get_random_string
-import hashlib
-import uuid
+
 
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -22,7 +23,7 @@ class User(AbstractUser):
     verification_token = models.CharField(max_length=100, blank=True, null=True)
     reset_password_token = models.CharField(max_length=100, blank=True, null=True)
     reset_password_expires = models.DateTimeField(blank=True, null=True)
-    
+
     # New fields for registration
     id_number = models.CharField(max_length=20, blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
@@ -42,15 +43,15 @@ class User(AbstractUser):
         ('management', 'Management'),
     )
     department = models.CharField(max_length=30, choices=DEPARTMENT_CHOICES, blank=True, null=True)
-    
+
     def __str__(self):
         return f"{self.username} ({self.role})"
-    
+
     def send_reset_email(self):
         self.reset_password_token = get_random_string(64)
         self.reset_password_expires = timezone.now() + timezone.timedelta(hours=24)
         self.save()
-        
+
         try:
             html_message = render_to_string('email/reset_password.html', {
                 'user': self,
@@ -73,13 +74,13 @@ class Course(models.Model):
         ('intermediate', 'Intermediate'),
         ('advanced', 'Advanced'),
     )
-    
+
     STATUS_CHOICES = (
         ('draft', 'Draft'),
         ('published', 'Published'),
         ('archived', 'Archived'),
     )
-    
+
     title = models.CharField(max_length=200)
     slug = models.SlugField(unique=True, blank=True)
     description = models.TextField()
@@ -93,23 +94,23 @@ class Course(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     average_rating = models.FloatField(default=0)
     total_reviews = models.IntegerField(default=0)
-    
+
     def __str__(self):
         return self.title
-    
+
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = get_random_string(20)
         super().save(*args, **kwargs)
-    
+
     @property
     def total_students(self):
         return self.students.count()
-    
+
     @property
     def total_lessons(self):
         return self.lessons.count()
-    
+
     @property
     def total_quizzes(self):
         return Quiz.objects.filter(lesson__course=self).count()
@@ -129,10 +130,10 @@ class Lesson(models.Model):
     order = models.IntegerField(default=0)
     # Module relationship (add this field)
     module = models.ForeignKey('LearningModule', on_delete=models.SET_NULL, null=True, blank=True, related_name='lessons')
-    
+
     class Meta:
         ordering = ['order']
-    
+
     def __str__(self):
         return self.title
 
@@ -142,10 +143,10 @@ class Quiz(models.Model):
     description = models.TextField(blank=True)
     passing_score = models.IntegerField(default=70)
     time_limit = models.IntegerField(default=0, help_text="Time limit in minutes (0 = no limit)")
-    
+
     def __str__(self):
         return f"Quiz: {self.lesson.title}"
-    
+
     @property
     def total_points(self):
         return sum(q.points for q in self.questions.all())
@@ -155,7 +156,7 @@ class QuizQuestion(models.Model):
         ('multiple_choice', 'Multiple Choice'),
         ('true_false', 'True/False'),
     )
-    
+
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='questions')
     question_text = models.TextField()
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPES)
@@ -166,10 +167,10 @@ class QuizQuestion(models.Model):
     option_c = models.CharField(max_length=500, blank=True)
     option_d = models.CharField(max_length=500, blank=True)
     correct_answer = models.CharField(max_length=255)
-    
+
     class Meta:
         ordering = ['order']
-    
+
     def __str__(self):
         return f"{self.quiz.lesson.title} - Q{self.order}"
 
@@ -182,10 +183,10 @@ class QuizAttempt(models.Model):
     answers = models.JSONField(default=dict)
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         unique_together = ['quiz', 'student']
-    
+
     def __str__(self):
         return f"{self.quiz.lesson.title} - {self.student.username}"
 
@@ -196,10 +197,10 @@ class Assignment(models.Model):
     due_date = models.DateTimeField()
     total_points = models.IntegerField(default=100)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     def __str__(self):
         return self.title
-    
+
     @property
     def is_past_due(self):
         return timezone.now() > self.due_date
@@ -214,10 +215,10 @@ class Submission(models.Model):
     submitted_at = models.DateTimeField(auto_now_add=True)
     grade = models.IntegerField(null=True, blank=True)
     feedback = models.TextField(blank=True, null=True)
-    
+
     class Meta:
         unique_together = ['assignment', 'student']
-    
+
     def __str__(self):
         return f"{self.assignment.title} - {self.student.username}"
 
@@ -229,13 +230,13 @@ class Progress(models.Model):
     completed_assignments = models.ManyToManyField(Assignment, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     certificate_issued = models.BooleanField(default=False)
-    
+
     class Meta:
         unique_together = ['student', 'course']
-    
+
     def __str__(self):
         return f"{self.student.username} - {self.course.title}"
-    
+
     @property
     def progress_percentage(self):
         total = self.course.lessons.count()
@@ -243,7 +244,7 @@ class Progress(models.Model):
             return 0
         completed = self.completed_lessons.count()
         return int((completed / total) * 100)
-    
+
     def check_completion(self):
         if self.progress_percentage == 100 and not self.certificate_issued:
             self.completed_at = timezone.now()
@@ -251,7 +252,7 @@ class Progress(models.Model):
             self.save()
             return True
         return False
-    
+
     @property
     def practical_progress_percentage(self):
         modules = self.course.learning_modules.filter(module_type='practical')
@@ -260,7 +261,7 @@ class Progress(models.Model):
             return 0
         done = AssessorSignOff.objects.filter(student=self.student, module__in=modules, outcome='competent').count()
         return int((done / total) * 100)
-    
+
     @property
     def work_experience_progress_percentage(self):
         modules = self.course.learning_modules.filter(module_type='work_experience')
@@ -269,7 +270,7 @@ class Progress(models.Model):
             return 0
         done = AssessorSignOff.objects.filter(student=self.student, module__in=modules, outcome='competent').count()
         return int((done / total) * 100)
-    
+
     @property
     def overall_qualification_percentage(self):
         parts = [self.progress_percentage]
@@ -284,18 +285,16 @@ class Certificate(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='certificates')
     certificate_number = models.CharField(max_length=100, unique=True)
     issued_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         unique_together = ['student', 'course']
-    
+
     def __str__(self):
         return f"Certificate - {self.course.title} - {self.student.username}"
-    
+
     def save(self, *args, **kwargs):
         if not self.certificate_number:
-            import time
-            unique_string = f"{self.course.id}{self.student.id}{time.time()}"
-            self.certificate_number = hashlib.md5(unique_string.encode()).hexdigest()[:16].upper()
+            self.certificate_number = secrets.token_hex(8).upper()
         super().save(*args, **kwargs)
 
 class Notification(models.Model):
@@ -305,13 +304,13 @@ class Notification(models.Model):
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     link = models.CharField(max_length=500, blank=True, null=True)
-    
+
     class Meta:
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.user.username} - {self.title}"
-    
+
 
 
 
@@ -332,7 +331,7 @@ class LessonModule(models.Model):
     is_locked = models.BooleanField(default=False)
     time_estimate = models.IntegerField(help_text="Time in minutes", default=5)
     points = models.IntegerField(default=10)
-    
+
     class Meta:
         ordering = ['order']
 
@@ -345,7 +344,7 @@ class UserModuleProgress(models.Model):
     time_spent = models.IntegerField(default=0)  # seconds
     score = models.IntegerField(null=True, blank=True)
     attempts = models.IntegerField(default=0)
-    
+
     class Meta:
         unique_together = ['student', 'module']
 
@@ -359,7 +358,7 @@ class LessonInteraction(models.Model):
     last_module_viewed = models.IntegerField(default=0)
     completed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         unique_together = ['student', 'lesson']
 
@@ -371,7 +370,7 @@ class Badge(models.Model):
     points_required = models.IntegerField(default=0)
     lessons_completed = models.IntegerField(default=0)
     courses_completed = models.IntegerField(default=0)
-    
+
 class UserBadge(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='badges')
     badge = models.ForeignKey(Badge, on_delete=models.CASCADE)
@@ -398,10 +397,10 @@ class Announcement(models.Model):
     is_pinned = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def __str__(self):
         return f"{self.course.title} - {self.title}"
-    
+
     class Meta:
         ordering = ['-is_pinned', '-created_at']
 
@@ -414,10 +413,10 @@ class CourseGroup(models.Model):
     members = models.ManyToManyField(User, related_name='course_groups', blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_groups')
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     def __str__(self):
         return f"{self.course.title} - {self.name}"
-    
+
     @property
     def member_count(self):
         return self.members.count()
@@ -431,17 +430,17 @@ class Attendance(models.Model):
         ('late', 'Late'),
         ('excused', 'Excused'),
     )
-    
+
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='attendances')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='attendances')
     date = models.DateField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='present')
     notes = models.TextField(blank=True, null=True)
     marked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='marked_attendances')
-    
+
     class Meta:
         unique_together = ['student', 'course', 'date']
-    
+
     def __str__(self):
         return f"{self.student.username} - {self.course.title} - {self.date}"
 
@@ -453,7 +452,7 @@ class LearningModule(models.Model):
         ('practical', 'Practical Skill Module'),
         ('work_experience', 'Work Experience Module'),
     )
-    
+
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='learning_modules')
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -461,33 +460,33 @@ class LearningModule(models.Model):
     is_visible = models.BooleanField(default=True)
     module_type = models.CharField(max_length=20, choices=MODULE_TYPE_CHOICES, default='knowledge')
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['order']
-    
+
     def __str__(self):
         return f"{self.course.title} - {self.title}"
-    
+
     @property
     def lesson_count(self):
         return self.lessons.count()
-    
+
     @property
     def total_duration(self):
         return sum(l.duration for l in self.lessons.all())
-    
+
 
 # ==================== LEARNER PROFILE SYSTEM (QCTO COMPLIANT) ====================
 
 class LearnerProfile(models.Model):
     """Extended learner profile for QCTO compliance"""
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='learner_profile')
-    
+
     # Section A: Personal & Contact (additional fields beyond User model)
     physical_address = models.TextField(blank=True, null=True)
     emergency_contact_name = models.CharField(max_length=200, blank=True, null=True)
     emergency_contact_phone = models.CharField(max_length=20, blank=True, null=True)
-    
+
     # Section C: Internship / Workplace Experience
     host_company_name = models.CharField(max_length=255, blank=True, null=True)
     mou_file = models.FileField(upload_to='mou_documents/', blank=True, null=True)
@@ -496,7 +495,7 @@ class LearnerProfile(models.Model):
     supervisor_name = models.CharField(max_length=200, blank=True, null=True)
     supervisor_phone = models.CharField(max_length=20, blank=True, null=True)
     supervisor_email = models.EmailField(blank=True, null=True)
-    
+
     # Section D: Academic Tracking
     current_course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True, related_name='enrolled_learners')
     enrollment_date = models.DateField(blank=True, null=True)
@@ -504,22 +503,22 @@ class LearnerProfile(models.Model):
     assessment_notes = models.TextField(blank=True, null=True)
     certificate_issued = models.BooleanField(default=False)
     certificate_issued_date = models.DateField(blank=True, null=True)
-    
+
     # POPIA Compliance
     popia_consent = models.BooleanField(default=False)
     popia_consent_date = models.DateTimeField(blank=True, null=True)
     data_processing_consent = models.BooleanField(default=False)
-    
+
     # Timestamps
     profile_updated = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = "Learner Profile"
         verbose_name_plural = "Learner Profiles"
-    
+
     def __str__(self):
         return f"Profile for {self.user.get_full_name() or self.user.username}"
-    
+
     def get_completion_percentage(self):
         """Calculate profile completion percentage for QCTO reporting"""
         fields = [self.physical_address, self.emergency_contact_name, self.id_number,
@@ -539,7 +538,7 @@ class LearnerDocument(models.Model):
         ('medical_certificate', 'Medical Certificate'),
         ('other', 'Other Document'),
     )
-    
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='documents')
     document_type = models.CharField(max_length=50, choices=DOCUMENT_TYPES)
     title = models.CharField(max_length=200, blank=True, null=True)
@@ -552,10 +551,10 @@ class LearnerDocument(models.Model):
     is_verified = models.BooleanField(default=False)
     verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='verified_documents')
     verified_date = models.DateTimeField(blank=True, null=True)
-    
+
     class Meta:
         ordering = ['-upload_date']
-    
+
     def __str__(self):
         return f"{self.user.username} - {self.get_document_type_display()}"
 
@@ -575,11 +574,11 @@ class LogbookEntry(models.Model):
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='approved_logbooks')
     approved_date = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-entry_date']
         verbose_name_plural = "Logbook entries"
-    
+
     def __str__(self):
         return f"{self.user.username} - {self.entry_date}"
 
@@ -592,10 +591,10 @@ class BackupLog(models.Model):
     status = models.CharField(max_length=20, choices=[('success', 'Success'), ('failed', 'Failed'), ('in_progress', 'In Progress')])
     initiated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     notes = models.TextField(blank=True, null=True)
-    
+
     class Meta:
         ordering = ['-backup_timestamp']
-    
+
     def __str__(self):
         return f"Backup on {self.backup_timestamp.strftime('%Y-%m-%d %H:%M')}"
 
@@ -610,7 +609,7 @@ class AuditLog(models.Model):
         ('export', 'Export'),
         ('download', 'Download'),
     )
-    
+
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     resource_type = models.CharField(max_length=100)
@@ -619,10 +618,10 @@ class AuditLog(models.Model):
     user_agent = models.TextField(blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     details = models.JSONField(default=dict, blank=True)
-    
+
     class Meta:
         ordering = ['-timestamp']
-    
+
     def __str__(self):
         return f"{self.user} - {self.action} - {self.resource_type} - {self.timestamp}"
 
@@ -669,12 +668,12 @@ class ForumTopic(models.Model):
         ],
         default='medium'
     )
-    
+
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'Forum Topic'
         verbose_name_plural = 'Forum Topics'
-    
+
     def __str__(self):
         return f"{self.lesson.title} - {self.title}"
 
@@ -699,12 +698,12 @@ class ForumPost(models.Model):
     )
     likes_count = models.IntegerField(default=0)
     liked_by = models.ManyToManyField(User, blank=True, related_name='liked_forum_posts')
-    
+
     class Meta:
         ordering = ['created_at']
         verbose_name = 'Forum Post'
         verbose_name_plural = 'Forum Posts'
-    
+
     def __str__(self):
         return f"Post by {self.author.username} on {self.topic.title}"
 
@@ -724,14 +723,14 @@ class Opportunity(models.Model):
         ('bursary', 'Bursary'),
         ('training', 'Training Programme'),
     )
-    
+
     STATUS_CHOICES = (
         ('draft', 'Draft'),
         ('published', 'Published'),
         ('closed', 'Closed'),
         ('cancelled', 'Cancelled'),
     )
-    
+
     # Basic Information
     title = models.CharField(max_length=200)
     opportunity_type = models.CharField(max_length=50, choices=OPPORTUNITY_TYPES)
@@ -739,57 +738,57 @@ class Opportunity(models.Model):
     description = models.TextField()
     requirements = models.TextField(help_text="List requirements, one per line or use bullet points")
     responsibilities = models.TextField(blank=True, help_text="Key responsibilities for the role")
-    
+
     # Location & Logistics
     location = models.CharField(max_length=200)
     remote_options = models.BooleanField(default=False)
     stipend_amount = models.CharField(max_length=100, blank=True, help_text="e.g., R3500 per month")
     funding_amount = models.CharField(max_length=100, blank=True, help_text="e.g., Up to R100,000")
-    
+
     # Dates
     opening_date = models.DateField()
     closing_date = models.DateField()
     expected_start_date = models.DateField(null=True, blank=True)
-    
+
     # Capacity
     available_positions = models.IntegerField(default=1)
     positions_filled = models.IntegerField(default=0)
-    
+
     # Status & Visibility
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     featured = models.BooleanField(default=False)
     priority = models.IntegerField(default=0, help_text="Higher number = higher priority in listings")
-    
+
     # Additional Info
     contact_email = models.EmailField(default='careers@malitinne.co.za')
     contact_person = models.CharField(max_length=100, blank=True)
     application_instructions = models.TextField(blank=True, help_text="Special instructions for applying")
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_opportunities')
-    
+
     class Meta:
         ordering = ['-priority', '-created_at']
         verbose_name_plural = "Opportunities"
-    
+
     def save(self, *args, **kwargs):
         if not self.reference_number:
             import uuid
             self.reference_number = f"MAL-{self.opportunity_type[:3].upper()}-{uuid.uuid4().hex[:6].upper()}"
         super().save(*args, **kwargs)
-    
+
     @property
     def is_open(self):
         from django.utils import timezone
         today = timezone.now().date()
         return self.status == 'published' and self.opening_date <= today <= self.closing_date and self.positions_filled < self.available_positions
-    
+
     @property
     def remaining_positions(self):
         return self.available_positions - self.positions_filled
-    
+
     def __str__(self):
         return f"{self.title} ({self.get_opportunity_type_display()})"
 
@@ -805,18 +804,18 @@ class Application(models.Model):
         ('rejected', 'Rejected'),
         ('withdrawn', 'Withdrawn'),
     )
-    
+
     # Application Information
     opportunity = models.ForeignKey(Opportunity, on_delete=models.CASCADE, related_name='applications')
     application_number = models.CharField(max_length=50, unique=True, blank=True)
-    
+
     # Personal Information
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField()
     phone_number = models.CharField(max_length=20)
     alternative_phone = models.CharField(max_length=20, blank=True)
-    
+
     # Demographics
     id_number = models.CharField(max_length=20)
     date_of_birth = models.DateField()
@@ -827,63 +826,63 @@ class Application(models.Model):
         ('african', 'African'), ('coloured', 'Coloured'), ('indian', 'Indian'), ('white', 'White'), ('other', 'Other')
     ), blank=True, help_text="For BBBEE/Employment Equity purposes")
     disability = models.CharField(max_length=100, blank=True, help_text="Specify disability if applicable")
-    
+
     # Address
     address = models.TextField()
     city = models.CharField(max_length=100)
     province = models.CharField(max_length=50, choices=(
-        ('EC', 'Eastern Cape'), ('FS', 'Free State'), ('GP', 'Gauteng'), 
-        ('KZN', 'KwaZulu-Natal'), ('LP', 'Limpopo'), ('MP', 'Mpumalanga'), 
+        ('EC', 'Eastern Cape'), ('FS', 'Free State'), ('GP', 'Gauteng'),
+        ('KZN', 'KwaZulu-Natal'), ('LP', 'Limpopo'), ('MP', 'Mpumalanga'),
         ('NC', 'Northern Cape'), ('NW', 'North West'), ('WC', 'Western Cape')
     ))
     postal_code = models.CharField(max_length=10)
-    
+
     # Education & Experience
     highest_qualification = models.CharField(max_length=200)
     institution = models.CharField(max_length=200)
     year_completed = models.IntegerField()
     field_of_study = models.CharField(max_length=200, blank=True)
-    
+
     work_experience = models.TextField(blank=True, help_text="Previous work experience")
     skills = models.TextField(help_text="Relevant skills, separated by commas")
-    
+
     # Documents
     cv = models.FileField(upload_to='applications/cvs/%Y/%m/', null=True, blank=True)
     cover_letter = models.FileField(upload_to='applications/cover_letters/%Y/%m/', null=True, blank=True)
     id_document = models.FileField(upload_to='applications/ids/%Y/%m/', null=True, blank=True)
     qualifications = models.FileField(upload_to='applications/qualifications/%Y/%m/', null=True, blank=True)
-    
+
     # Additional Information
     hear_about_us = models.CharField(max_length=200, blank=True, help_text="How did you hear about this opportunity?")
     additional_info = models.TextField(blank=True, help_text="Any additional information you'd like to share")
-    
+
     # Status & Tracking
     status = models.CharField(max_length=20, choices=APPLICATION_STATUS, default='pending')
     status_notes = models.TextField(blank=True, help_text="Internal notes about application status")
-    
+
     # Review Information
     reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_applications')
     reviewed_at = models.DateTimeField(null=True, blank=True)
     score = models.IntegerField(null=True, blank=True, help_text="Application score out of 100")
-    
+
     # Submission
     submitted_at = models.DateTimeField(auto_now_add=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
-    
+
     class Meta:
         ordering = ['-submitted_at']
-    
+
     def save(self, *args, **kwargs):
         if not self.application_number:
             import uuid
             self.application_number = f"APP-{uuid.uuid4().hex[:8].upper()}"
         super().save(*args, **kwargs)
-    
+
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
-    
+
     def __str__(self):
         return f"{self.full_name} - {self.opportunity.title}"
 
@@ -1095,7 +1094,7 @@ class TenderSource(models.Model):
     is_active = models.BooleanField(default=True)
     last_crawled = models.DateTimeField(null=True, blank=True)
     crawl_frequency_hours = models.IntegerField(default=24)
-    
+
     def __str__(self):
         return self.name
 
@@ -1111,7 +1110,7 @@ class TenderOpportunity(models.Model):
         ('lost', 'Lost'),
         ('expired', 'Expired'),
     )
-    
+
     CATEGORY_CHOICES = (
         ('training', 'Training & Skills Development'),
         ('consulting', 'Consulting Services'),
@@ -1119,64 +1118,64 @@ class TenderOpportunity(models.Model):
         ('construction', 'Construction'),
         ('other', 'Other'),
     )
-    
+
     source = models.ForeignKey(TenderSource, on_delete=models.SET_NULL, null=True, related_name='opportunities')
     tender_id = models.CharField(max_length=100, help_text="Original tender ID from source")
     title = models.CharField(max_length=500)
     description = models.TextField()
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='training')
-    
+
     published_date = models.DateField(null=True, blank=True)
     closing_date = models.DateField()
     opening_date = models.DateField(null=True, blank=True)
-    
+
     estimated_value = models.CharField(max_length=200, blank=True, help_text="Estimated value range")
     bidder_deposit = models.CharField(max_length=200, blank=True)
-    
+
     location = models.CharField(max_length=200, blank=True)
     department = models.CharField(max_length=300, blank=True, help_text="Issuing department/agency")
-    
+
     document_url = models.URLField(blank=True, help_text="Link to original tender document")
     local_document = models.FileField(upload_to='tenders/%Y/%m/', blank=True, null=True)
-    
+
     ai_relevance_score = models.FloatField(default=0, help_text="0-100 score based on business fit")
     ai_confidence = models.FloatField(default=0, help_text="Confidence in scoring")
     ai_match_reasons = models.TextField(blank=True, help_text="Why this tender is relevant")
-    
+
     internal_notes = models.TextField(blank=True)
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tenders')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
-    
+
     follow_up_date = models.DateField(null=True, blank=True)
     follow_up_notes = models.TextField(blank=True)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_tenders')
-    
+
     class Meta:
         unique_together = ['source', 'tender_id']
         ordering = ['closing_date', '-ai_relevance_score']
-    
+
     def __str__(self):
         return f"{self.title} (Closes: {self.closing_date})"
-    
+
     @property
     def days_until_close(self):
         from django.utils import timezone
         delta = self.closing_date - timezone.now().date()
         return delta.days
-    
+
     @property
     def is_urgent(self):
         return self.days_until_close <= 7 and self.status == 'new'
-    
+
     @property
     def is_open(self):
         from django.utils import timezone
         return self.closing_date >= timezone.now().date() and self.status not in ['expired', 'lost']
 
-    
+
 
 class LoginAttempt(models.Model):
     """Track login attempts from web and SSH"""
@@ -1184,7 +1183,7 @@ class LoginAttempt(models.Model):
         ('web', 'Web Login'),
         ('ssh', 'SSH Login'),
     ]
-    
+
     username = models.CharField(max_length=150, null=True, blank=True)
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField(blank=True)
@@ -1193,7 +1192,7 @@ class LoginAttempt(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     country = models.CharField(max_length=100, blank=True)
     city = models.CharField(max_length=100, blank=True)
-    
+
     class Meta:
         ordering = ['-timestamp']
         indexes = [
@@ -1202,7 +1201,7 @@ class LoginAttempt(models.Model):
             models.Index(fields=['success']),
             models.Index(fields=['attempt_type']),
         ]
-    
+
     def __str__(self):
         return f"{self.username} - {self.ip_address} - {self.attempt_type} - {'SUCCESS' if self.success else 'FAILED'}"
 
@@ -1216,11 +1215,11 @@ class DocumentCategory(models.Model):
     icon = models.CharField(max_length=50, default='fa-folder')
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subcategories')
     order = models.IntegerField(default=0)
-    
+
     class Meta:
         ordering = ['order', 'name']
         verbose_name_plural = "Document categories"
-    
+
     def __str__(self):
         if self.parent:
             return f"{self.parent.name} / {self.name}"
@@ -1235,36 +1234,36 @@ class SharedDocument(models.Model):
         ('department', 'Specific Department'),
         ('private', 'Private (Owner Only)'),
     )
-    
+
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     category = models.ForeignKey(DocumentCategory, on_delete=models.SET_NULL, null=True, related_name='documents')
-    
+
     file = models.FileField(upload_to='shared_drive/%Y/%m/')
     file_name = models.CharField(max_length=500)
     file_size = models.BigIntegerField(default=0, help_text="File size in bytes")
     mime_type = models.CharField(max_length=100, blank=True)
-    
+
     version = models.CharField(max_length=20, default='1.0')
     previous_version = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='later_versions')
-    
+
     visibility = models.CharField(max_length=20, choices=VISIBILITY_CHOICES, default='all_staff')
     allowed_departments = models.ManyToManyField('User', limit_choices_to={'role__in': ['instructor', 'admin']}, blank=True, related_name='accessible_docs')
-    
+
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='uploaded_documents_shared')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     tags = models.CharField(max_length=500, blank=True, help_text="Comma-separated tags")
-    
+
     download_count = models.IntegerField(default=0)
-    
+
     class Meta:
         ordering = ['-uploaded_at']
-    
+
     def __str__(self):
         return self.title
-    
+
     def save(self, *args, **kwargs):
         if self.file:
             self.file_name = self.file.name.split('/')[-1]
@@ -1279,10 +1278,10 @@ class DocumentDownloadLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='document_downloads')
     downloaded_at = models.DateTimeField(auto_now_add=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
-    
+
     class Meta:
         ordering = ['-downloaded_at']
-    
+
     def __str__(self):
         return f"{self.user.username} downloaded {self.document.title}"
 
@@ -1296,6 +1295,6 @@ class CrawlLog(models.Model):
     opportunities_new = models.IntegerField(default=0)
     status = models.CharField(max_length=50, choices=[('success', 'Success'), ('failed', 'Failed'), ('in_progress', 'In Progress')])
     error_message = models.TextField(blank=True)
-    
+
     def __str__(self):
         return f"Crawl {self.source.name} - {self.started_at}"

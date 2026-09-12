@@ -1,54 +1,90 @@
 # ==================== FIXED IMPORTS ====================
-import pandas as pd
-from openpyxl import Workbook
-from django.core.paginator import Paginator
-from django.db.models import Q, Count
-from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse, HttpResponse
-from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib import messages
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib import messages
-from .portal_helpers import calculate_project_health, get_urgent_actions, get_overall_stats
-from .permissions import is_admin, is_instructor
-from django.contrib.auth import authenticate, login, logout
-from django.http import JsonResponse, HttpResponseForbidden, HttpResponse, FileResponse, Http404
-from django.utils import timezone
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.utils.crypto import get_random_string
-from django.db.models import Count, Q, Avg, F  # ADDED F here
-from django.utils.text import get_valid_filename
-from datetime import timedelta
-from django.db.models import Q
-from django.http import HttpResponseForbidden, FileResponse, Http404
-import json
 import csv
 import io
+import json
 import mimetypes
 import os
 import time
-from datetime import datetime, date, timedelta
-from django.conf import settings
+from datetime import datetime, timedelta
+from io import BytesIO
 
-from .models import Opportunity, Application
+import pandas as pd
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.core.mail import send_mail
+from django.core.paginator import Paginator
+from django.db.models import Avg, Count, F, Q  # ADDED F here
+from django.http import (
+    FileResponse,
+    Http404,
+    HttpResponse,
+    HttpResponseForbidden,
+    JsonResponse,
+)
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
+from django.utils import timezone
+from django.utils.text import get_valid_filename
+from openpyxl import Workbook
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.pdfgen import canvas
+
 from .ai_assistant import AIAdminAssistant
 from .ai_recommendations import get_course_recommendations
 from .models import (
-    User, Course, Lesson, Assignment, Submission, Progress, 
-    Quiz, QuizQuestion, QuizAttempt, Certificate, Notification,
-    Announcement, CourseGroup, Attendance, LearningModule,
-    LearnerProfile, LearnerDocument, LogbookEntry, BackupLog, AuditLog,
-    LessonModule, UserModuleProgress, LessonInteraction, DailyStreak, Badge, UserBadge,
-    ForumTopic, ForumPost, ObservationChecklistItem, StudentChecklistResult,
-    AssessorSignOff, ModuleEvidence, PortfolioOfEvidence, SummativeAssessment,
-    SummativeAssessmentSubmission, Task, Meeting, StaffAnnouncement,
-    TenderOpportunity, SharedDocument, DocumentCategory, DocumentDownloadLog
+    Announcement,
+    Application,
+    AssessorSignOff,
+    Assignment,
+    Attendance,
+    AuditLog,
+    BackupLog,
+    Badge,
+    Certificate,
+    Course,
+    DailyStreak,
+    DocumentCategory,
+    DocumentDownloadLog,
+    ForumPost,
+    ForumTopic,
+    LearnerDocument,
+    LearnerProfile,
+    LearningModule,
+    Lesson,
+    LessonInteraction,
+    LessonModule,
+    LogbookEntry,
+    Meeting,
+    ModuleEvidence,
+    Notification,
+    ObservationChecklistItem,
+    Opportunity,
+    PortfolioOfEvidence,
+    Progress,
+    Quiz,
+    QuizAttempt,
+    QuizQuestion,
+    SharedDocument,
+    StaffAnnouncement,
+    StudentChecklistResult,
+    Submission,
+    SummativeAssessment,
+    SummativeAssessmentSubmission,
+    Task,
+    TenderOpportunity,
+    User,
+    UserBadge,
+    UserModuleProgress,
 )
-from reportlab.lib.pagesizes import A4, landscape
-from reportlab.pdfgen import canvas
-from io import BytesIO
+from .permissions import is_admin, is_instructor
+from .portal_helpers import (
+    calculate_project_health,
+    get_overall_stats,
+    get_urgent_actions,
+)
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -71,19 +107,19 @@ def get_client_ip(request):
 
 def check_for_badges(user):
     streak, _ = DailyStreak.objects.get_or_create(user=user)
-    
+
     if streak.total_xp >= 100 and not UserBadge.objects.filter(user=user, badge__name='Rookie').exists():
         badge, _ = Badge.objects.get_or_create(name='Rookie', defaults={'description': 'Earned 100 XP', 'icon': 'fa-seedling', 'points_required': 100})
         UserBadge.objects.get_or_create(user=user, badge=badge)
-    
+
     if streak.total_xp >= 500 and not UserBadge.objects.filter(user=user, badge__name='Apprentice').exists():
         badge, _ = Badge.objects.get_or_create(name='Apprentice', defaults={'description': 'Earned 500 XP', 'icon': 'fa-graduation-cap', 'points_required': 500})
         UserBadge.objects.get_or_create(user=user, badge=badge)
-    
+
     if streak.total_xp >= 1000 and not UserBadge.objects.filter(user=user, badge__name='Master').exists():
         badge, _ = Badge.objects.get_or_create(name='Master', defaults={'description': 'Earned 1000 XP', 'icon': 'fa-crown', 'points_required': 1000})
         UserBadge.objects.get_or_create(user=user, badge=badge)
-    
+
     if streak.current_streak >= 7 and not UserBadge.objects.filter(user=user, badge__name='Weekly Warrior').exists():
         badge, _ = Badge.objects.get_or_create(name='Weekly Warrior', defaults={'description': 'Logged in for 7 days in a row', 'icon': 'fa-calendar-check', 'lessons_completed': 7})
         UserBadge.objects.get_or_create(user=user, badge=badge)
@@ -163,7 +199,7 @@ def staff_portal(request):
         'applications_this_month': Application.objects.filter(
             submitted_at__year=now.year, submitted_at__month=now.month
         ).count(),
-        
+
         # NEW
         'projects_health': projects_health,
         'urgent_actions': urgent_actions,
@@ -181,12 +217,12 @@ def tender_dashboard(request):
     """Dashboard for viewing opportunities/tenders"""
     if request.user.role not in ['instructor', 'admin']:
         return redirect('student_dashboard')
-    
+
     tenders = TenderOpportunity.objects.filter(
         Q(status='new') | Q(status='viewed'),
         closing_date__gte=timezone.now().date()
     ).order_by('closing_date', '-ai_relevance_score')
-    
+
     total = tenders.count()
     urgent = tenders.filter(closing_date__lte=timezone.now().date() + timedelta(days=7)).count()
     upcoming = tenders.filter(
@@ -194,7 +230,7 @@ def tender_dashboard(request):
         closing_date__lte=timezone.now().date() + timedelta(days=30)
     ).count()
     ongoing = tenders.filter(closing_date__gt=timezone.now().date() + timedelta(days=30)).count()
-    
+
     context = {
         'tenders': tenders[:20],
         'total': total,
@@ -218,22 +254,22 @@ def run_tender_crawl(request):
 def tender_detail(request, tender_id):
     """View tender details and update status"""
     tender = get_object_or_404(TenderOpportunity, id=tender_id)
-    
+
     if request.user.role not in ['instructor', 'admin']:
         return redirect('student_dashboard')
-    
+
     if request.method == 'POST':
         tender.status = request.POST.get('status')
         tender.internal_notes = request.POST.get('notes', '')
         tender.follow_up_date = request.POST.get('follow_up_date') or None
         tender.follow_up_notes = request.POST.get('follow_up_notes', '')
-        
+
         if request.FILES.get('document'):
             tender.local_document = request.FILES['document']
-        
+
         tender.save()
         messages.success(request, 'Tender updated successfully')
-    
+
     return render(request, 'tender_detail.html', {'tender': tender})
 
 
@@ -244,29 +280,29 @@ def shared_drive(request):
     """Shared document drive for staff"""
     if request.user.role not in ['instructor', 'admin']:
         return redirect('student_dashboard')
-    
+
     # Get documents based on visibility
     documents = SharedDocument.objects.filter(
         Q(visibility='all_staff') |
         Q(visibility='management', uploaded_by__role='admin') |
         Q(visibility='private', uploaded_by=request.user)
     ).distinct().order_by('-uploaded_at')
-    
+
     # Apply filters
     category = request.GET.get('category')
     if category:
         documents = documents.filter(category__slug=category)
-    
+
     search = request.GET.get('search')
     if search:
         documents = documents.filter(
-            Q(title__icontains=search) | 
+            Q(title__icontains=search) |
             Q(description__icontains=search) |
             Q(tags__icontains=search)
         )
-    
+
     categories = DocumentCategory.objects.all()
-    
+
     context = {
         'documents': documents,
         'categories': categories,
@@ -281,21 +317,21 @@ def upload_document(request):
     """Upload document to shared drive"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     if request.user.role not in ['instructor', 'admin']:
         return JsonResponse({'error': 'Permission denied'}, status=403)
-    
+
     title = request.POST.get('title')
     description = request.POST.get('description', '')
     category_id = request.POST.get('category')
     visibility = request.POST.get('visibility', 'all_staff')
     tags = request.POST.get('tags', '')
-    
+
     if not title or not request.FILES.get('file'):
         return JsonResponse({'error': 'Title and file required'}, status=400)
-    
+
     file = request.FILES['file']
-    
+
     doc = SharedDocument.objects.create(
         title=title,
         description=description,
@@ -308,7 +344,7 @@ def upload_document(request):
         uploaded_by=request.user,
         category_id=category_id if category_id else None
     )
-    
+
     # Notify staff
     staff_users = User.objects.filter(role__in=['instructor', 'admin'])
     for staff in staff_users:
@@ -318,7 +354,7 @@ def upload_document(request):
             f'{request.user.username} shared "{title}" in the document drive.',
             '/shared-drive/'
         )
-    
+
     return JsonResponse({
         'success': True,
         'document': {
@@ -335,7 +371,7 @@ def upload_document(request):
 def download_document(request, doc_id):
     """Download document from shared drive with logging"""
     doc = get_object_or_404(SharedDocument, id=doc_id)
-    
+
     # Check permissions
     if doc.visibility == 'all_staff':
         pass  # OK
@@ -343,18 +379,18 @@ def download_document(request, doc_id):
         return HttpResponseForbidden("You don't have permission to download this document")
     elif doc.visibility == 'private' and doc.uploaded_by != request.user:
         return HttpResponseForbidden("This document is private")
-    
+
     # Log download
     DocumentDownloadLog.objects.create(
         document=doc,
         user=request.user,
         ip_address=get_client_ip(request)
     )
-    
+
     # Increment download count
     doc.download_count += 1
     doc.save()
-    
+
     # Serve file
     if doc.file and os.path.isfile(doc.file.path):
         return FileResponse(
@@ -362,7 +398,7 @@ def download_document(request, doc_id):
             as_attachment=True,
             filename=doc.file_name
         )
-    
+
     raise Http404("File not found")
 
 
@@ -371,17 +407,17 @@ def delete_document(request, doc_id):
     """Delete document (admin only or document owner)"""
     if request.method != 'DELETE':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     doc = get_object_or_404(SharedDocument, id=doc_id)
-    
+
     # Only admin or uploader can delete
     if request.user.role != 'admin' and doc.uploaded_by != request.user:
         return JsonResponse({'error': 'Permission denied'}, status=403)
-    
+
     # Delete file from disk
     if doc.file and os.path.isfile(doc.file.path):
         os.remove(doc.file.path)
-    
+
     doc.delete()
     return JsonResponse({'success': True})
 
@@ -395,23 +431,23 @@ def ai_command_api(request):
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'POST method required'}, status=405)
-    
+
     if request.user.role not in ['admin', 'instructor']:
         return JsonResponse({'error': 'Staff access required'}, status=403)
-    
+
     try:
         data = json.loads(request.body)
         query = data.get('query', '')
-        
+
         if not query:
             return JsonResponse({'error': 'No query provided'}, status=400)
-        
+
         # Import and use the AI functions
         from .ai_assistant import process_operation_query
-        
+
         # Process the query
         response = process_operation_query(query, request.user)
-        
+
         # Log the query
         AuditLog.objects.create(
             user=request.user,
@@ -419,9 +455,9 @@ def ai_command_api(request):
             details={'query': query[:200], 'response_type': response.get('type', 'general')},
             ip_address=get_client_ip(request)
         )
-        
+
         return JsonResponse(response)
-        
+
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
@@ -434,28 +470,28 @@ def popia_consent_api(request):
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
         consent = data.get('consent', False)
-        
+
         if not consent:
             return JsonResponse({'error': 'Consent must be true'}, status=400)
-        
+
         profile, created = LearnerProfile.objects.get_or_create(user=request.user)
         profile.popia_consent = True
         profile.popia_consent_date = timezone.now()
         profile.save()
-        
+
         AuditLog.objects.create(
             user=request.user,
             action='popia_consent',
             details={'consent_given': True},
             ip_address=get_client_ip(request)
         )
-        
+
         return JsonResponse({'success': True, 'message': 'POPIA consent recorded'})
-        
+
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -466,21 +502,21 @@ def delete_reply(request, reply_id):
     """Delete a reply (instructor or admin only)"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     try:
         reply = get_object_or_404(ForumPost, id=reply_id)
         topic = reply.topic
         lesson = topic.lesson
-        
+
         if request.user.role == 'instructor':
             if lesson.course.instructor != request.user:
                 return JsonResponse({'error': 'You do not have permission to delete this reply'}, status=403)
         elif request.user.role != 'admin':
             return JsonResponse({'error': 'Permission denied'}, status=403)
-        
+
         reply.delete()
         return JsonResponse({'success': True, 'message': 'Reply deleted successfully'})
-        
+
     except ForumPost.DoesNotExist:
         return JsonResponse({'error': 'Reply not found'}, status=404)
     except Exception as e:
@@ -491,10 +527,10 @@ def like_reply(request, reply_id):
     """Like or unlike a reply"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     try:
         reply = get_object_or_404(ForumPost, id=reply_id)
-        
+
         if request.user in reply.liked_by.all():
             reply.liked_by.remove(request.user)
             reply.likes_count = max(0, reply.likes_count - 1)
@@ -505,13 +541,13 @@ def like_reply(request, reply_id):
             liked = True
 
         reply.save(update_fields=['likes_count'])
-        
+
         return JsonResponse({
             'success': True,
             'liked': liked,
             'likes_count': reply.likes_count
         })
-        
+
     except ForumPost.DoesNotExist:
         return JsonResponse({'error': 'Reply not found'}, status=404)
     except Exception as e:
@@ -523,9 +559,9 @@ def user_login(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        
+
         user = authenticate(request, username=username, password=password)
-        
+
         if user:
             login(request, user)
             messages.success(request, f'Welcome back, {user.username}!')
@@ -537,7 +573,7 @@ def user_login(request):
                 return redirect('admin_dashboard')
         else:
             messages.error(request, 'Invalid username or password.')
-    
+
     return render(request, 'login.html')
 
 def user_logout(request):
@@ -551,11 +587,11 @@ def register(request):
         email = request.POST.get('email')
         password = request.POST.get('password')
         password2 = request.POST.get('password2')
-        
+
         full_name = request.POST.get('full_name', '').split(' ', 1)
         first_name = full_name[0] if full_name else ''
         last_name = full_name[1] if len(full_name) > 1 else ''
-        
+
         id_number = request.POST.get('id_number')
         date_of_birth = request.POST.get('date_of_birth')
         gender = request.POST.get('gender')
@@ -563,7 +599,7 @@ def register(request):
         contact_number = request.POST.get('contact_number')
         disability = request.POST.get('disability')
         preferred_language = request.POST.get('preferred_language')
-        
+
         if password != password2:
             messages.error(request, 'Passwords do not match.')
         elif User.objects.filter(username=username).exists():
@@ -581,7 +617,7 @@ def register(request):
                 is_active=True,
                 is_approved=False
             )
-            
+
             user.id_number = id_number
             if date_of_birth:
                 user.date_of_birth = datetime.strptime(date_of_birth, '%Y-%m-%d').date()
@@ -591,7 +627,7 @@ def register(request):
             user.disability = disability
             user.preferred_language = preferred_language
             user.save()
-            
+
             try:
                 html_message = render_to_string('email/registration_pending.html', {
                     'user': user,
@@ -607,7 +643,7 @@ def register(request):
                 )
             except:
                 pass
-            
+
             admins = User.objects.filter(role='admin', is_approved=True)
             for admin in admins:
                 try:
@@ -622,10 +658,10 @@ def register(request):
                     )
                 except:
                     pass
-            
+
             messages.success(request, 'Registration submitted! Please wait for admin approval.')
             return redirect('login')
-    
+
     return render(request, 'register.html')
 
 def forgot_password(request):
@@ -637,7 +673,7 @@ def forgot_password(request):
             messages.success(request, 'Password reset link sent to your email.')
         except User.DoesNotExist:
             messages.error(request, 'No account found with that email address.')
-    
+
     return render(request, 'forgot_password.html')
 
 def reset_password(request, token):
@@ -647,11 +683,11 @@ def reset_password(request, token):
     except User.DoesNotExist:
         valid = False
         user = None
-    
+
     if request.method == 'POST' and valid:
         password = request.POST.get('password')
         password2 = request.POST.get('password2')
-        
+
         if password == password2:
             user.set_password(password)
             user.reset_password_token = None
@@ -661,7 +697,7 @@ def reset_password(request, token):
             return redirect('login')
         else:
             messages.error(request, 'Passwords do not match.')
-    
+
     return render(request, 'reset_password.html', {'valid': valid, 'user': user})
 
 # ==================== HOME VIEWS ====================
@@ -689,27 +725,27 @@ def lms_portal(request):
 def student_dashboard(request):
     if request.user.role != 'student':
         return redirect('instructor_dashboard')
-    
+
     enrolled_courses = request.user.enrolled_courses.all()
     available_courses = Course.objects.filter(status='published').exclude(id__in=enrolled_courses)
-    
+
     course_progress = {}
     courses_in_progress = 0
     total_progress_sum = 0
-    
+
     for course in enrolled_courses:
         progress, _ = Progress.objects.get_or_create(student=request.user, course=course)
         progress_percent = progress.progress_percentage
         course_progress[course.id] = progress_percent
         total_progress_sum += progress_percent
-        
+
         if 0 < progress_percent < 100:
             courses_in_progress += 1
-    
+
     average_progress = int(total_progress_sum / len(enrolled_courses)) if enrolled_courses else 0
     certificates_count = Certificate.objects.filter(student=request.user).count()
     notifications = request.user.notifications.filter(is_read=False)[:5]
-    
+
     return render(request, 'student_dashboard.html', {
         'enrolled_courses': enrolled_courses,
         'available_courses': available_courses,
@@ -727,14 +763,14 @@ def course_detail(request, course_id):
     lessons = course.lessons.all().order_by('order')
     assignments = course.assignments.all()
     quizzes = []
-    
+
     progress = None
     if request.user.role == 'student':
         if request.user not in course.students.all():
             messages.warning(request, 'You need to enroll in this course first.')
             return redirect('student_dashboard')
         progress, created = Progress.objects.get_or_create(student=request.user, course=course)
-    
+
     for lesson in lessons:
         if hasattr(lesson, 'quiz'):
             quiz = lesson.quiz
@@ -742,7 +778,7 @@ def course_detail(request, course_id):
             if request.user.is_authenticated:
                 quiz_attempt = QuizAttempt.objects.filter(quiz=quiz, student=request.user).first()
             quizzes.append({'quiz': quiz, 'attempt': quiz_attempt, 'lesson': lesson})
-    
+
     return render(request, 'course_detail.html', {
         'course': course,
         'lessons': lessons,
@@ -755,7 +791,7 @@ def course_detail(request, course_id):
 def enroll_course(request, course_id):
     if request.user.role != 'student':
         return JsonResponse({'error': 'Only students can enroll'}, status=403)
-    
+
     course = get_object_or_404(Course, id=course_id)
     if request.user not in course.students.all():
         course.students.add(request.user)
@@ -764,23 +800,23 @@ def enroll_course(request, course_id):
         messages.success(request, f'Successfully enrolled in {course.title}!')
     else:
         messages.info(request, f'You are already enrolled in {course.title}')
-    
+
     return redirect('student_dashboard')
 
 @login_required
 def lesson_detail(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
     course = lesson.course
-    
+
     if request.user.role != 'student':
         return redirect('instructor_dashboard')
-    
+
     if request.user not in course.students.all():
         messages.warning(request, 'You need to enroll in this course first.')
         return redirect('course_detail', course_id=course.id)
-    
+
     progress, created = Progress.objects.get_or_create(student=request.user, course=course)
-    
+
     # ===== FIX: Get quiz attempt in view instead of template =====
     quiz_attempt = None
     if hasattr(lesson, 'quiz'):
@@ -788,21 +824,21 @@ def lesson_detail(request, lesson_id):
             quiz=lesson.quiz,
             student=request.user
         ).first()
-    
+
     if request.method == 'POST' and 'complete' in request.POST:
         if lesson not in progress.completed_lessons.all():
             progress.completed_lessons.add(lesson)
             messages.success(request, f'✅ Lesson "{lesson.title}" marked as complete!')
-            
+
             if progress.progress_percentage == 100:
                 certificate, cert_created = Certificate.objects.get_or_create(student=request.user, course=course)
                 if cert_created:
                     messages.success(request, '🎉 CONGRATULATIONS! You have completed the course! 🎉')
         else:
             messages.info(request, 'Lesson already completed')
-        
+
         return redirect('course_detail', course_id=course.id)
-    
+
     return render(request, 'lesson_detail.html', {
         'lesson': lesson,
         'course': course,
@@ -813,20 +849,20 @@ def lesson_detail(request, lesson_id):
 @login_required
 def view_document(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
-    
+
     if request.user.role == 'student' and request.user not in lesson.course.students.all():
         return HttpResponseForbidden("You are not enrolled in this course.")
-    
+
     if not lesson.document:
         raise Http404("No document available.")
-    
+
     file_path = lesson.document.path
     if not os.path.exists(file_path):
         raise Http404("Document file not found.")
-    
+
     with open(file_path, 'rb') as f:
         file_data = f.read()
-    
+
     if file_path.endswith('.pdf'):
         response = HttpResponse(file_data, content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{os.path.basename(file_path)}"'
@@ -834,7 +870,7 @@ def view_document(request, lesson_id):
         mime_type, encoding = mimetypes.guess_type(file_path)
         response = HttpResponse(file_data, content_type=mime_type or 'application/octet-stream')
         response['Content-Disposition'] = f'inline; filename="{os.path.basename(file_path)}"'
-    
+
     return response
 
 @login_required
@@ -842,21 +878,21 @@ def take_quiz(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
     lesson = quiz.lesson
     course = lesson.course
-    
+
     if request.user.role != 'student' or request.user not in course.students.all():
         messages.error(request, 'You need to be enrolled to take this quiz.')
         return redirect('course_detail', course_id=course.id)
-    
+
     existing_attempt = QuizAttempt.objects.filter(quiz=quiz, student=request.user).first()
     if existing_attempt and existing_attempt.completed_at:
         messages.warning(request, 'You have already completed this quiz.')
         return redirect('course_detail', course_id=course.id)
-    
+
     if request.method == 'POST':
         answers = {}
         score = 0
         total_points = 0
-        
+
         for question in quiz.questions.all():
             total_points += question.points
             user_answer = request.POST.get(f'question_{question.id}')
@@ -864,10 +900,10 @@ def take_quiz(request, quiz_id):
                 answers[str(question.id)] = user_answer
                 if user_answer.upper() == question.correct_answer:
                     score += question.points
-        
+
         percentage = (score / total_points) * 100 if total_points > 0 else 0
         passed = percentage >= quiz.passing_score
-        
+
         attempt = QuizAttempt.objects.create(
             quiz=quiz,
             student=request.user,
@@ -877,18 +913,18 @@ def take_quiz(request, quiz_id):
             answers=answers,
             completed_at=timezone.now()
         )
-        
+
         progress, _ = Progress.objects.get_or_create(student=request.user, course=course)
         if lesson not in progress.completed_lessons.all():
             progress.completed_lessons.add(lesson)
-        
+
         if passed:
             messages.success(request, f'Quiz completed! Score: {score}/{total_points} ({percentage:.0f}%) - PASSED!')
         else:
             messages.warning(request, f'Quiz completed! Score: {score}/{total_points} ({percentage:.0f}%) - Failed.')
-        
+
         return redirect('course_detail', course_id=course.id)
-    
+
     questions = quiz.questions.all().order_by('order')
     return render(request, 'take_quiz.html', {
         'quiz': quiz,
@@ -899,15 +935,15 @@ def take_quiz(request, quiz_id):
 @login_required
 def submit_assignment(request, assignment_id):
     assignment = get_object_or_404(Assignment, id=assignment_id)
-    
+
     if request.user.role != 'student':
         return HttpResponseForbidden()
-    
+
     existing = Submission.objects.filter(assignment=assignment, student=request.user).first()
-    
+
     if request.method == 'POST' and request.FILES.get('file'):
         file = request.FILES['file']
-        
+
         if existing:
             existing.file_upload = file
             existing.submitted_at = timezone.now()
@@ -918,11 +954,11 @@ def submit_assignment(request, assignment_id):
         else:
             submission = Submission.objects.create(assignment=assignment, student=request.user, file_upload=file)
             submission_id = submission.id
-        
+
         send_notification(assignment.course.instructor, 'New Submission', f'{request.user.username} submitted {assignment.title}', f'/instructor/grade/{submission_id}/')
         messages.success(request, 'Assignment submitted successfully!')
         return redirect('course_detail', course_id=assignment.course.id)
-    
+
     return render(request, 'submit_assignment.html', {
         'assignment': assignment,
         'submission': existing
@@ -932,7 +968,7 @@ def submit_assignment(request, assignment_id):
 def certificates(request):
     if request.user.role != 'student':
         return redirect('instructor_dashboard')
-    
+
     certificates = Certificate.objects.filter(student=request.user).select_related('course')
     return render(request, 'certificates.html', {'certificates': certificates})
 
@@ -940,7 +976,7 @@ def certificates(request):
 def debug_progress(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     progress, created = Progress.objects.get_or_create(student=request.user, course=course)
-    
+
     return JsonResponse({
         'course_title': course.title,
         'total_lessons': course.lessons.count(),
@@ -954,54 +990,54 @@ def debug_progress(request, course_id):
 def download_certificate(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     progress = get_object_or_404(Progress, student=request.user, course=course)
-    
+
     if progress.progress_percentage < 100:
         messages.error(request, 'You must complete 100% of the course to get a certificate.')
         return redirect('course_detail', course_id=course.id)
-    
+
     certificate, created = Certificate.objects.get_or_create(student=request.user, course=course)
-    
+
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=landscape(A4))
     width, height = landscape(A4)
-    
+
     p.setStrokeColorRGB(0.4, 0.2, 0.6)
     p.setLineWidth(5)
     p.rect(30, 30, width - 60, height - 60)
-    
+
     p.setFillColorRGB(0.4, 0.2, 0.6)
     p.setFont("Helvetica-Bold", 32)
     p.drawCentredString(width/2, height - 120, "CERTIFICATE OF COMPLETION")
-    
+
     p.setFont("Helvetica", 14)
     p.setFillColorRGB(0, 0, 0)
     p.drawCentredString(width/2, height - 160, "This certificate is proudly presented to")
-    
+
     p.setFont("Helvetica-Bold", 28)
     p.setFillColorRGB(0.4, 0.2, 0.6)
     name = request.user.get_full_name() or request.user.username
     p.drawCentredString(width/2, height - 220, name.upper())
-    
+
     p.setFont("Helvetica", 14)
     p.setFillColorRGB(0, 0, 0)
     p.drawCentredString(width/2, height - 270, "For successfully completing the course")
-    
+
     p.setFont("Helvetica-Bold", 18)
     p.setFillColorRGB(0.4, 0.2, 0.6)
     p.drawCentredString(width/2, height - 310, course.title)
-    
+
     p.setFont("Helvetica", 10)
     p.setFillColorRGB(0.5, 0.5, 0.5)
     p.drawCentredString(width/2, height - 380, f"Issued on: {certificate.issued_at.strftime('%B %d, %Y')}")
     p.drawCentredString(width/2, height - 400, f"Certificate Number: {certificate.certificate_number}")
-    
+
     p.line(width/2 - 100, height - 450, width/2 + 100, height - 450)
     p.setFont("Helvetica", 10)
     p.drawCentredString(width/2, height - 470, "Authorized Signature")
-    
+
     p.showPage()
     p.save()
-    
+
     buffer.seek(0)
     return FileResponse(buffer, as_attachment=True, filename=f'certificate_{course.slug}.pdf')
 
@@ -1011,19 +1047,19 @@ def download_certificate(request, course_id):
 def instructor_dashboard(request):
     if request.user.role != 'instructor':
         return redirect('student_dashboard')
-    
+
     courses = Course.objects.filter(instructor=request.user)
-    
+
     total_students = sum(course.students.count() for course in courses)
     total_lessons = sum(course.lessons.count() for course in courses)
     pending_grading = Submission.objects.filter(assignment__course__instructor=request.user, grade__isnull=True).count()
-    
+
     all_students = []
     for course in courses:
         for student in course.students.all():
             progress, _ = Progress.objects.get_or_create(student=student, course=course)
             enrollment_date = student.date_joined.date() if student.date_joined else None
-            
+
             if not any(s['student'].id == student.id for s in all_students):
                 all_students.append({
                     'student': student,
@@ -1031,7 +1067,7 @@ def instructor_dashboard(request):
                     'progress': progress.progress_percentage,
                     'enrollment_date': enrollment_date,
                 })
-    
+
     return render(request, 'instructor_dashboard.html', {
         'courses': courses,
         'total_courses': courses.count(),
@@ -1049,7 +1085,7 @@ def create_course(request):
         description = request.POST.get('description')
         level = request.POST.get('level', 'beginner')
         price = request.POST.get('price', 0)
-        
+
         if title:
             course = Course.objects.create(
                 title=title,
@@ -1063,7 +1099,7 @@ def create_course(request):
             return redirect('manage_course', course_id=course.id)
         else:
             messages.error(request, 'Course title is required')
-    
+
     return render(request, 'instructor/create_course.html')
 
 @login_required
@@ -1073,7 +1109,7 @@ def manage_course(request, course_id):
     lessons = course.lessons.all().order_by('order')
     assignments = course.assignments.all()
     students = course.students.all()
-    
+
     return render(request, 'instructor/manage_course.html', {
         'course': course,
         'lessons': lessons,
@@ -1085,7 +1121,7 @@ def manage_course(request, course_id):
 @user_passes_test(is_instructor)
 def add_lesson(request, course_id):
     course = get_object_or_404(Course, id=course_id, instructor=request.user)
-    
+
     if request.method == 'POST':
         title = request.POST.get('title')
         content = request.POST.get('content')
@@ -1093,7 +1129,7 @@ def add_lesson(request, course_id):
         duration = request.POST.get('duration', 0)
         order = request.POST.get('order', 0)
         document = request.FILES.get('document')
-        
+
         if title:
             lesson = Lesson.objects.create(
                 course=course,
@@ -1106,92 +1142,92 @@ def add_lesson(request, course_id):
             if document:
                 lesson.document = document
                 lesson.save()
-            
+
             messages.success(request, f'Lesson "{title}" added successfully!')
             return redirect('manage_course', course_id=course.id)
         else:
             messages.error(request, 'Lesson title is required')
-    
+
     return render(request, 'instructor/add_lesson.html', {'course': course})
 
 @login_required
 @user_passes_test(is_instructor)
 def edit_lesson(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
-    
+
     if lesson.course.instructor != request.user:
         messages.error(request, 'You do not have permission to edit this lesson.')
         return redirect('instructor_dashboard')
-    
+
     if request.method == 'POST':
         lesson.title = request.POST.get('title')
         lesson.content = request.POST.get('content')
         lesson.video_url = request.POST.get('video_url')
         lesson.duration = request.POST.get('duration', 0)
         lesson.order = request.POST.get('order', 0)
-        
+
         if request.FILES.get('document'):
             lesson.document = request.FILES['document']
-        
+
         lesson.save()
         messages.success(request, f'Lesson "{lesson.title}" updated successfully!')
         return redirect('manage_course', course_id=lesson.course.id)
-    
+
     return render(request, 'instructor/edit_lesson.html', {'lesson': lesson})
 
 @login_required
 @user_passes_test(is_instructor)
 def delete_lesson(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
-    
+
     if lesson.course.instructor != request.user:
         messages.error(request, 'You cannot delete this lesson.')
         return redirect('instructor_dashboard')
-    
+
     if request.method == 'POST':
         course_id = lesson.course.id
         lesson.delete()
         messages.success(request, 'Lesson deleted successfully!')
         return redirect('manage_course', course_id=course_id)
-    
+
     return render(request, 'instructor/delete_lesson.html', {'lesson': lesson})
 
 @login_required
 @user_passes_test(is_instructor)
 def add_quiz(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
-    
+
     if lesson.course.instructor != request.user:
         messages.error(request, 'You cannot add a quiz to this lesson.')
         return redirect('instructor_dashboard')
-    
+
     if request.method == 'POST':
         quiz, created = Quiz.objects.get_or_create(lesson=lesson)
         quiz.title = request.POST.get('title', f'Quiz: {lesson.title}')
         quiz.description = request.POST.get('description', '')
         quiz.passing_score = request.POST.get('passing_score', 70)
         quiz.save()
-        
+
         messages.success(request, 'Quiz created! Now add questions.')
         return redirect('add_quiz_question', quiz_id=quiz.id)
-    
+
     return render(request, 'instructor/add_quiz.html', {'lesson': lesson})
 
 @login_required
 @user_passes_test(is_instructor)
 def add_quiz_question(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
-    
+
     if quiz.lesson.course.instructor != request.user:
         messages.error(request, 'You cannot add questions to this quiz.')
         return redirect('instructor_dashboard')
-    
+
     if request.method == 'POST':
         question_text = request.POST.get('question_text')
         question_type = request.POST.get('question_type')
         points = request.POST.get('points', 10)
         correct_answer = request.POST.get('correct_answer')
-        
+
         QuizQuestion.objects.create(
             quiz=quiz,
             question_text=question_text,
@@ -1204,23 +1240,23 @@ def add_quiz_question(request, quiz_id):
             option_d=request.POST.get('option_d', ''),
             correct_answer=correct_answer
         )
-        
+
         messages.success(request, 'Question added!')
         return redirect('add_quiz_question', quiz_id=quiz.id)
-    
+
     return render(request, 'instructor/add_quiz_question.html', {'quiz': quiz})
 
 @login_required
 @user_passes_test(is_instructor)
 def add_assignment(request, course_id):
     course = get_object_or_404(Course, id=course_id, instructor=request.user)
-    
+
     if request.method == 'POST':
         title = request.POST.get('title')
         description = request.POST.get('description')
         due_date = request.POST.get('due_date')
         total_points = request.POST.get('total_points', 100)
-        
+
         if title and due_date:
             Assignment.objects.create(
                 course=course,
@@ -1233,20 +1269,20 @@ def add_assignment(request, course_id):
             return redirect('manage_course', course_id=course.id)
         else:
             messages.error(request, 'Assignment title and due date are required.')
-    
+
     return render(request, 'instructor/add_assignment.html', {'course': course})
 
 @login_required
 @user_passes_test(is_instructor)
 def view_submissions(request, assignment_id):
     assignment = get_object_or_404(Assignment, id=assignment_id)
-    
+
     if assignment.course.instructor != request.user:
         messages.error(request, 'You cannot view submissions for this assignment.')
         return redirect('instructor_dashboard')
-    
+
     submissions = assignment.submissions.all().order_by('-submitted_at')
-    
+
     return render(request, 'instructor/view_submissions.html', {
         'assignment': assignment,
         'submissions': submissions
@@ -1256,15 +1292,15 @@ def view_submissions(request, assignment_id):
 @user_passes_test(is_instructor)
 def grade_submission(request, submission_id):
     submission = get_object_or_404(Submission, id=submission_id)
-    
+
     if submission.assignment.course.instructor != request.user:
         messages.error(request, 'You cannot grade this submission.')
         return redirect('instructor_dashboard')
-    
+
     if request.method == 'POST':
         grade = request.POST.get('grade')
         feedback = request.POST.get('feedback', '')
-        
+
         try:
             grade = int(grade)
             max_points = submission.assignment.total_points
@@ -1274,7 +1310,7 @@ def grade_submission(request, submission_id):
                 submission.grade = grade
                 submission.feedback = feedback
                 submission.save()
-                
+
                 try:
                     send_mail(
                         f'Assignment Graded: {submission.assignment.title}',
@@ -1285,12 +1321,12 @@ def grade_submission(request, submission_id):
                     )
                 except:
                     pass
-                
-                messages.success(request, f'Grade submitted! Student notified.')
+
+                messages.success(request, 'Grade submitted! Student notified.')
                 return redirect('view_submissions', assignment_id=submission.assignment.id)
         except ValueError:
             messages.error(request, 'Please enter a valid number for grade')
-    
+
     return render(request, 'grade_submission.html', {'submission': submission})
 
 # ==================== BULK STUDENT UPLOAD ====================
@@ -1299,11 +1335,11 @@ def grade_submission(request, submission_id):
 def api_users(request):
     if request.user.role != 'admin':
         return JsonResponse({'error': 'Unauthorized'}, status=403)
-    
+
     if request.method == 'GET':
         users = User.objects.all().values('id', 'username', 'email', 'role', 'is_approved', 'first_name', 'last_name')
         return JsonResponse(list(users), safe=False)
-    
+
     elif request.method == 'DELETE':
         try:
             data = json.loads(request.body)
@@ -1312,31 +1348,31 @@ def api_users(request):
             return JsonResponse({'success': True})
         except:
             return JsonResponse({'error': 'Failed to delete'}, status=400)
-    
+
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 @login_required
 def api_bulk_upload(request):
     if request.user.role != 'admin':
         return JsonResponse({'error': 'Unauthorized'}, status=403)
-    
+
     if request.method == 'POST' and request.FILES.get('csv'):
         try:
             csv_file = request.FILES['csv']
             decoded = csv_file.read().decode('utf-8')
             io_string = io.StringIO(decoded)
             reader = csv.DictReader(io_string)
-            
+
             created = 0
             errors = []
-            
+
             for row in reader:
                 username = row.get('username', '').strip()
                 email = row.get('email', '').strip()
                 password = row.get('password', 'Student@123')
                 first_name = row.get('first_name', '')
                 last_name = row.get('last_name', '')
-                
+
                 if username and email:
                     user, created_flag = User.objects.get_or_create(
                         username=username,
@@ -1356,11 +1392,11 @@ def api_bulk_upload(request):
                         errors.append(f'{username} already exists')
                 else:
                     errors.append('Missing username or email')
-            
+
             return JsonResponse({'success': True, 'created': created, 'errors': errors[:5]})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-    
+
     return JsonResponse({'error': 'No CSV file provided'}, status=400)
 
 @login_required
@@ -1377,34 +1413,34 @@ def bulk_upload_process(request):
         csv_file = request.FILES.get('csv_file')
         send_welcome = request.POST.get('send_welcome') == 'on'
         auto_enroll = request.POST.get('auto_enroll') == 'on'
-        
+
         if not csv_file:
             messages.error(request, 'Please select a CSV file.')
             return redirect('bulk_upload_page')
-        
+
         if not csv_file.name.endswith('.csv'):
             messages.error(request, 'Please upload a CSV file.')
             return redirect('bulk_upload_page')
-        
+
         try:
             data = csv_file.read().decode('utf-8')
             io_string = io.StringIO(data)
             reader = csv.DictReader(io_string)
-            
+
             added = 0
             errors = []
-            
+
             for row in reader:
                 username = row.get('username', '').strip()
                 email = row.get('email', '').strip()
                 password = row.get('password', 'Mal@@@123')
                 first_name = row.get('first_name', '')
                 last_name = row.get('last_name', '')
-                
+
                 if not username or not email:
-                    errors.append(f'Missing username or email')
+                    errors.append('Missing username or email')
                     continue
-                
+
                 user, created = User.objects.get_or_create(
                     username=username,
                     defaults={
@@ -1415,12 +1451,12 @@ def bulk_upload_process(request):
                         'is_approved': True
                     }
                 )
-                
+
                 if created:
                     user.set_password(password)
                     user.save()
                     added += 1
-                    
+
                     if send_welcome:
                         try:
                             send_mail(
@@ -1436,7 +1472,7 @@ def bulk_upload_process(request):
                     if user.role != 'student':
                         user.role = 'student'
                         user.save()
-                
+
                 if auto_enroll and course_id:
                     try:
                         course = Course.objects.get(id=course_id, instructor=request.user)
@@ -1445,42 +1481,42 @@ def bulk_upload_process(request):
                             Progress.objects.get_or_create(student=user, course=course)
                     except Course.DoesNotExist:
                         pass
-            
+
             messages.success(request, f'Successfully added {added} new students!')
             if errors:
                 messages.warning(request, f'Errors: {", ".join(errors[:3])}')
-            
+
             return redirect('instructor_dashboard')
         except Exception as e:
-            messages.error(request, f'Error processing CSV: {str(e)}')
+            messages.error(request, f'Error processing CSV: {e!s}')
             return redirect('bulk_upload_page')
-    
+
     return redirect('bulk_upload_page')
 
 @login_required
 @user_passes_test(is_instructor)
 def bulk_upload_students(request, course_id):
     course = get_object_or_404(Course, id=course_id, instructor=request.user)
-    
+
     if request.method == 'POST' and request.FILES.get('csv_file'):
         csv_file = request.FILES['csv_file']
-        
+
         if not csv_file.name.endswith('.csv'):
             messages.error(request, 'Please upload a CSV file.')
             return redirect('manage_course', course_id=course.id)
-        
+
         data = csv_file.read().decode('utf-8')
         io_string = io.StringIO(data)
         reader = csv.DictReader(io_string)
-        
+
         added = 0
         errors = []
-        
+
         for row in reader:
             username = row.get('username')
             email = row.get('email')
             password = row.get('password', 'Password123!')
-            
+
             if username and email:
                 user, created = User.objects.get_or_create(
                     username=username,
@@ -1499,13 +1535,13 @@ def bulk_upload_students(request, course_id):
                         added += 1
                     else:
                         errors.append(f'{username} already enrolled')
-        
+
         messages.success(request, f'Added {added} students to the course!')
         if errors:
             messages.warning(request, f'Errors: {", ".join(errors[:5])}')
-        
+
         return redirect('manage_course', course_id=course.id)
-    
+
     return render(request, 'instructor/bulk_upload.html', {'course': course})
 
 # ==================== ADMIN VIEWS ====================
@@ -1514,15 +1550,15 @@ def bulk_upload_students(request, course_id):
 def admin_dashboard(request):
     if request.user.role != 'admin':
         return redirect('company_home')
-    
+
     section = request.GET.get('section', 'dashboard')
-    
+
     all_users = User.objects.all().order_by('-date_joined')
     students = all_users.filter(role='student')
     instructors = all_users.filter(role='instructor')
     courses = Course.objects.all().order_by('-created_at')
     submissions = Submission.objects.all()
-    
+
     context = {
         'section': section,
         'total_courses': courses.count(),
@@ -1578,59 +1614,59 @@ def get_notifications(request):
 @login_required
 def course_announcements(request, course_id):
     course = get_object_or_404(Course, id=course_id)
-    
+
     if request.user.role == 'student' and request.user not in course.students.all():
         messages.error(request, 'You are not enrolled in this course.')
         return redirect('student_dashboard')
-    
+
     if request.user.role == 'instructor' and course.instructor != request.user:
         messages.error(request, 'You do not own this course.')
         return redirect('instructor_dashboard')
-    
+
     announcements = course.announcements.all().order_by('-is_pinned', '-created_at')
-    
+
     if request.method == 'POST' and request.user.role == 'instructor':
         title = request.POST.get('title')
         content = request.POST.get('content')
         is_pinned = request.POST.get('is_pinned') == 'on'
-        
+
         if title and content:
             Announcement.objects.create(course=course, title=title, content=content, author=request.user, is_pinned=is_pinned)
             messages.success(request, 'Announcement posted successfully!')
         else:
             messages.error(request, 'Title and content are required.')
-        
+
         return redirect('course_announcements', course_id=course.id)
-    
+
     return render(request, 'announcements.html', {'course': course, 'announcements': announcements})
 
 @login_required
 def toggle_announcement_pin(request, announcement_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     announcement = get_object_or_404(Announcement, id=announcement_id)
-    
+
     if request.user.role != 'instructor' or announcement.course.instructor != request.user:
         return JsonResponse({'error': 'Permission denied'}, status=403)
-    
+
     announcement.is_pinned = not announcement.is_pinned
     announcement.save()
-    
+
     return JsonResponse({'success': True, 'is_pinned': announcement.is_pinned})
 
 @login_required
 def delete_announcement(request, announcement_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     announcement = get_object_or_404(Announcement, id=announcement_id)
-    
+
     if request.user.role != 'instructor' or announcement.course.instructor != request.user:
         return JsonResponse({'error': 'Permission denied'}, status=403)
-    
+
     announcement.delete()
-    
+
     return JsonResponse({'success': True})
 
 # ==================== FORUM SYSTEM ====================
@@ -1638,13 +1674,13 @@ def delete_announcement(request, announcement_id):
 def lesson_discussions(request, lesson_id):
     """View all discussions for a lesson"""
     lesson = get_object_or_404(Lesson, id=lesson_id)
-    
+
     # Check permissions
     if request.user.is_authenticated:
         if request.user.role == 'student' and request.user not in lesson.course.students.all():
             messages.error(request, 'You are not enrolled in this course.')
             return redirect('course_detail', course_id=lesson.course.id)
-    
+
     if request.method == 'POST' and 'create_discussion' in request.POST:
         title = request.POST.get('title', '').strip()
         content = request.POST.get('content', '').strip()
@@ -1661,7 +1697,7 @@ def lesson_discussions(request, lesson_id):
             return redirect('discussion_detail', topic_id=topic.id)
 
     topics = ForumTopic.objects.filter(lesson=lesson).order_by('-is_pinned', '-created_at')
-    
+
     return render(request, 'discussion/lesson_discussions.html', {
         'lesson': lesson,
         'discussions': topics,
@@ -1673,7 +1709,7 @@ def discussion_detail(request, topic_id):
     """View a single discussion topic and its replies"""
     topic = get_object_or_404(ForumTopic, id=topic_id)
     lesson = topic.lesson
-    
+
     if request.user.role == 'student':
         if request.user not in lesson.course.students.all():
             messages.warning(request, 'You need to be enrolled in this course to view discussions.')
@@ -1682,11 +1718,11 @@ def discussion_detail(request, topic_id):
         if lesson.course.instructor != request.user and request.user.role != 'admin':
             messages.error(request, 'You do not have permission to view this discussion.')
             return redirect('instructor_dashboard')
-    
+
     topic.views_count += 1
     topic.save(update_fields=['views_count'])
     posts = topic.posts.filter(parent=None).prefetch_related('posts__author').order_by('created_at')
-    
+
     if request.method == 'POST' and 'add_reply' in request.POST:
         if topic.is_closed:
             messages.error(request, 'This discussion is closed.')
@@ -1694,12 +1730,12 @@ def discussion_detail(request, topic_id):
 
         content = request.POST.get('content')
         parent_id = request.POST.get('parent_reply_id')
-        
+
         if content:
             parent = None
             if parent_id:
                 parent = get_object_or_404(ForumPost, id=parent_id)
-            
+
             ForumPost.objects.create(
                 topic=topic,
                 author=request.user,
@@ -1709,9 +1745,9 @@ def discussion_detail(request, topic_id):
             messages.success(request, 'Your reply has been posted.')
         else:
             messages.error(request, 'Please enter some content for your reply.')
-        
+
         return redirect('discussion_detail', topic_id=topic.id)
-    
+
     if request.method == 'POST' and 'delete_reply' in request.POST:
         if request.user.role == 'instructor' and lesson.course.instructor == request.user:
             reply_id = request.POST.get('reply_id')
@@ -1723,9 +1759,9 @@ def discussion_detail(request, topic_id):
                 messages.error(request, 'Reply not found.')
         else:
             messages.error(request, 'You do not have permission to delete this reply.')
-        
+
         return redirect('discussion_detail', topic_id=topic.id)
-    
+
     reply_list = []
     for post in posts:
         reply_data = {
@@ -1738,7 +1774,7 @@ def discussion_detail(request, topic_id):
             'can_delete': request.user.role == 'instructor' and lesson.course.instructor == request.user
         }
         reply_list.append(reply_data)
-    
+
     context = {
         'discussion': topic,
         'lesson': lesson,
@@ -1746,25 +1782,25 @@ def discussion_detail(request, topic_id):
         'posts': reply_list,
         'can_delete_discussion': request.user.role == 'instructor' and lesson.course.instructor == request.user
     }
-    
+
     return render(request, 'discussion/discussion_detail.html', context)
 
 @login_required
 def toggle_discussion_pin(request, discussion_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     try:
         topic = get_object_or_404(ForumTopic, id=discussion_id)
-        
+
         if request.user.role != 'instructor' or topic.lesson.course.instructor != request.user:
             return JsonResponse({'error': 'Permission denied'}, status=403)
-        
+
         topic.is_pinned = not topic.is_pinned
         topic.save()
-        
+
         return JsonResponse({'success': True, 'is_pinned': topic.is_pinned})
-        
+
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -1772,22 +1808,22 @@ def toggle_discussion_pin(request, discussion_id):
 def toggle_discussion_lock(request, discussion_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     try:
         topic = get_object_or_404(ForumTopic, id=discussion_id)
-        
+
         if request.user.role != 'instructor' or topic.lesson.course.instructor != request.user:
             return JsonResponse({'error': 'Permission denied'}, status=403)
-        
+
         topic.is_closed = not topic.is_closed
         topic.save()
-        
+
         return JsonResponse({
             'success': True,
             'is_locked': topic.is_closed,
             'is_closed': topic.is_closed,
         })
-        
+
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -1795,19 +1831,19 @@ def toggle_discussion_lock(request, discussion_id):
 def delete_discussion(request, discussion_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     try:
         topic = get_object_or_404(ForumTopic, id=discussion_id)
         lesson = topic.lesson
-        
+
         if request.user.role != 'instructor' or lesson.course.instructor != request.user:
             return JsonResponse({'error': 'You do not have permission to delete this discussion'}, status=403)
-        
+
         topic.posts.all().delete()
         topic.delete()
-        
+
         return JsonResponse({'success': True, 'message': 'Discussion deleted successfully'})
-        
+
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -1816,33 +1852,33 @@ def delete_discussion(request, discussion_id):
 @login_required
 def course_roster(request, course_id):
     course = get_object_or_404(Course, id=course_id)
-    
+
     if request.user.role == 'student' and request.user not in course.students.all():
         messages.error(request, 'You are not enrolled in this course.')
         return redirect('student_dashboard')
-    
+
     if request.user.role == 'instructor' and course.instructor != request.user:
         messages.error(request, 'You do not own this course.')
         return redirect('instructor_dashboard')
-    
+
     students = []
     for student in course.students.all():
         progress, _ = Progress.objects.get_or_create(student=student, course=course)
-        
+
         attendance_count = Attendance.objects.filter(student=student, course=course, status='present').count()
         total_attendance = Attendance.objects.filter(student=student, course=course).count()
         attendance_percent = int((attendance_count / total_attendance) * 100) if total_attendance > 0 else 0
-        
+
         submissions = Submission.objects.filter(student=student, assignment__course=course, grade__isnull=False)
         avg_grade = submissions.aggregate(avg=Avg('grade'))['avg'] or 0
-        
+
         students.append({
             'student': student,
             'progress': progress.progress_percentage,
             'attendance': attendance_percent,
             'grade': f"{avg_grade:.0f}%" if avg_grade > 0 else "N/A"
         })
-    
+
     return render(request, 'course_roster.html', {'course': course, 'students': students})
 
 # ==================== ATTENDANCE ====================
@@ -1850,44 +1886,44 @@ def course_roster(request, course_id):
 @login_required
 def course_attendance(request, course_id):
     course = get_object_or_404(Course, id=course_id)
-    
+
     if request.user.role != 'instructor' or course.instructor != request.user:
         messages.error(request, 'Only instructors can view attendance.')
         return redirect('instructor_dashboard')
-    
+
     attendances = Attendance.objects.filter(course=course).order_by('-date')
-    
+
     return render(request, 'attendance.html', {'course': course, 'attendances': attendances})
 
 @login_required
 def mark_attendance(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     course_id = request.POST.get('course_id')
     student_id = request.POST.get('student_id')
     status = request.POST.get('status')
     date = request.POST.get('date')
-    
+
     course = get_object_or_404(Course, id=course_id)
-    
+
     if request.user.role != 'instructor' or course.instructor != request.user:
         return JsonResponse({'error': 'Permission denied'}, status=403)
-    
+
     student = get_object_or_404(User, id=student_id)
-    
+
     attendance, created = Attendance.objects.get_or_create(
         student=student,
         course=course,
         date=date,
         defaults={'status': status, 'marked_by': request.user}
     )
-    
+
     if not created:
         attendance.status = status
         attendance.marked_by = request.user
         attendance.save()
-    
+
     return JsonResponse({'success': True})
 
 # ==================== MODERN LESSON API ENDPOINTS ====================
@@ -1898,16 +1934,16 @@ def api_module_content(request, module_id):
         module = LessonModule.objects.get(id=module_id)
     except LessonModule.DoesNotExist:
         return JsonResponse({'error': 'Module not found'}, status=404)
-    
+
     if request.user.role == 'student' and request.user not in module.lesson.course.students.all():
         return JsonResponse({'error': 'You are not enrolled in this course'}, status=403)
-    
+
     previous_modules = module.lesson.modules.filter(order__lt=module.order)
     for prev_module in previous_modules:
         progress_exists = UserModuleProgress.objects.filter(student=request.user, module=prev_module, completed=True).exists()
         if not progress_exists:
             return JsonResponse({'error': 'Complete previous modules first'}, status=403)
-    
+
     return JsonResponse({
         'id': module.id,
         'title': module.title,
@@ -1926,24 +1962,24 @@ def api_module_quiz(request, module_id):
         module = LessonModule.objects.get(id=module_id)
     except LessonModule.DoesNotExist:
         return JsonResponse({'error': 'Module not found'}, status=404)
-    
+
     if module.content_type != 'quiz':
         return JsonResponse({'error': 'This module does not have a quiz'}, status=400)
-    
+
     if request.user.role == 'student' and request.user not in module.lesson.course.students.all():
         return JsonResponse({'error': 'You are not enrolled in this course'}, status=403)
-    
+
     previous_modules = module.lesson.modules.filter(order__lt=module.order)
     for prev_module in previous_modules:
         progress_exists = UserModuleProgress.objects.filter(student=request.user, module=prev_module, completed=True).exists()
         if not progress_exists:
             return JsonResponse({'error': 'Complete previous modules first'}, status=403)
-    
+
     questions = []
     if hasattr(module.lesson, 'quiz'):
         quiz = module.lesson.quiz
         quiz_questions = quiz.questions.all()
-        
+
         for q in quiz_questions:
             questions.append({
                 'id': q.id,
@@ -1952,7 +1988,7 @@ def api_module_quiz(request, module_id):
                 'type': q.question_type,
                 'points': q.points
             })
-    
+
     return JsonResponse({
         'id': module.id,
         'title': f"Quiz: {module.title}",
@@ -1966,45 +2002,45 @@ def api_module_quiz(request, module_id):
 def api_module_complete(request, module_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST method required'}, status=405)
-    
+
     try:
         module = LessonModule.objects.get(id=module_id)
     except LessonModule.DoesNotExist:
         return JsonResponse({'error': 'Module not found'}, status=404)
-    
+
     if request.user.role == 'student' and request.user not in module.lesson.course.students.all():
         return JsonResponse({'error': 'You are not enrolled in this course'}, status=403)
-    
+
     previous_modules = module.lesson.modules.filter(order__lt=module.order)
     for prev_module in previous_modules:
         progress_exists = UserModuleProgress.objects.filter(student=request.user, module=prev_module, completed=True).exists()
         if not progress_exists:
             return JsonResponse({'error': f'Complete "{prev_module.title}" first', 'required_module': prev_module.title}, status=403)
-    
+
     progress, created = UserModuleProgress.objects.get_or_create(student=request.user, module=module)
-    
+
     if progress.completed:
         return JsonResponse({'success': False, 'message': 'Module already completed'})
-    
+
     progress.completed = True
     progress.completed_at = timezone.now()
     progress.save()
-    
+
     interaction, _ = LessonInteraction.objects.get_or_create(student=request.user, lesson=module.lesson)
     completed_count = UserModuleProgress.objects.filter(student=request.user, module__lesson=module.lesson, completed=True).count()
     interaction.modules_completed = completed_count
     interaction.total_time_spent = getattr(interaction, 'total_time_spent', 0) + module.time_estimate * 60
     interaction.last_module_viewed = module.order
     interaction.save()
-    
+
     streak, _ = DailyStreak.objects.get_or_create(user=request.user)
     streak.total_xp += module.points
     streak.save()
-    
+
     total_modules = module.lesson.modules.count()
     lesson_completed = False
     lesson_completion_bonus = 0
-    
+
     if completed_count == total_modules and not interaction.completed:
         interaction.completed = True
         interaction.completed_at = timezone.now()
@@ -2013,13 +2049,13 @@ def api_module_complete(request, module_id):
         lesson_completion_bonus = 50
         streak.total_xp += lesson_completion_bonus
         streak.save()
-        
+
         course_progress, _ = Progress.objects.get_or_create(student=request.user, course=module.lesson.course)
         if module.lesson not in course_progress.completed_lessons.all():
             course_progress.completed_lessons.add(module.lesson)
-    
+
     check_for_badges(request.user)
-    
+
     return JsonResponse({
         'success': True,
         'xp_earned': module.points,
@@ -2038,16 +2074,16 @@ def api_lesson_progress(request, lesson_id):
         lesson = Lesson.objects.get(id=lesson_id)
     except Lesson.DoesNotExist:
         return JsonResponse({'error': 'Lesson not found'}, status=404)
-    
+
     if request.user.role == 'student' and request.user not in lesson.course.students.all():
         return JsonResponse({'error': 'You are not enrolled in this course'}, status=403)
-    
+
     interaction, _ = LessonInteraction.objects.get_or_create(student=request.user, lesson=lesson)
     total_modules = lesson.modules.count()
     modules_completed = UserModuleProgress.objects.filter(student=request.user, module__lesson=lesson, completed=True).count()
     progress_percentage = int((modules_completed / total_modules) * 100) if total_modules > 0 else 0
     streak, _ = DailyStreak.objects.get_or_create(user=request.user)
-    
+
     return JsonResponse({
         'lesson_id': lesson.id,
         'lesson_title': lesson.title,
@@ -2064,39 +2100,39 @@ def api_lesson_progress(request, lesson_id):
 def api_lesson_complete(request, lesson_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST method required'}, status=405)
-    
+
     try:
         lesson = Lesson.objects.get(id=lesson_id)
     except Lesson.DoesNotExist:
         return JsonResponse({'error': 'Lesson not found'}, status=404)
-    
+
     if request.user.role == 'student' and request.user not in lesson.course.students.all():
         return JsonResponse({'error': 'You are not enrolled in this course'}, status=403)
-    
+
     total_modules = lesson.modules.count()
     modules_completed = UserModuleProgress.objects.filter(student=request.user, module__lesson=lesson, completed=True).count()
-    
+
     if total_modules > 0 and modules_completed < total_modules:
         return JsonResponse({'error': f'Complete all {total_modules} modules first', 'modules_remaining': total_modules - modules_completed}, status=400)
-    
+
     interaction, _ = LessonInteraction.objects.get_or_create(student=request.user, lesson=lesson)
-    
+
     if interaction.completed:
         return JsonResponse({'success': False, 'message': 'Lesson already completed'})
-    
+
     interaction.completed = True
     interaction.completed_at = timezone.now()
     interaction.save()
-    
+
     progress, _ = Progress.objects.get_or_create(student=request.user, course=lesson.course)
     if lesson not in progress.completed_lessons.all():
         progress.completed_lessons.add(lesson)
-    
+
     streak, _ = DailyStreak.objects.get_or_create(user=request.user)
     bonus_xp = 50
     streak.total_xp += bonus_xp
     streak.save()
-    
+
     return JsonResponse({
         'success': True,
         'xp_earned': bonus_xp,
@@ -2111,14 +2147,14 @@ def api_check_module_status(request, lesson_id):
         lesson = Lesson.objects.get(id=lesson_id)
     except Lesson.DoesNotExist:
         return JsonResponse({'error': 'Lesson not found'}, status=404)
-    
+
     modules = lesson.modules.all()
     completed_module_ids = []
-    
+
     for module in modules:
         if UserModuleProgress.objects.filter(student=request.user, module=module, completed=True).exists():
             completed_module_ids.append(module.id)
-    
+
     return JsonResponse({
         'lesson_id': lesson.id,
         'total_modules': modules.count(),
@@ -2132,25 +2168,25 @@ def api_check_module_status(request, lesson_id):
 def ai_assistant_api(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST method required'}, status=405)
-    
+
     if request.user.role != 'admin':
         return JsonResponse({'error': 'Admin access required'}, status=403)
-    
+
     try:
         data = json.loads(request.body)
         user_input = data.get('message', '')
-        
+
         if not user_input:
             return JsonResponse({'error': 'No message provided'}, status=400)
-        
+
         assistant = AIAdminAssistant()
         response = assistant.process(user_input)
-        
+
         if response['action'] == 'list_courses':
             courses = Course.objects.all()
             response['data']['courses_count'] = courses.count()
             response['data']['courses'] = [{'id': c.id, 'title': c.title, 'level': c.level} for c in courses[:5]]
-        
+
         return JsonResponse(response)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
@@ -2159,10 +2195,10 @@ def ai_assistant_api(request):
 def ai_recommendations(request):
     if request.user.role != 'student':
         return redirect('instructor_dashboard')
-    
+
     enrolled_courses = request.user.enrolled_courses.all()
     completed_count = in_progress_count = not_started_count = 0
-    
+
     for course in enrolled_courses:
         progress, _ = Progress.objects.get_or_create(student=request.user, course=course)
         if progress.progress_percentage == 100:
@@ -2171,7 +2207,7 @@ def ai_recommendations(request):
             in_progress_count += 1
         else:
             not_started_count += 1
-    
+
     total = completed_count + in_progress_count + not_started_count
     if total > 0:
         completed_percentage = int((completed_count / total) * 100)
@@ -2180,9 +2216,9 @@ def ai_recommendations(request):
         overall_progress = int((completed_count / total) * 100)
     else:
         completed_percentage = in_progress_percentage = not_started_percentage = overall_progress = 0
-    
+
     recommendations = get_course_recommendations(request.user)
-    
+
     return render(request, 'ai_dashboard.html', {
         'recommendations': recommendations,
         'completed_percentage': completed_percentage,
@@ -2197,18 +2233,18 @@ def ai_recommendations(request):
 @user_passes_test(is_instructor)
 def instructor_student_view(request, user_id):
     student = get_object_or_404(User, id=user_id, role='student')
-    
+
     instructor_courses = Course.objects.filter(instructor=request.user)
     is_enrolled = student.enrolled_courses.filter(id__in=instructor_courses).exists()
-    
+
     if not is_enrolled and request.user.role != 'admin':
         messages.error(request, 'You can only view students enrolled in your courses.')
         return redirect('instructor_dashboard')
-    
+
     profile, created = LearnerProfile.objects.get_or_create(user=student)
     documents = student.documents.all()
     logbooks = student.logbook_entries.all().order_by('-entry_date')[:10]
-    
+
     enrolled_courses = student.enrolled_courses.all()
     course_progress = []
     for course in enrolled_courses:
@@ -2219,9 +2255,9 @@ def instructor_student_view(request, user_id):
             'completed_lessons': progress.completed_lessons.count(),
             'total_lessons': course.lessons.count()
         })
-    
+
     certificates = Certificate.objects.filter(student=student)
-    
+
     context = {
         'student': student,
         'profile': profile,
@@ -2241,13 +2277,13 @@ def instructor_student_view(request, user_id):
 def learner_profile_view(request, user_id):
     learner = get_object_or_404(User, id=user_id)
     profile, created = LearnerProfile.objects.get_or_create(user=learner)
-    
+
     AuditLog.objects.create(user=request.user, action='view', resource_type='LearnerProfile', resource_id=user_id, ip_address=get_client_ip(request))
-    
+
     courses = Course.objects.filter(status='published')
     documents = learner.documents.all()
     logbooks = learner.logbook_entries.all()
-    
+
     return render(request, 'admin/learner_profile.html', {
         'learner': learner, 'profile': profile, 'courses': courses,
         'documents': documents, 'logbooks': logbooks
@@ -2258,61 +2294,61 @@ def learner_profile_view(request, user_id):
 def save_learner_profile(request, user_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     learner = get_object_or_404(User, id=user_id)
     profile, created = LearnerProfile.objects.get_or_create(user=learner)
-    
+
     try:
         data = json.loads(request.body)
-        
+
         if 'full_name' in data:
             name_parts = data['full_name'].split(' ', 1)
             learner.first_name = name_parts[0]
             learner.last_name = name_parts[1] if len(name_parts) > 1 else ''
-        
+
         learner.email = data.get('email', learner.email)
         learner.contact_number = data.get('phone_number', learner.contact_number)
         learner.id_number = data.get('id_number', learner.id_number)
-        
+
         if data.get('date_of_birth'):
             learner.date_of_birth = datetime.strptime(data['date_of_birth'], '%Y-%m-%d').date()
-        
+
         learner.gender = data.get('gender', learner.gender)
         learner.nationality = data.get('nationality', learner.nationality)
         learner.disability = data.get('disability', learner.disability)
         learner.preferred_language = data.get('preferred_language', learner.preferred_language)
         learner.save()
-        
+
         profile.physical_address = data.get('physical_address', profile.physical_address)
         profile.emergency_contact_name = data.get('emergency_contact_name', profile.emergency_contact_name)
         profile.emergency_contact_phone = data.get('emergency_contact_phone', profile.emergency_contact_phone)
         profile.host_company_name = data.get('host_company', profile.host_company_name)
-        
+
         if data.get('mou_start_date'):
             profile.mou_start_date = datetime.strptime(data['mou_start_date'], '%Y-%m-%d').date()
         if data.get('mou_end_date'):
             profile.mou_end_date = datetime.strptime(data['mou_end_date'], '%Y-%m-%d').date()
-        
+
         profile.supervisor_name = data.get('supervisor_name', profile.supervisor_name)
         profile.supervisor_phone = data.get('supervisor_phone', profile.supervisor_phone)
         profile.supervisor_email = data.get('supervisor_email', profile.supervisor_email)
-        
+
         if data.get('course_id'):
             profile.current_course_id = int(data['course_id'])
         if data.get('enrollment_date'):
             profile.enrollment_date = datetime.strptime(data['enrollment_date'], '%Y-%m-%d').date()
-        
+
         profile.assessment_notes = data.get('assessment_notes', profile.assessment_notes)
         profile.certificate_issued = data.get('certificate_issued', False)
         if data.get('certificate_issued_date'):
             profile.certificate_issued_date = datetime.strptime(data['certificate_issued_date'], '%Y-%m-%d').date()
-        
+
         profile.popia_consent = data.get('popia_consent', profile.popia_consent)
         if profile.popia_consent and not profile.popia_consent_date:
             profile.popia_consent_date = timezone.now()
-        
+
         profile.save()
-        
+
         AuditLog.objects.create(user=request.user, action='edit', resource_type='LearnerProfile', resource_id=user_id, ip_address=get_client_ip(request))
         return JsonResponse({'success': True, 'message': 'Profile saved successfully'})
     except Exception as e:
@@ -2323,32 +2359,32 @@ def save_learner_profile(request, user_id):
 def upload_learner_document(request, user_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     learner = get_object_or_404(User, id=user_id)
-    
+
     if 'document' not in request.FILES:
         return JsonResponse({'error': 'No file provided'}, status=400)
-    
+
     file = request.FILES['document']
     doc_type = request.POST.get('document_type', 'other')
-    
+
     allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
     if file.content_type not in allowed_types:
         return JsonResponse({'error': 'Invalid file type'}, status=400)
-    
+
     filename = get_valid_filename(file.name)
     timestamp = int(time.time())
     unique_filename = f"{user_id}_{doc_type}_{timestamp}_{filename}"
-    
+
     doc = LearnerDocument(
         user=learner, document_type=doc_type, title=request.POST.get('title', filename),
         file=file, file_name=filename, file_size=file.size,
         description=request.POST.get('description', ''), uploaded_by=request.user
     )
     doc.save()
-    
+
     AuditLog.objects.create(user=request.user, action='create', resource_type='LearnerDocument', resource_id=doc.id, ip_address=get_client_ip(request))
-    
+
     return JsonResponse({'success': True, 'document': {
         'id': doc.id, 'type': doc.get_document_type_display(), 'name': doc.file_name,
         'date': doc.upload_date.strftime('%Y-%m-%d'),
@@ -2360,12 +2396,12 @@ def upload_learner_document(request, user_id):
 def delete_learner_document(request, doc_id):
     if request.method != 'DELETE':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     doc = get_object_or_404(LearnerDocument, id=doc_id)
-    
+
     if doc.file and os.path.isfile(doc.file.path):
         os.remove(doc.file.path)
-    
+
     doc.delete()
     return JsonResponse({'success': True})
 
@@ -2373,12 +2409,12 @@ def delete_learner_document(request, doc_id):
 @user_passes_test(is_admin)
 def download_learner_document(request, doc_id):
     doc = get_object_or_404(LearnerDocument, id=doc_id)
-    
+
     AuditLog.objects.create(user=request.user, action='download', resource_type='LearnerDocument', resource_id=doc_id, ip_address=get_client_ip(request))
-    
+
     if doc.file and os.path.isfile(doc.file.path):
         return FileResponse(open(doc.file.path, 'rb'), as_attachment=True, filename=doc.file_name)
-    
+
     return JsonResponse({'error': 'File not found'}, status=404)
 
 @login_required
@@ -2386,16 +2422,16 @@ def download_learner_document(request, doc_id):
 def add_logbook_entry(request, user_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     learner = get_object_or_404(User, id=user_id)
     data = json.loads(request.body)
-    
+
     entry = LogbookEntry.objects.create(
         user=learner, entry_date=datetime.strptime(data.get('entry_date'), '%Y-%m-%d').date(),
         hours_spent=data.get('hours_spent', 0), description=data.get('description', ''),
         skills_learned=data.get('skills_learned', '')
     )
-    
+
     return JsonResponse({'success': True, 'entry': {
         'id': entry.id, 'date': entry.entry_date.strftime('%Y-%m-%d'),
         'hours': str(entry.hours_spent), 'description': entry.description, 'skills': entry.skills_learned
@@ -2410,7 +2446,7 @@ def export_learner_report(request, user_id):
     profile = LearnerProfile.objects.get_or_create(user=learner)[0]
     documents = learner.documents.all()
     logbooks = learner.logbook_entries.all().order_by('-entry_date')
-    
+
     course_progress = []
     for course in learner.enrolled_courses.all():
         progress, _ = Progress.objects.get_or_create(student=learner, course=course)
@@ -2420,21 +2456,21 @@ def export_learner_report(request, user_id):
             'completed_lessons': progress.completed_lessons.count(),
             'total_lessons': course.lessons.count()
         })
-    
+
     doc_rows = ""
     for doc in documents:
         doc_rows += f'<tr><td>{doc.get_document_type_display()}</td><td>{doc.file_name}</td><td>{doc.upload_date.strftime("%Y-%m-%d")}</td><td>{doc.file_size // 1024} KB</td></tr>'
-    
+
     if not documents:
         doc_rows = '<tr><td colspan="4" style="text-align: center;">No documents uploaded</td></tr>'
-    
+
     logbook_rows = ""
     for entry in logbooks:
         logbook_rows += f'<tr><td>{entry.entry_date.strftime("%Y-%m-%d")}</td><td>{entry.hours_spent}</td><td>{entry.description[:100]}</td><td>{entry.skills_learned[:100] if entry.skills_learned else "N/A"}</td><td><span style="color: {"green" if entry.supervisor_approved else "orange"};">{"Approved" if entry.supervisor_approved else "Pending"}</span></td></tr>'
-    
+
     if not logbooks:
         logbook_rows = '<tr><td colspan="5" style="text-align: center;">No logbook entries</td></tr>'
-    
+
     progress_rows = ""
     for cp in course_progress:
         status = "Completed" if cp['progress'] == 100 else "In Progress" if cp['progress'] > 0 else "Not Started"
@@ -2447,7 +2483,7 @@ def export_learner_report(request, user_id):
             <td><span style="color: {color};">{status}</span></td>
         </tr>
         '''
-    
+
     html_content = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -2510,9 +2546,9 @@ def export_learner_report(request, user_id):
 </body>
 </html>
 """
-    
+
     AuditLog.objects.create(user=request.user, action='export', resource_type='LearnerProfile', resource_id=user_id, ip_address=get_client_ip(request), details={'format': 'HTML'})
-    
+
     response = HttpResponse(html_content, content_type='text/html')
     response['Content-Disposition'] = f'attachment; filename="learner_report_{learner.username}_{timezone.now().strftime("%Y%m%d_%H%M%S")}.html"'
     return response
@@ -2534,15 +2570,15 @@ def contact_form_submit(request):
             organisation = request.POST.get('organisation', '')
             client_type = request.POST.get('client_type', '')
             message = request.POST.get('message', '')
-            
+
             if not first_name or not last_name or not email or not message:
                 messages.error(request, 'Please fill in all required fields.')
                 response = redirect('company_home')
                 response['Location'] += '#contact'
                 return response
-            
+
             full_name = f"{first_name} {last_name}"
-            
+
             html_message = f"""
             <html>
             <body>
@@ -2556,7 +2592,7 @@ def contact_form_submit(request):
             </body>
             </html>
             """
-            
+
             send_mail(
                 subject=f'New Contact Form Submission from {full_name}',
                 message=message,
@@ -2565,11 +2601,11 @@ def contact_form_submit(request):
                 html_message=html_message,
                 fail_silently=False
             )
-            
+
             messages.success(request, 'Thank you! Your message has been sent.')
-        except Exception as e:
+        except Exception:
             messages.error(request, 'An error occurred. Please try again.')
-    
+
     response = redirect('company_home')
     response['Location'] += '#contact'
     return response
@@ -2579,7 +2615,7 @@ def contact_form_submit(request):
 def opportunities_list(request):
     """Display all open opportunities - expired ones automatically hidden"""
     today = timezone.now().date()
-    
+
     # Only show opportunities that are:
     # 1. Published
     # 2. Opening date <= today
@@ -2590,12 +2626,12 @@ def opportunities_list(request):
         opening_date__lte=today,
         closing_date__gte=today  # This automatically filters out expired posts
     ).exclude(positions_filled__gte=F('available_positions'))
-    
+
     # Apply filters
     opportunity_type = request.GET.get('type')
     if opportunity_type:
         opportunities = opportunities.filter(opportunity_type=opportunity_type)
-    
+
     search_query = request.GET.get('search')
     if search_query:
         opportunities = opportunities.filter(
@@ -2603,7 +2639,7 @@ def opportunities_list(request):
             Q(description__icontains=search_query) |
             Q(location__icontains=search_query)
         )
-    
+
     context = {
         'opportunities': opportunities,
         'opportunity_types': Opportunity.OPPORTUNITY_TYPES,
@@ -2615,19 +2651,19 @@ def opportunities_list(request):
 def apply_for_opportunity(request, opportunity_id):
     """Application form for opportunities - checks if still open"""
     opportunity = get_object_or_404(Opportunity, id=opportunity_id)
-    
+
     # Check if opportunity is still open (not expired)
     if not opportunity.is_open:
         messages.error(request, 'This opportunity is no longer accepting applications. It has expired or been filled.')
         return redirect('opportunities')
-    
+
     if request.method == 'POST':
         try:
             # Double-check expiry before saving
             if not opportunity.is_open:
                 messages.error(request, 'This opportunity closed while you were applying. Please check other opportunities.')
                 return redirect('opportunities')
-            
+
             application = Application.objects.create(
                 opportunity=opportunity,
                 first_name=request.POST.get('first_name'),
@@ -2655,7 +2691,7 @@ def apply_for_opportunity(request, opportunity_id):
                 ip_address=get_client_ip(request),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
             )
-            
+
             # Handle file uploads
             if request.FILES.get('cv'):
                 application.cv = request.FILES['cv']
@@ -2665,9 +2701,9 @@ def apply_for_opportunity(request, opportunity_id):
                 application.id_document = request.FILES['id_document']
             if request.FILES.get('qualifications'):
                 application.qualifications = request.FILES['qualifications']
-            
+
             application.save()
-            
+
             # Send confirmation email to applicant
             try:
                 send_mail(
@@ -2679,7 +2715,7 @@ def apply_for_opportunity(request, opportunity_id):
                 )
             except:
                 pass
-            
+
             # Send notification to admins
             admin_emails = User.objects.filter(role='admin', is_active=True).values_list('email', flat=True)
             for email in admin_emails:
@@ -2693,12 +2729,12 @@ def apply_for_opportunity(request, opportunity_id):
                     )
                 except:
                     pass
-            
+
             messages.success(request, f'Application submitted successfully! Your reference number is {application.application_number}')
             return redirect('application_success', application_number=application.application_number)
         except Exception as e:
-            messages.error(request, f'Error submitting application: {str(e)}')
-    
+            messages.error(request, f'Error submitting application: {e!s}')
+
     context = {'opportunity': opportunity}
     return render(request, 'malitinne/apply_dynamic.html', context)
 
@@ -2713,7 +2749,7 @@ def application_success(request, application_number):
 @staff_member_required
 def learner_management_hub(request):
     """Central hub for managing all learners (10,000+)"""
-    
+
     # Get filter parameters
     search_query = request.GET.get('search', '').strip()
     status_filter = request.GET.get('status', '')
@@ -2723,16 +2759,16 @@ def learner_management_hub(request):
     date_to = request.GET.get('date_to', '')
     sort_by = request.GET.get('sort', '-date_joined')
     page = request.GET.get('page', 1)
-    
+
     # Base queryset - all users with role='student' or 'learner'
     learners = User.objects.filter(
         Q(role='student') | Q(role='learner')
     ).select_related('learner_profile').prefetch_related(
-        'enrolled_courses', 
+        'enrolled_courses',
         'progress',
         'certificates'
     )
-    
+
     # Apply filters
     if search_query:
         learners = learners.filter(
@@ -2743,7 +2779,7 @@ def learner_management_hub(request):
             Q(id_number__icontains=search_query) |
             Q(phone__icontains=search_query)
         )
-    
+
     if status_filter:
         if status_filter == 'active':
             learners = learners.filter(is_active=True, is_approved=True)
@@ -2753,56 +2789,56 @@ def learner_management_hub(request):
             learners = learners.filter(is_approved=False, is_active=True)
         elif status_filter == 'blocked':
             learners = learners.filter(is_active=False, is_approved=True)
-    
+
     if project_filter:
         learners = learners.filter(enrolled_courses__id=project_filter)
-    
+
     if department_filter:
         learners = learners.filter(department=department_filter)
-    
+
     if date_from:
         learners = learners.filter(date_joined__gte=date_from)
-    
+
     if date_to:
         learners = learners.filter(date_joined__lte=date_to)
-    
+
     # Annotate with additional stats
     learners = learners.annotate(
         course_count=Count('enrolled_courses', distinct=True),
         certificate_count=Count('certificates', distinct=True)
     )
-    
+
     # Order by
     if sort_by:
         learners = learners.order_by(sort_by)
-    
+
     # Paginate (50 per page for performance)
     paginator = Paginator(learners, 50)
     page_obj = paginator.get_page(page)
-    
+
     # Get filter options
     projects = Course.objects.filter(status='published').values_list('id', 'title')
     departments = User.DEPARTMENT_CHOICES
-    
+
     # Statistics
     stats = {
         'total_learners': User.objects.filter(role__in=['student', 'learner']).count(),
         'active_learners': User.objects.filter(
-            role__in=['student', 'learner'], 
-            is_active=True, 
+            role__in=['student', 'learner'],
+            is_active=True,
             is_approved=True
         ).count(),
         'pending_approval': User.objects.filter(
-            role__in=['student', 'learner'], 
+            role__in=['student', 'learner'],
             is_approved=False
         ).count(),
         'inactive_learners': User.objects.filter(
-            role__in=['student', 'learner'], 
+            role__in=['student', 'learner'],
             is_active=False
         ).count(),
         'total_projects': Course.objects.filter(status='published').count(),
     }
-    
+
     context = {
         'learners': page_obj,
         'stats': stats,
@@ -2818,7 +2854,7 @@ def learner_management_hub(request):
         'total_learners_count': learners.count(),
         'notification_count': Notification.objects.filter(user=request.user, is_read=False).count(),
     }
-    
+
     return render(request, 'learner_management_hub.html', context)
 
 
@@ -2829,38 +2865,38 @@ def learner_detail_view(request, user_id):
         User.objects.filter(role__in=['student', 'learner']),
         id=user_id
     )
-    
+
     # Get all progress data
     progress_data = Progress.objects.filter(student=learner).select_related('course')
-    
+
     # Get enrollments
     enrollments = learner.enrolled_courses.all()
-    
+
     # Get certificates
     certificates = Certificate.objects.filter(student=learner).select_related('course')
-    
+
     # Get assessment history (from QCTO models if they exist)
     assessments = []
     if hasattr(learner, 'sign_offs'):
         assessments = learner.sign_offs.all().select_related('module', 'assessor')
-    
+
     # Get logbook entries
     logbook_entries = []
     if hasattr(learner, 'logbook_entries'):
         logbook_entries = learner.logbook_entries.all().order_by('-entry_date')[:20]
-    
+
     # Calculate overall progress
     overall_progress = 0
     if progress_data.exists():
         total_courses = progress_data.count()
         completed_courses = progress_data.filter(completed_at__isnull=False).count()
         overall_progress = int((completed_courses / total_courses) * 100) if total_courses > 0 else 0
-    
+
     # Get profile completion
     profile_completion = 0
     if hasattr(learner, 'learner_profile'):
         profile_completion = learner.learner_profile.get_completion_percentage()
-    
+
     context = {
         'learner': learner,
         'progress_data': progress_data,
@@ -2872,7 +2908,7 @@ def learner_detail_view(request, user_id):
         'profile_completion': profile_completion,
         'notification_count': Notification.objects.filter(user=request.user, is_read=False).count(),
     }
-    
+
     return render(request, 'learner_detail.html', context)
 
 @login_required
@@ -2880,27 +2916,27 @@ def ai_query_count_api(request):
     """Get the number of AI queries today for the current user"""
     from django.utils import timezone
     today = timezone.now().date()
-    
+
     # Count AI queries from today (you'll need to track this)
     # For now, return a default value
     count = 0
-    
+
     # If you have a model tracking AI queries, use it:
     # from core.models import AIQueryLog
     # count = AIQueryLog.objects.filter(
     #     user=request.user,
     #     created_at__date=today
     # ).count()
-    
+
     return JsonResponse({'count': count})
 
 @login_required
 def discussions_list(request):
     """View all forum discussions"""
     from core.models import ForumTopic
-    
+
     topics = ForumTopic.objects.all().order_by('-created_at')
-    
+
     context = {
         'topics': topics,
         'notification_count': Notification.objects.filter(user=request.user, is_read=False).count(),
@@ -2913,18 +2949,18 @@ def bulk_upload_learners(request):
     if request.method == 'POST' and request.FILES.get('file'):
         try:
             file = request.FILES['file']
-            
+
             # Read the file
             if file.name.endswith('.csv'):
                 df = pd.read_csv(file)
             else:
                 df = pd.read_excel(file)
-            
+
             # Expected columns mapping
             required_columns = [
                 'username', 'email', 'first_name', 'last_name'
             ]
-            
+
             # Validate required columns
             missing_cols = [col for col in required_columns if col not in df.columns]
             if missing_cols:
@@ -2932,7 +2968,7 @@ def bulk_upload_learners(request):
                     'success': False,
                     'error': f'Missing columns: {", ".join(missing_cols)}'
                 }, status=400)
-            
+
             results = {
                 'success': 0,
                 'failed': 0,
@@ -2940,18 +2976,18 @@ def bulk_upload_learners(request):
                 'created': [],
                 'updated': []
             }
-            
+
             # Process each row
             for index, row in df.iterrows():
                 try:
                     username = str(row.get('username', '')).strip()
                     email = str(row.get('email', '')).strip()
-                    
+
                     if not username or not email:
                         results['failed'] += 1
                         results['errors'].append(f'Row {index+2}: Missing username or email')
                         continue
-                    
+
                     # Check if user exists
                     user, created = User.objects.get_or_create(
                         username=username,
@@ -2964,7 +3000,7 @@ def bulk_upload_learners(request):
                             'is_approved': True,
                         }
                     )
-                    
+
                     if not created:
                         # Update existing user
                         user.email = email
@@ -2974,51 +3010,51 @@ def bulk_upload_learners(request):
                         results['updated'].append(username)
                     else:
                         results['created'].append(username)
-                    
+
                     # Update additional fields if they exist
                     if 'phone' in df.columns:
                         user.phone = str(row.get('phone', '')).strip()[:20]
-                    
+
                     if 'id_number' in df.columns:
                         user.id_number = str(row.get('id_number', '')).strip()[:20]
-                    
+
                     if 'department' in df.columns and row.get('department'):
                         dept = str(row.get('department', '')).strip()
                         # Validate department choice
                         dept_choices = dict(User.DEPARTMENT_CHOICES)
                         if dept in dept_choices:
                             user.department = dept
-                    
+
                     if 'date_of_birth' in df.columns and pd.notna(row.get('date_of_birth')):
                         try:
                             user.date_of_birth = pd.to_datetime(row['date_of_birth']).date()
-                        except:
+                        except (ValueError, TypeError):
                             pass
-                    
+
                     user.save()
-                    
+
                     # Create learner profile if not exists
                     if not hasattr(user, 'learner_profile'):
                         from core.models import LearnerProfile
                         LearnerProfile.objects.create(user=user)
-                    
+
                     results['success'] += 1
-                    
+
                 except Exception as e:
                     results['failed'] += 1
-                    results['errors'].append(f'Row {index+2}: {str(e)}')
-            
+                    results['errors'].append(f'Row {index+2}: {e!s}')
+
             return JsonResponse({
                 'success': True,
                 'results': results
             })
-            
+
         except Exception as e:
             return JsonResponse({
                 'success': False,
                 'error': str(e)
             }, status=400)
-    
+
     return JsonResponse({'success': False, 'error': 'No file uploaded'}, status=400)
 
 
@@ -3028,9 +3064,9 @@ def export_learners(request):
     # Get filters
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('status', '')
-    
+
     learners = User.objects.filter(role__in=['student', 'learner'])
-    
+
     if search_query:
         learners = learners.filter(
             Q(username__icontains=search_query) |
@@ -3038,7 +3074,7 @@ def export_learners(request):
             Q(last_name__icontains=search_query) |
             Q(email__icontains=search_query)
         )
-    
+
     if status_filter:
         if status_filter == 'active':
             learners = learners.filter(is_active=True, is_approved=True)
@@ -3046,12 +3082,12 @@ def export_learners(request):
             learners = learners.filter(is_active=False)
         elif status_filter == 'pending':
             learners = learners.filter(is_approved=False)
-    
+
     # Create Excel workbook
     wb = Workbook()
     ws = wb.active
     ws.title = "Learners"
-    
+
     # Headers
     headers = [
         'Username', 'Email', 'First Name', 'Last Name', 'Phone',
@@ -3059,7 +3095,7 @@ def export_learners(request):
         'Date Joined', 'Last Login', 'Courses Enrolled', 'Certificates'
     ]
     ws.append(headers)
-    
+
     # Data
     for learner in learners:
         ws.append([
@@ -3077,7 +3113,7 @@ def export_learners(request):
             learner.enrolled_courses.count(),
             learner.certificates.count(),
         ])
-    
+
     # Save to response
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -3092,26 +3128,26 @@ def export_learners(request):
 def get_observation_checklist(request, lesson_id):
     """Get observation checklist for a lesson's practical module"""
     lesson = get_object_or_404(Lesson, id=lesson_id)
-    
+
     # Check permissions
     if request.user.role == 'student' and request.user not in lesson.course.students.all():
         return JsonResponse({'error': 'Not enrolled'}, status=403)
-    
+
     # Get the practical module for this lesson
     practical_modules = lesson.course.learning_modules.filter(module_type='practical')
     if not practical_modules.exists():
         return JsonResponse({'checklist': [], 'message': 'No practical checklist available'})
-    
+
     module = practical_modules.first()
     checklist_items = module.checklist_items.all()
-    
+
     # Get student's results if they're a student
     results = {}
     if request.user.role == 'student':
         student_results = StudentChecklistResult.objects.filter(student=request.user, item__in=checklist_items)
         for result in student_results:
             results[result.item.id] = result.is_competent
-    
+
     checklist_data = []
     for item in checklist_items:
         checklist_data.append({
@@ -3120,7 +3156,7 @@ def get_observation_checklist(request, lesson_id):
             'order': item.order,
             'is_competent': results.get(item.id, False)
         })
-    
+
     return JsonResponse({
         'module_id': module.id,
         'module_title': module.title,
@@ -3134,18 +3170,18 @@ def assess_checklist_item(request, item_id):
     """Assessor marks a checklist item as competent/not yet competent"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     item = get_object_or_404(ObservationChecklistItem, id=item_id)
     student_id = request.POST.get('student_id')
     is_competent = request.POST.get('is_competent') == 'true'
     comments = request.POST.get('comments', '')
-    
+
     student = get_object_or_404(User, id=student_id, role='student')
-    
+
     # Verify instructor owns this course
     if student not in item.module.course.students.all():
         return JsonResponse({'error': 'Student not in this course'}, status=403)
-    
+
     result, created = StudentChecklistResult.objects.update_or_create(
         student=student,
         item=item,
@@ -3156,14 +3192,14 @@ def assess_checklist_item(request, item_id):
             'comments': comments
         }
     )
-    
+
     # Check if all items for this module are competent
     all_items = item.module.checklist_items.all()
     all_competent = all(
         StudentChecklistResult.objects.filter(student=student, item=i, is_competent=True).exists()
         for i in all_items
     )
-    
+
     if all_competent:
         # Auto-sign-off the module if all items competent
         signoff, created = AssessorSignOff.objects.update_or_create(
@@ -3176,17 +3212,17 @@ def assess_checklist_item(request, item_id):
                 'signed_at': timezone.now()
             }
         )
-        
+
         # Update progress
         progress, _ = Progress.objects.get_or_create(student=student, course=item.module.course)
-        
+
         return JsonResponse({
             'success': True,
             'is_competent': is_competent,
             'module_completed': True,
             'message': f'Checklist item updated. Module {item.module.title} is now COMPETENT!'
         })
-    
+
     return JsonResponse({
         'success': True,
         'is_competent': is_competent,
@@ -3200,26 +3236,26 @@ def get_module_competency_status(request, module_id):
     """Get a student's competency status for a module"""
     module = get_object_or_404(LearningModule, id=module_id)
     student_id = request.GET.get('student_id')
-    
+
     if request.user.role == 'instructor' and student_id:
         student = get_object_or_404(User, id=student_id, role='student')
     elif request.user.role == 'student':
         student = request.user
     else:
         return JsonResponse({'error': 'Permission denied'}, status=403)
-    
+
     # Check sign-off status
     signoff = AssessorSignOff.objects.filter(student=student, module=module).first()
-    
+
     # Get checklist progress
     checklist_items = module.checklist_items.all()
     completed_items = StudentChecklistResult.objects.filter(
         student=student, item__in=checklist_items, is_competent=True
     ).count()
-    
+
     # Get evidence uploaded
     evidence = ModuleEvidence.objects.filter(student=student, module=module)
-    
+
     return JsonResponse({
         'module_id': module.id,
         'module_title': module.title,
@@ -3240,15 +3276,15 @@ def upload_module_evidence(request, module_id):
     """Upload evidence for a work experience or practical module"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     module = get_object_or_404(LearningModule, id=module_id)
-    
+
     if request.user.role == 'student' and request.user not in module.course.students.all():
         return JsonResponse({'error': 'Not enrolled in this course'}, status=403)
-    
+
     if 'file' not in request.FILES:
         return JsonResponse({'error': 'No file provided'}, status=400)
-    
+
     file = request.FILES['file']
     title = request.POST.get('title', file.name)
     description = request.POST.get('description', '')
@@ -3263,13 +3299,13 @@ def upload_module_evidence(request, module_id):
             return JsonResponse({'error': 'You do not own this course'}, status=403)
         if student not in module.course.students.all():
             return JsonResponse({'error': 'Student not in this course'}, status=403)
-    
+
     # Validate file type
-    allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 
+    allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword',
                      'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
     if file.content_type not in allowed_types:
         return JsonResponse({'error': 'Invalid file type. PDF, DOC, or images only.'}, status=400)
-    
+
     evidence = ModuleEvidence.objects.create(
         student=student,
         module=module,
@@ -3278,7 +3314,7 @@ def upload_module_evidence(request, module_id):
         description=description,
         uploaded_at=timezone.now()
     )
-    
+
     return JsonResponse({
         'success': True,
         'evidence': {
@@ -3296,20 +3332,20 @@ def delete_module_evidence(request, evidence_id):
     """Delete uploaded evidence"""
     if request.method != 'DELETE':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     evidence = get_object_or_404(ModuleEvidence, id=evidence_id)
-    
+
     # Check permissions
     if request.user.role == 'student' and evidence.student != request.user:
         return JsonResponse({'error': 'Cannot delete other student\'s evidence'}, status=403)
-    
+
     if request.user.role == 'instructor' and evidence.module.course.instructor != request.user:
         return JsonResponse({'error': 'You do not own this course'}, status=403)
-    
+
     # Delete file from disk
     if evidence.file and os.path.isfile(evidence.file.path):
         os.remove(evidence.file.path)
-    
+
     evidence.delete()
     return JsonResponse({'success': True})
 
@@ -3320,15 +3356,15 @@ def verify_module_evidence(request, evidence_id):
     """Instructor verifies evidence as authentic"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     evidence = get_object_or_404(ModuleEvidence, id=evidence_id)
     is_verified = request.POST.get('is_verified') == 'true'
-    
+
     evidence.is_verified = is_verified
     evidence.verified_by = request.user
     evidence.verified_at = timezone.now() if is_verified else None
     evidence.save()
-    
+
     return JsonResponse({
         'success': True,
         'is_verified': evidence.is_verified,
@@ -3344,27 +3380,27 @@ def get_portfolio_status(request, course_id):
     """Get portfolio status for a student"""
     course = get_object_or_404(Course, id=course_id)
     student_id = request.GET.get('student_id')
-    
+
     if request.user.role == 'instructor' and student_id:
         student = get_object_or_404(User, id=student_id, role='student')
     elif request.user.role == 'student':
         student = request.user
     else:
         return JsonResponse({'error': 'Permission denied'}, status=403)
-    
+
     portfolio, created = PortfolioOfEvidence.objects.get_or_create(student=student, course=course)
-    
+
     # Get all evidence for this course
     modules = course.learning_modules.filter(module_type__in=['practical', 'work_experience'])
     evidence_counts = {}
     for module in modules:
         evidence_counts[module.id] = ModuleEvidence.objects.filter(student=student, module=module).count()
-    
+
     # Get sign-offs
     signoffs = {}
     for signoff in AssessorSignOff.objects.filter(student=student, module__in=modules):
         signoffs[signoff.module_id] = signoff.outcome
-    
+
     return JsonResponse({
         'portfolio_id': portfolio.id,
         'status': portfolio.status,
@@ -3389,37 +3425,37 @@ def submit_portfolio(request, course_id):
     """Student submits portfolio for assessment"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     if request.user.role != 'student':
         return JsonResponse({'error': 'Only students can submit portfolios'}, status=403)
-    
+
     course = get_object_or_404(Course, id=course_id)
     portfolio, created = PortfolioOfEvidence.objects.get_or_create(student=request.user, course=course)
-    
+
     # Check if all required modules have sign-offs
     practical_modules = course.learning_modules.filter(module_type='practical')
     work_modules = course.learning_modules.filter(module_type='work_experience')
-    
+
     missing_signoffs = []
     for module in practical_modules:
         if not AssessorSignOff.objects.filter(student=request.user, module=module, outcome='competent').exists():
             missing_signoffs.append(f"Practical: {module.title}")
-    
+
     for module in work_modules:
         if not AssessorSignOff.objects.filter(student=request.user, module=module, outcome='competent').exists():
             missing_signoffs.append(f"Work Experience: {module.title}")
-    
+
     if missing_signoffs:
         return JsonResponse({
             'success': False,
             'error': 'Cannot submit portfolio until all modules are signed off as competent',
             'missing_signoffs': missing_signoffs
         }, status=400)
-    
+
     portfolio.status = 'submitted'
     portfolio.submitted_at = timezone.now()
     portfolio.save()
-    
+
     # Notify instructors/admins
     instructors = User.objects.filter(role__in=['instructor', 'admin'])
     for instructor in instructors:
@@ -3429,7 +3465,7 @@ def submit_portfolio(request, course_id):
             f'{request.user.get_full_name()} has submitted their portfolio for review',
             f'/admin/learner/{request.user.id}/'
         )
-    
+
     return JsonResponse({
         'success': True,
         'message': 'Portfolio submitted for assessment',
@@ -3443,10 +3479,10 @@ def submit_portfolio(request, course_id):
 def get_iisa_assessments(request, course_id):
     """Get IISA/summative assessments for a course"""
     course = get_object_or_404(Course, id=course_id)
-    
+
     assessments = course.summative_assessments.all()
     results = {}
-    
+
     if request.user.role == 'student':
         for assessment in assessments:
             submission = SummativeAssessmentSubmission.objects.filter(
@@ -3461,7 +3497,7 @@ def get_iisa_assessments(request, course_id):
                 }
             else:
                 results[assessment.id] = {'submitted': False}
-    
+
     return JsonResponse({
         'assessments': [
             {
@@ -3481,25 +3517,25 @@ def submit_iisa(request, assessment_id):
     """Student submits IISA assessment"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     if request.user.role != 'student':
         return JsonResponse({'error': 'Only students can submit assessments'}, status=403)
-    
+
     assessment = get_object_or_404(SummativeAssessment, id=assessment_id)
-    
+
     # Check if already submitted
     existing = SummativeAssessmentSubmission.objects.filter(
         assessment=assessment, student=request.user
     ).first()
-    
+
     if existing:
         return JsonResponse({'error': 'You have already submitted this assessment'}, status=400)
-    
+
     if 'file' not in request.FILES:
         return JsonResponse({'error': 'No file provided'}, status=400)
-    
+
     file = request.FILES['file']
-    
+
     submission = SummativeAssessmentSubmission.objects.create(
         assessment=assessment,
         student=request.user,
@@ -3507,7 +3543,7 @@ def submit_iisa(request, assessment_id):
         submitted_at=timezone.now(),
         result='pending'
     )
-    
+
     return JsonResponse({
         'success': True,
         'message': 'IISA assessment submitted successfully',
@@ -3522,26 +3558,26 @@ def grade_iisa(request, assessment_id):
     """Instructor grades IISA assessment"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     assessment = get_object_or_404(SummativeAssessment, id=assessment_id)
     student_id = request.POST.get('student_id')
     result = request.POST.get('result')  # 'competent' or 'not_yet_competent'
     feedback = request.POST.get('feedback', '')
-    
+
     student = get_object_or_404(User, id=student_id, role='student')
-    
+
     submission = get_object_or_404(
         SummativeAssessmentSubmission,
         assessment=assessment,
         student=student
     )
-    
+
     submission.result = result
     submission.assessed_by = request.user
     submission.assessed_at = timezone.now()
     submission.feedback = feedback
     submission.save()
-    
+
     # If student passed IISA, mark qualification as complete
     if result == 'competent':
         # Check if all IISA assessments passed
@@ -3552,7 +3588,7 @@ def grade_iisa(request, assessment_id):
             ).exists()
             for a in all_assessments
         )
-        
+
         if all_passed:
             # Generate final certificate
             progress = Progress.objects.get(student=student, course=assessment.course)
@@ -3565,10 +3601,10 @@ def grade_iisa(request, assessment_id):
                     send_notification(
                         student,
                         f'🎉 Qualification Complete! - {assessment.course.title}',
-                        f'Congratulations! You have successfully completed all requirements including the IISA.',
-                        f'/certificates/'
+                        'Congratulations! You have successfully completed all requirements including the IISA.',
+                        '/certificates/'
                     )
-    
+
     return JsonResponse({
         'success': True,
         'result': result,
@@ -3585,14 +3621,14 @@ def assessor_signoff(request, module_id):
     """Assessor signs off a module as competent"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
     module = get_object_or_404(LearningModule, id=module_id)
     student_id = request.POST.get('student_id')
     outcome = request.POST.get('outcome')  # 'competent' or 'not_yet_competent'
     comments = request.POST.get('comments', '')
-    
+
     student = get_object_or_404(User, id=student_id, role='student')
-    
+
     # For practical modules, check checklist completion
     if module.module_type == 'practical':
         checklist_items = module.checklist_items.all()
@@ -3600,12 +3636,12 @@ def assessor_signoff(request, module_id):
             completed = StudentChecklistResult.objects.filter(
                 student=student, item__in=checklist_items, is_competent=True
             ).count()
-            
+
             if outcome == 'competent' and completed < checklist_items.count():
                 return JsonResponse({
                     'error': f'Cannot sign off as competent. Only {completed}/{checklist_items.count()} checklist items completed.'
                 }, status=400)
-    
+
     signoff, created = AssessorSignOff.objects.update_or_create(
         student=student,
         module=module,
@@ -3616,10 +3652,10 @@ def assessor_signoff(request, module_id):
             'signed_at': timezone.now()
         }
     )
-    
+
     # Update student progress
     progress, _ = Progress.objects.get_or_create(student=student, course=module.course)
-    
+
     return JsonResponse({
         'success': True,
         'outcome': outcome,
