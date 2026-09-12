@@ -2602,13 +2602,6 @@ def opportunities_list(request):
         closing_date__gte=today  # This automatically filters out expired posts
     ).exclude(positions_filled__gte=F('available_positions'))
     
-    # Optional: Auto-update expired opportunities to 'closed' status
-    # This runs every time the page loads - keeps statuses current
-    Opportunity.objects.filter(
-        status='published',
-        closing_date__lt=today
-    ).update(status='closed')
-    
     # Apply filters
     opportunity_type = request.GET.get('type')
     if opportunity_type:
