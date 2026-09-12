@@ -9,6 +9,9 @@ bind = "0.0.0.0:8000"
 backlog = 2048
 
 # Worker processes
+# Recommended formula: (2 * CPU cores) + 1
+# On a 4-core box this gives 9 workers.
+# 25 workers was causing ~3.25 GiB baseline memory on an 8 GiB VPS.
 workers = multiprocessing.cpu_count() * 2 + 1
 worker_class = "sync"
 worker_connections = 1000
