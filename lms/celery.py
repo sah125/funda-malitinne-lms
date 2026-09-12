@@ -1,16 +1,28 @@
 """
 Celery tasks for Funda Malitinne LMS
 """
-from celery import shared_task
+from celery import Celery, shared_task
+from celery.schedules import crontab
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-from core.models import User, Course, Progress, Notification
+
+app = Celery('lms')
+app.config_from_object('django.conf:settings', namespace='CELERY')
+app.autodiscover_tasks()
+app.conf.imports = ('core.tasks',)
+app.conf.beat_schedule = {
+    'close-expired-opportunities-daily': {
+        'task': 'core.tasks.close_expired_opportunities',
+        'schedule': crontab(minute=5, hour=0),
+    },
+}
 
 @shared_task
 def send_registration_email(user_id):
     """Send registration confirmation email"""
     try:
+        from core.models import User
         user = User.objects.get(id=user_id)
         context = {
             'user': user,
@@ -35,6 +47,7 @@ def send_registration_email(user_id):
 def send_course_enrollment_email(user_id, course_id):
     """Send course enrollment confirmation email"""
     try:
+        from core.models import User, Course
         user = User.objects.get(id=user_id)
         course = Course.objects.get(id=course_id)
         
