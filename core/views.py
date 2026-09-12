@@ -3660,34 +3660,6 @@ def assessor_signoff(request, module_id):
     })
 
 
-@login_required
-def ai_query_count_api(request):
-    """Get the number of AI queries today for the current user."""
-    today = timezone.now().date()
-    count = 0
-
-    # If you have a model tracking AI queries, use it here.
-    # Example:
-    # count = AIQueryLog.objects.filter(
-    #     user=request.user,
-    #     created_at__date=today
-    # ).count()
-
-    return JsonResponse({'count': count})
-
-
-@login_required
-def discussions_list(request):
-    """View all forum discussions."""
-    topics = ForumTopic.objects.all().order_by('-created_at')
-
-    context = {
-        'topics': topics,
-        'notification_count': Notification.objects.filter(user=request.user, is_read=False).count(),
-    }
-    return render(request, 'discussions_list.html', context)
-
-
 # ==================== ERROR HANDLERS ====================
 
 def custom_404(request, exception):
