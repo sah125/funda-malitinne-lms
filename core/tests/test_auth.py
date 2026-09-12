@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -78,6 +78,32 @@ class RegistrationTests(TestCase):
 
 
 class LoginTests(TestCase):
+    def test_login_form_contains_csrf_token(self):
+        """Login page must include CSRF token or POST will 403."""
+        response = self.client.get(reverse("login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "csrfmiddlewaretoken")
+
+    def test_login_post_succeeds_with_csrf(self):
+        """Posting valid credentials must not 403 on CSRF."""
+        user = make_student(username="csrf-login")
+        client = Client(enforce_csrf_checks=True)
+        login_page = client.get(reverse("login"))
+        csrf_token = login_page.cookies["csrftoken"].value
+
+        response = client.post(
+            reverse("login"),
+            {
+                "username": user.username,
+                "password": "TestPass123!",
+                "csrfmiddlewaretoken": csrf_token,
+            },
+            HTTP_REFERER="http://testserver/login/",
+        )
+
+        self.assertNotEqual(response.status_code, 403)
+
     def test_student_login_redirects_to_student_dashboard(self):
         make_student(username="student-login")
 
