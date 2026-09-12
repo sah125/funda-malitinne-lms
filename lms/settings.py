@@ -98,6 +98,9 @@ else:
         }
     }
 
+DATABASES['default']['CONN_MAX_AGE'] = 60
+DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+
 # ===== AUTHENTICATION =====
 AUTH_USER_MODEL = 'core.User'
 
