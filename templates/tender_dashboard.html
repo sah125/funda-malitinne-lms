@@ -76,11 +76,6 @@
                 {% endif %}
             </div>
             <div class="user-avatar" title="{{ user.username }}">{{ user.username|slice:":1"|upper }}</div>
-            {% if user.role == 'admin' %}
-            <a href="/tender-crawl/" class="btn-crawl">
-                <i class="fas fa-sync-alt"></i> Refresh Tenders
-            </a>
-            {% endif %}
         </div>
     </div>
 
