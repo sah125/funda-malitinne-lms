@@ -6,7 +6,6 @@ from django.db.models import Q, Count
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.contrib.admin.views.decorators import staff_member_required
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -19,7 +18,6 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.crypto import get_random_string
 from django.db.models import Count, Q, Avg, F  # ADDED F here
-from django.views.decorators.csrf import csrf_exempt
 from django.utils.text import get_valid_filename
 from datetime import timedelta
 from django.db.models import Q
@@ -1322,7 +1320,6 @@ def api_users(request):
     
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-@csrf_exempt
 @login_required
 def api_bulk_upload(request):
     if request.user.role != 'admin':
@@ -2916,7 +2913,6 @@ def discussions_list(request):
     return render(request, 'discussions_list.html', context)
 
 @staff_member_required
-@csrf_exempt
 def bulk_upload_learners(request):
     """Bulk upload learners from Excel/CSV file"""
     if request.method == 'POST' and request.FILES.get('file'):
