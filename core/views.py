@@ -215,13 +215,10 @@ def tender_dashboard(request):
 
 @login_required
 def run_tender_crawl(request):
-    """Manually trigger tender crawling"""
+    """Report that tender crawling is not currently available."""
     if request.user.role != 'admin':
-        messages.error(request, 'Admin access required')
-        return redirect('tender_dashboard')
-    
-    messages.info(request, 'Tender crawler will be implemented in the next step')
-    return redirect('tender_dashboard')
+        return JsonResponse({'error': 'Admin access required'}, status=403)
+    return JsonResponse({'error': 'not_implemented'}, status=501)
 
 
 @login_required
