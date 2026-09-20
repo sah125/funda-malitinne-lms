@@ -8,6 +8,10 @@ from django.utils import timezone
 
 from .models import (
     Announcement,
+    Accreditation,
+    AccreditationProgramme,
+    AccreditationProject,
+    AccreditationStat,
     Application,
     Assignment,
     Attendance,
@@ -29,6 +33,7 @@ from .models import (
     LessonInteraction,
     LessonModule,
     LogbookEntry,
+    NewsPost,
     Notification,
     Opportunity,
     Progress,
@@ -823,3 +828,35 @@ class ApplicationAdmin(admin.ModelAdmin):
                 obj.reviewed_by = request.user
                 obj.reviewed_at = timezone.now()
         super().save_model(request, obj, form, change)
+
+
+class AccreditationStatInline(admin.TabularInline):
+    model = AccreditationStat
+    extra = 1
+
+
+class AccreditationProgrammeInline(admin.TabularInline):
+    model = AccreditationProgramme
+    extra = 1
+
+
+class AccreditationProjectInline(admin.TabularInline):
+    model = AccreditationProject
+    extra = 1
+
+
+@admin.register(Accreditation)
+class AccreditationAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'is_active', 'order')
+    list_editable = ('is_active', 'order')
+    prepopulated_fields = {'slug': ('name',)}
+    inlines = [AccreditationStatInline, AccreditationProgrammeInline, AccreditationProjectInline]
+
+
+@admin.register(NewsPost)
+class NewsPostAdmin(admin.ModelAdmin):
+    list_display = ('title', 'published_date', 'is_published', 'author')
+    list_editable = ('is_published',)
+    list_filter = ('is_published',)
+    prepopulated_fields = {'slug': ('title',)}
+    date_hierarchy = 'published_date'

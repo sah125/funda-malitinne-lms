@@ -1302,3 +1302,83 @@ class CrawlLog(models.Model):
 
     def __str__(self):
         return f"Crawl {self.source.name} - {self.started_at}"
+
+
+class Accreditation(models.Model):
+    slug = models.SlugField(unique=True)
+    name = models.CharField(max_length=100)
+    full_name = models.CharField(max_length=200)
+    icon_class = models.CharField(max_length=50, blank=True)
+    type_label = models.CharField(max_length=200, blank=True)
+    accreditation_status = models.CharField(max_length=255, blank=True)
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    certificate_file = models.FileField(upload_to='accreditations/certificates/', blank=True, null=True)
+
+    class Meta:
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('accreditation_detail', kwargs={'slug': self.slug})
+
+
+class AccreditationStat(models.Model):
+    accreditation = models.ForeignKey(Accreditation, related_name='stats', on_delete=models.CASCADE)
+    icon_class = models.CharField(max_length=50, blank=True)
+    label = models.CharField(max_length=100)
+    value = models.CharField(max_length=100)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+
+
+class AccreditationProgramme(models.Model):
+    accreditation = models.ForeignKey(Accreditation, related_name='programmes', on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+    level = models.CharField(max_length=255, blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+
+
+class AccreditationProject(models.Model):
+    accreditation = models.ForeignKey(Accreditation, related_name='projects', on_delete=models.CASCADE)
+    client = models.CharField(max_length=255)
+    beneficiaries = models.CharField(max_length=50, blank=True)
+    period = models.CharField(max_length=100, blank=True)
+    services = models.TextField(help_text='One service per line')
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+
+    def services_list(self):
+        return [service.strip() for service in self.services.splitlines() if service.strip()]
+
+
+class NewsPost(models.Model):
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(unique=True)
+    excerpt = models.CharField(max_length=300, help_text='Short summary shown on the news list page')
+    body = models.TextField(help_text='Full article content (HTML or Markdown, your choice)')
+    cover_image = models.ImageField(upload_to='news/covers/', blank=True, null=True)
+    author = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True)
+    published_date = models.DateField()
+    is_published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-published_date']
+
+    def __str__(self):
+        return self.title
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('news_detail', kwargs={'slug': self.slug})

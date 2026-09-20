@@ -1,0 +1,54 @@
+{% extends "malitinne/base.html" %}
+{% load static %}
+
+{% block title %}News & Updates | Malitinne{% endblock %}
+
+{% block content %}
+<section style="padding: 130px 0 60px; background: #f8f9fa;">
+    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 40px;">
+            <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 2.5rem; font-weight: 700; color: #1a1a2e; text-transform: uppercase; letter-spacing: 2px; margin: 0;">
+                Latest News
+            </h1>
+            <a href="{% url 'news_list' %}" style="color: #9f7734; text-decoration: none; font-weight: 600; font-size: 0.9rem; letter-spacing: 1px;">
+                ALL NEWS &rarr;
+            </a>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;">
+            {% for post in posts %}
+                <article>
+                    <a href="{% url 'news_detail' post.slug %}" style="text-decoration: none; color: inherit; display: block;">
+                        {% if post.cover_image %}
+                            <div style="aspect-ratio: 16/10; overflow: hidden; margin-bottom: 20px; background: #eee;">
+                                <img src="{{ post.cover_image.url }}" alt="{{ post.title }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;">
+                            </div>
+                        {% endif %}
+                        <h2 style="font-size: 1.15rem; font-weight: 700; color: #1a1a2e; line-height: 1.4; margin: 0 0 12px 0;">
+                            {{ post.title }}
+                        </h2>
+                        <p style="font-size: 0.9rem; color: #666; line-height: 1.6; margin: 0 0 16px 0;">
+                            {{ post.excerpt|truncatewords:20 }}
+                        </p>
+                        <div style="font-size: 0.75rem; color: #999; letter-spacing: 1px; text-transform: uppercase;">
+                            {{ post.published_date|date:"F j, Y" }}
+                        </div>
+                    </a>
+                </article>
+            {% empty %}
+                <p style="grid-column: 1 / -1; text-align: center; color: #888; padding: 60px 0;">
+                    No news posts yet. Check back soon.
+                </p>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<style>
+@media (max-width: 900px) {
+    .container > div[style*="grid-template-columns: repeat(3"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+{% endblock %}

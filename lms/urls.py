@@ -18,6 +18,8 @@ urlpatterns = [
     path('', views.company_home, name='company_home'),
     path('programmes/', views.programmes_page, name='programmes'),
     path('clients/', views.clients_page, name='clients'),
+    path('news/', views.news_list, name='news_list'),
+    path('news/<slug:slug>/', views.news_detail, name='news_detail'),
     
     # ===== AUTH =====
     path('login/', views.user_login, name='login'),
@@ -168,6 +170,6 @@ handler500 = 'core.views.custom_500'
 
 
 # Serve static and media files in development
-if settings.DEBUG:
+if settings.DEBUG or settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
