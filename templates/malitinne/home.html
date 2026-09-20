@@ -24,14 +24,14 @@
     <meta name="robots" content="index, follow">
 
     <!-- CANONICAL -->
-    <link rel="canonical" href="https://www.malitinne.co.za/">
+    <link rel="canonical" href="https://malitinne.co.za/">
 
     <!-- OPEN GRAPH / FACEBOOK -->
     <meta property="og:title" content="Malitinne - Grooming Human Capital for the Workplace">
     <meta property="og:description"
           content="SETA accredited skills development, training and workplace placements in South Africa.">
-    <meta property="og:image" content="https://www.malitinne.co.za/static/Malitinne-logo.png">
-    <meta property="og:url" content="https://www.malitinne.co.za/">
+    <meta property="og:image" content="https://malitinne.co.za/static/Malitinne-logo.png">
+    <meta property="og:url" content="https://malitinne.co.za/">
     <meta property="og:type" content="website">
 
     <!-- TWITTER -->
@@ -40,7 +40,7 @@
     <meta name="twitter:description"
           content="Skills Development & Workplace Training South Africa">
     <meta name="twitter:image"
-          content="https://www.malitinne.co.za/static/Malitinne-logo.png">
+          content="https://malitinne.co.za/static/Malitinne-logo.png">
 
     <!-- FAVICON -->
     <link rel="icon" type="image/x-icon"
@@ -60,8 +60,8 @@
       "@context": "https://schema.org",
       "@type": "Organization",
       "name": "Malitinne",
-      "url": "https://www.malitinne.co.za",
-      "logo": "https://www.malitinne.co.za/static/Malitinne-logo.png",
+    "url": "https://malitinne.co.za",
+    "logo": "https://malitinne.co.za/static/Malitinne-logo.png",
       "description": "South African skills development and human capital company.",
       "email": "info@malitinne.co.za",
       "telephone": "+27-73-931-7923",
@@ -804,13 +804,13 @@
 <nav id="navbar">
     <a href="/" class="nav-logo"><img src="{% static 'Malitinne-logo.png' %}" alt="Malitinne"></a>
     <ul class="nav-links">
-        <li><a href="#about">About</a></li>
-        <li><a href="#services">Services</a></li>
-        <li><a href="#impact">Impact</a></li>
-       <li><a href="/opportunities/">Opportunities</a></li>
-        <li><a href="#clients">Clients</a></li>
-        <li><a href="#contact">Contact</a></li>
-        <li><a href="/lms/" class="nav-cta"><i class="fas fa-graduation-cap"></i> LMS Portal</a></li>
+        <li><a href="/#about">About</a></li>
+        <li><a href="/#services">Services</a></li>
+        <li><a href="/#impact">Impact</a></li>
+        <li><a href="{% url 'opportunities' %}">Opportunities</a></li>
+        <li><a href="/#clients">Clients</a></li>
+        <li><a href="/#contact">Contact</a></li>
+        <li><a href="{% url 'lms_portal' %}" class="nav-cta"><i class="fas fa-graduation-cap"></i> LMS Portal</a></li>
     </ul>
     <div class="hamburger" onclick="openMobileMenu()">
         <span></span><span></span><span></span>
@@ -834,7 +834,7 @@
             <p class="hero-sub">Malitinne is South Africa's trusted partner in skills development, training, workplace placements and project management — bridging available and required skills to improve competencies across Africa.</p>
             <div class="hero-btns">
                 <a href="#services" class="btn-primary"><i class="fas fa-arrow-right"></i> Our Services</a>
-                <a href="/lms/" class="btn-outline-white"><i class="fas fa-graduation-cap"></i> Access LMS</a>
+                <a href="{% url 'lms_portal' %}" class="btn-outline-white"><i class="fas fa-graduation-cap"></i> Access LMS</a>
             </div>
         </div>
         <div class="hero-right">
@@ -975,8 +975,8 @@
         <h2>Ready to Start Learning?</h2>
         <p>Access our Funda Malitinne Learning Management System — your gateway to accredited courses, learnerships, and skills development programmes.</p>
         <div class="lms-btns">
-            <a href="/lms/" class="btn-white"><i class="fas fa-graduation-cap"></i> Access LMS Portal</a>
-            <a href="/register/" class="btn-outline-white2"><i class="fas fa-user-plus"></i> Register Now</a>
+            <a href="{% url 'lms_portal' %}" class="btn-white"><i class="fas fa-graduation-cap"></i> Access LMS Portal</a>
+            <a href="{% url 'register' %}" class="btn-outline-white2"><i class="fas fa-user-plus"></i> Register Now</a>
         </div>
     </div>
 </div>
@@ -1057,7 +1057,7 @@
                     <p style="font-size:1.1rem;margin-bottom:15px;">
                         <strong>Ready to start your skills development journey?</strong>
                     </p>
-                    <a href="/opportunities/" class="btn btn-primary" style="background:#9f7734;color:white;padding:10px 30px;border-radius:5px;text-decoration:none;">
+                    <a href="{% url 'opportunities' %}" class="btn btn-primary" style="background:#9f7734;color:white;padding:10px 30px;border-radius:5px;text-decoration:none;">
                         View Opportunities <i class="fas fa-arrow-right"></i>
                     </a>
                 </div>
@@ -1071,7 +1071,7 @@
         <div class="footer-brand"><img src="{% static 'Malitinne-logo.png' %}" alt="Malitinne"><p>Malitinne (Pty) Ltd — Your partner in skills development, training, placements and project management. Grooming Human Capital for the Workplace.</p><div class="footer-socials"><a href="#"><i class="fab fa-facebook-f"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-linkedin-in"></i></a><a href="#"><i class="fab fa-instagram"></i></a></div></div>
         <div class="footer-col"><h5>Company</h5><ul><li><a href="#about">About Us</a></li><li><a href="#founder">Our Founder</a></li><li><a href="#services">Services</a></li><li><a href="#clients">Clients</a></li><li><a href="#contact">Contact</a></li></ul></div>
         <div class="footer-col"><h5>Services</h5><ul><li><a href="#">Skills Development</a></li><li><a href="#">Workplace Placements</a></li><li><a href="#">Project Management</a></li><li><a href="#">CSR Consulting</a></li><li><a href="#">Career Guidance</a></li></ul></div>
-        <div class="footer-col"><h5>LMS Portal</h5><ul><li><a href="/lms/">Access LMS</a></li><li><a href="/login/">Student Login</a></li><li><a href="/register/">Register</a></li><li><a href="/opportunities/">Opportunities</a></li><li><li><a href="/admin-dashboard/">Admin</a></li></ul></div>
+        <div class="footer-col"><h5>LMS Portal</h5><ul><li><a href="{% url 'lms_portal' %}">Access LMS</a></li><li><a href="{% url 'login' %}">Student Login</a></li><li><a href="{% url 'register' %}">Register</a></li><li><a href="{% url 'opportunities' %}">Opportunities</a></li><li><a href="{% url 'admin_dashboard' %}">Admin</a></li></ul></div>
     </div>
     <div class="footer-bottom"><span>© 2026 Malitinne (Pty) Ltd · All Rights Reserved · Durban, South Africa</span><span>SETA Accredited · BBBEE Compliant · Black-Women Owned</span></div>
 </footer>
