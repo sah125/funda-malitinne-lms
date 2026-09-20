@@ -59,6 +59,7 @@ from .models import (
     LogbookEntry,
     Meeting,
     ModuleEvidence,
+    NewsPost,
     Notification,
     ObservationChecklistItem,
     Opportunity,
@@ -133,6 +134,16 @@ def programmes_page(request):
 def clients_page(request):
     """Display clients and testimonials page"""
     return render(request, 'malitinne/clients.html')
+
+
+def news_list(request):
+    posts = NewsPost.objects.filter(is_published=True)
+    return render(request, 'malitinne/news_list.html', {'posts': posts})
+
+
+def news_detail(request, slug):
+    post = get_object_or_404(NewsPost, slug=slug, is_published=True)
+    return render(request, 'malitinne/news_detail.html', {'post': post})
 
 # NOTE: These were created by mistake for a separate-pages architecture.
 # The public site is a one-pager (see templates/malitinne/home.html).
@@ -722,7 +733,8 @@ def home(request):
     return render(request, 'home.html', {'courses': courses})
 
 def company_home(request):
-    return render(request, 'malitinne/home.html')
+    latest_news = NewsPost.objects.filter(is_published=True).order_by('-published_date')[:3]
+    return render(request, 'malitinne/home.html', {'latest_news': latest_news})
 
 def lms_portal(request):
     if request.user.is_authenticated:
