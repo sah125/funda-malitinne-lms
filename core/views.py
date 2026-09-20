@@ -134,6 +134,9 @@ def clients_page(request):
     """Display clients and testimonials page"""
     return render(request, 'malitinne/clients.html')
 
+# NOTE: These were created by mistake for a separate-pages architecture.
+# The public site is a one-pager (see templates/malitinne/home.html).
+# These views are intentionally unrouted. Safe to delete when convenient.
 def about_page(request):
     return render(request, 'malitinne/about.html')
 
