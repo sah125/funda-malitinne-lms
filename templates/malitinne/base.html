@@ -8,7 +8,7 @@
     <title>{% block title %}Malitinne Skills Development | Grooming Human Capital for the Workplace{% endblock %}</title>
     
     <!-- ===== SEO META TAGS ===== -->
-    <meta name="description" content="Malitinne is a South African black-women owned skills development company specializing in learnerships, apprenticeships, SETA-accredited training, and workplace placements.">
+    <meta name="description" content="{% block meta_description %}Malitinne is a South African black-women owned skills development company specializing in learnerships, apprenticeships, SETA-accredited training, and workplace placements.{% endblock %}">
     <meta name="keywords" content="skills development, learnerships, apprenticeships, SETA accredited, training, workplace placements, Durban, South Africa, human capital development, skills training">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Malitinne (Pty) Ltd">
@@ -17,8 +17,8 @@
     <!-- ===== OPEN GRAPH / FACEBOOK ===== -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.malitinne.co.za/">
-    <meta property="og:title" content="Malitinne Skills Development | Grooming Human Capital for the Workplace">
-    <meta property="og:description" content="SETA-accredited skills development, learnerships, apprenticeships, training and workplace placements in South Africa.">
+    <meta property="og:title" content="{% block og_title %}Malitinne Skills Development | Grooming Human Capital for the Workplace{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}SETA-accredited skills development, learnerships, apprenticeships, training and workplace placements in South Africa.{% endblock %}">
     <meta property="og:image" content="https://www.malitinne.co.za/static/Malitinne-logo.png">
     
     <!-- ===== TWITTER ===== -->
@@ -364,12 +364,13 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="/#about">About</a></li>
-                <li class="nav-item"><a class="nav-link" href="/#services">Services</a></li>
-                <li class="nav-item"><a class="nav-link" href="/#impact">Impact</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'company_home' %}">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'about' %}">About</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'services' %}">Services</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'impact' %}">Impact</a></li>
                 <li class="nav-item"><a class="nav-link" href="{% url 'opportunities' %}">Opportunities</a></li>
-                <li class="nav-item"><a class="nav-link" href="/#clients">Clients</a></li>
-                <li class="nav-item"><a class="nav-link" href="/#contact">Contact</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'clients' %}">Clients</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'contact' %}">Contact</a></li>
                 <li class="nav-item">
                     <a class="btn btn-lms ms-3" href="{% url 'lms_portal' %}"><i class="fas fa-graduation-cap"></i> LMS Portal</a>
                 </li>

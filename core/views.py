@@ -134,6 +134,18 @@ def clients_page(request):
     """Display clients and testimonials page"""
     return render(request, 'malitinne/clients.html')
 
+def about_page(request):
+    return render(request, 'malitinne/about.html')
+
+def services_page(request):
+    return render(request, 'malitinne/services.html')
+
+def impact_page(request):
+    return render(request, 'malitinne/impact.html')
+
+def contact_page(request):
+    return render(request, 'malitinne/contact.html')
+
 
 # ==================== STAFF PORTAL (PHASE 1) ====================
 
