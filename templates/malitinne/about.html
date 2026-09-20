@@ -1,0 +1,25 @@
+{% extends "malitinne/base.html" %}
+
+{% block title %}About Malitinne | Skills Development in South Africa{% endblock %}
+{% block meta_description %}Learn about Malitinne (Pty) Ltd, a black-women owned South African skills development provider focused on practical training and workplace opportunity.{% endblock %}
+{% block og_title %}About Malitinne | Skills Development in South Africa{% endblock %}
+{% block og_description %}Discover Malitinne's approach to skills development, accredited learning and workplace opportunity.{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="py-5">
+            <p class="text-uppercase small mb-2">About Malitinne</p>
+            <h1>Grooming human capital for the workplace</h1>
+            <p class="lead">Malitinne helps people and organisations turn learning into practical capability, sustainable employment and stronger communities.</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-lg-6"><h2>Who we are</h2><p>Malitinne (Pty) Ltd is a Durban-based, black-women owned skills development company serving learners, employers, municipalities and public-sector partners.</p></div>
+            <div class="col-lg-6"><h2>Our purpose</h2><p>We bridge available and required skills through structured programmes, learner support, placements and project delivery.</p></div>
+            <div class="col-lg-6"><h2>How we work</h2><p>Our programmes combine accredited learning with coordination, evidence, mentoring and workplace experience so that participants can apply what they learn.</p></div>
+            <div class="col-lg-6"><h2>Our standards</h2><p>We work across SETA-aligned programmes and maintain a practical focus on quality, accountability and meaningful learner outcomes.</p></div>
+        </div>
+        <p class="mt-5"><a class="btn btn-primary" href="{% url 'contact' %}">Talk to Malitinne</a></p>
+    </div>
+</section>
+{% endblock %}

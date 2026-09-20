@@ -1,4 +1,14 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.malitinne.co.za/sitemap.xml
+Disallow: /admin/
+Disallow: /lms/
+Disallow: /student/
+Disallow: /instructor/
+Disallow: /staff-portal/
+Disallow: /api/
+Disallow: /shared-drive/
+Disallow: /tender-dashboard/
+Disallow: /tender/
+
+Sitemap: https://malitinne.co.za/sitemap.xml

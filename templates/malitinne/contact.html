@@ -1,0 +1,25 @@
+{% extends "malitinne/base.html" %}
+
+{% block title %}Contact Malitinne | Durban Skills Development Provider{% endblock %}
+{% block meta_description %}Contact Malitinne (Pty) Ltd in Durban about SETA-accredited training, learnerships, workplace placements and skills development projects.{% endblock %}
+{% block og_title %}Contact Malitinne | Durban Skills Development Provider{% endblock %}
+{% block og_description %}Speak to Malitinne about practical skills development, training and workplace placement solutions.{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="py-5">
+            <p class="text-uppercase small mb-2">Contact Malitinne</p>
+            <h1>Let us plan the right skills solution</h1>
+            <p class="lead">Tell us what your learners, workforce or organisation needs and our team will help you identify the next step.</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-lg-6"><h2>Visit us</h2><p>40 Dr A B Xuma St<br>Durban Central<br>Durban, 4001<br>South Africa</p></div>
+            <div class="col-lg-6"><h2>Call us</h2><p><a href="tel:+27313010835">031 301 0835</a></p><p>Contact us about training, placements, learnerships, skills programmes or project management.</p></div>
+            <div class="col-lg-6"><h2>Talk about training</h2><p>We can help employers and partners explore programme delivery, accreditation requirements and learner support.</p></div>
+            <div class="col-lg-6"><h2>Talk about opportunity</h2><p>We connect participants and organisations through practical learning and workplace pathways.</p></div>
+        </div>
+        <p class="mt-5"><a class="btn btn-primary" href="{% url 'contact' %}">Send an enquiry</a></p>
+    </div>
+</section>
+{% endblock %}
