@@ -18,10 +18,9 @@ class StaticViewSitemap(Sitemap):
             'programmes',     # /programmes/
             'clients',        # /clients/
             'opportunities',  # /opportunities/
-            'about',          # /about/
-            'services',       # /services/
-            'impact',         # /impact/
-            'contact',        # /contact/
+            'lms_portal',     # /lms/
+            'login',          # /login/
+            'register',       # /register/
         ]
 
     def location(self, item):

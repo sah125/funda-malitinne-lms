@@ -791,13 +791,13 @@
 <!-- Mobile Menu -->
 <div class="mobile-menu" id="mobileMenu">
     <button class="mobile-close" onclick="closeMobileMenu()"><i class="fas fa-times"></i></button>
-    <a href="#about" onclick="closeMobileMenu()">About</a>
-    <a href="#services" onclick="closeMobileMenu()">Services</a>
-    <a href="#impact" onclick="closeMobileMenu()">Impact</a>
-    <a href="/opportunities/" onclick="closeMobileMenu()">Opportunities</a>
-    <a href="#clients" onclick="closeMobileMenu()">Clients</a>
-    <a href="#contact" onclick="closeMobileMenu()">Contact</a>
-    <a href="/lms/" onclick="closeMobileMenu()" style="color: var(--gold-light);">LMS Portal</a>
+    <a href="/#about" onclick="closeMobileMenu()">About</a>
+    <a href="/#services" onclick="closeMobileMenu()">Services</a>
+    <a href="/#impact" onclick="closeMobileMenu()">Impact</a>
+    <a href="{% url 'opportunities' %}" onclick="closeMobileMenu()">Opportunities</a>
+    <a href="/#clients" onclick="closeMobileMenu()">Clients</a>
+    <a href="/#contact" onclick="closeMobileMenu()">Contact</a>
+    <a href="{% url 'lms_portal' %}" onclick="closeMobileMenu()" style="color: var(--gold-light);">LMS Portal</a>
 </div>
 
 <!-- Navbar -->

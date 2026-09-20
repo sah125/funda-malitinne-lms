@@ -142,12 +142,6 @@ urlpatterns = [
     path('apply/<int:opportunity_id>/', views.apply_for_opportunity, name='apply'),
     path('application/<str:application_number>/', views.application_success, name='application_success'),
     
-    # ===== PUBLIC MARKETING PAGES =====
-    path('about/', views.about_page, name='about'),
-    path('services/', views.services_page, name='services'),
-    path('impact/', views.impact_page, name='impact'),
-    path('contact/', views.contact_page, name='contact'),
-
     # ===== CONTACT =====
     path('contact/submit/', views.contact_form_submit, name='contact_submit'),
     
