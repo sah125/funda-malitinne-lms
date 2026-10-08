@@ -1,9 +1,20 @@
 {% extends 'malitinne/site_base.html' %}
+{% load static %}
 {% block title %}Our Impact | Malitinne{% endblock %}
 {% block meta_description %}Over a decade of transforming lives — 10,000+ learners placed, 2,850+ workplace partners, 50+ accredited programmes across South Africa.{% endblock %}
-{% extends 'malitinne/site_base.html' %}
-{% load static %}
-{% block title %}...{% endblock %}
+{% block page_banner %}
+<section class="page-banner">
+    <div class="page-banner-inner">
+        <h1>Our Impact</h1>
+        <p>Over 10,000 graduates placed across 2,850+ workplaces in the public and private sectors.</p>
+        <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="{% url 'company_home' %}">Home</a>
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+            <span class="current" aria-current="page">Impact</span>
+        </div>
+    </div>
+</section>
+{% endblock %}
 {% block extra_head %}
 <style>
     .impact-sector-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1300px; margin: 50px auto 0; }

@@ -85,6 +85,81 @@
         .hamburger span { display: block; width: 24px; height: 2px; background: white; transition: all 0.3s; border-radius: 2px; }
         nav.scrolled .hamburger span { background: var(--charcoal); }
 
+        /* ===== REUSABLE PAGE BANNER ===== */
+        .page-banner {
+            position: relative;
+            overflow: hidden;
+            padding: 140px 8% 60px;
+            background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+            color: white;
+        }
+        .page-banner::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(201,169,110,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(201,169,110,0.05) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+        }
+        .page-banner::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: min(50vw, 650px);
+            height: 100%;
+            background: radial-gradient(ellipse at top right, rgba(201,169,110,0.18), transparent 68%);
+            pointer-events: none;
+        }
+        .page-banner-inner {
+            max-width: 1300px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        .page-banner h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(2.4rem, 5vw, 3.6rem);
+            font-weight: 700;
+            line-height: 1.1;
+            color: white;
+            margin-bottom: 14px;
+        }
+        .page-banner h1 em { color: var(--gold-light); font-style: italic; }
+        .page-banner p {
+            max-width: 640px;
+            margin-bottom: 24px;
+            color: rgba(255,255,255,0.7);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+        .page-banner .breadcrumb {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 0;
+            padding: 0;
+            color: rgba(201,169,110,0.75);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+        }
+        .page-banner .breadcrumb a {
+            color: rgba(201,169,110,0.75);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .page-banner .breadcrumb a:hover { color: var(--gold-light); }
+        .page-banner .breadcrumb i { font-size: 0.65rem; opacity: 0.7; }
+        .page-banner .breadcrumb .current { color: var(--gold-light); font-weight: 600; }
+        @media (max-width: 768px) {
+            .page-banner { padding: 110px 5% 42px; }
+            .page-banner h1 { font-size: 2rem; }
+        }
+
         /* ===== HERO WITH BACKGROUND SLIDER ===== */
         .hero {
             min-height: 100vh;
@@ -779,6 +854,9 @@
     </ul>
     <div class="hamburger" onclick="openMobileMenu()"><span></span><span></span><span></span></div>
 </nav>
+
+{# ===== PAGE BANNER (overridable per page) ===== #}
+{% block page_banner %}{% endblock %}
 
 {% block content %}{% endblock %}
 

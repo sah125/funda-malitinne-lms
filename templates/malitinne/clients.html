@@ -1,7 +1,20 @@
-{% extends 'base.html' %}
+{% extends 'malitinne/site_base.html' %}
 {% load static %}
 
 {% block title %}Our Clients - Funda Malitinne{% endblock %}
+{% block page_banner %}
+<section class="page-banner">
+    <div class="page-banner-inner">
+        <h1>Our Clients</h1>
+        <p>Trusted by leading employers, SETAs and public sector partners across South Africa.</p>
+        <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="{% url 'company_home' %}">Home</a>
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+            <span class="current" aria-current="page">Clients</span>
+        </div>
+    </div>
+</section>
+{% endblock %}
 
 {% block content %}
 <style>
@@ -14,19 +27,6 @@
     --gray-200: #e2e8f0;
     --gray-600: #475569;
     --gray-800: #1e293b;
-  }
-
-  .page-hero {
-    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-    padding: 4rem 2rem;
-    text-align: center;
-    color: white;
-  }
-
-  .page-hero h1 {
-    font-size: 2.5rem;
-    font-weight: 800;
-    margin-bottom: 1rem;
   }
 
   .testimonials-section {
@@ -143,17 +143,7 @@
     color: var(--gray-600);
   }
 
-  @media (max-width: 768px) {
-    .page-hero h1 {
-      font-size: 1.75rem;
-    }
-  }
 </style>
-
-<div class="page-hero">
-  <h1>Our Clients & Partners</h1>
-  <p>Trusted by leading organizations across South Africa</p>
-</div>
 
 <!-- Featured Clients -->
 <section class="clients-section">

@@ -1,7 +1,7 @@
 {% extends 'malitinne/site_base.html' %}
 {% load static %}
-{% block nav_class %}{% endblock %}
-
+{% block title %}Malitinne | Skills Development & Training{% endblock %}
+{% block page_banner %}{% endblock %}
 {% block content %}
 
 <!-- Hero -->
@@ -63,6 +63,37 @@
             <div style="margin-top: 32px;">
                 <a href="{% url 'about' %}" class="btn-primary">Read Full Story <i class="fas fa-arrow-right"></i></a>
             </div>
+        </div>
+    </div>
+</section>
+
+<!-- Latest News -->
+<section style="padding: 80px 0; background: #f8f9fa;">
+    <div class="max-container">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:40px;">
+            <div>
+                <div class="section-tag"><i class="fas fa-newspaper"></i> News & Updates</div>
+                <h2 class="section-title">Latest <em>News</em></h2>
+            </div>
+            <a href="{% url 'news_list' %}" style="color:#9f7734;text-decoration:none;font-weight:600;letter-spacing:1px;">ALL NEWS &rarr;</a>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:32px;">
+            {% for post in latest_news %}
+                <article>
+                    <a href="{% url 'news_detail' post.slug %}" style="text-decoration:none;color:inherit;display:block;">
+                        {% if post.cover_image %}
+                            <div style="aspect-ratio:16/10;overflow:hidden;margin-bottom:20px;background:#eee;">
+                                <img src="{{ post.cover_image.url }}" alt="{{ post.title }}" style="width:100%;height:100%;object-fit:cover;">
+                            </div>
+                        {% endif %}
+                        <h3 style="font-size:1.15rem;font-weight:700;color:var(--navy);line-height:1.4;margin:0 0 12px;">{{ post.title }}</h3>
+                        <p style="font-size:0.9rem;color:var(--text-muted);line-height:1.6;margin:0 0 16px;">{{ post.excerpt|truncatewords:20 }}</p>
+                        <div style="font-size:0.75rem;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;">{{ post.published_date|date:"F j, Y" }}</div>
+                    </a>
+                </article>
+            {% empty %}
+                <p style="grid-column:1 / -1;text-align:center;color:var(--text-muted);padding:30px 0;">No news posts yet. Check back soon.</p>
+            {% endfor %}
         </div>
     </div>
 </section>
@@ -298,3 +329,5 @@ function handleOverlayClick(e) { if (e.target === document.getElementById('modal
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 </script>
 {% endblock %}
+
+{% block nav_class %}{% endblock %}
