@@ -16,8 +16,12 @@ urlpatterns = [
     
     # ===== COMPANY WEBSITE =====
     path('', views.company_home, name='company_home'),
+    path('about/', views.about_page, name='about'),
+    path('services/', views.services_page, name='services'),
+    path('impact/', views.impact_page, name='impact'),
     path('programmes/', views.programmes_page, name='programmes'),
     path('clients/', views.clients_page, name='clients'),
+    path('contact/', views.contact_page, name='contact'),
     path('news/', views.news_list, name='news_list'),
     path('news/<slug:slug>/', views.news_detail, name='news_detail'),
     

@@ -1,0 +1,58 @@
+{% extends 'malitinne/site_base.html' %}
+{% block title %}Our Impact | Malitinne{% endblock %}
+{% block meta_description %}Over a decade of transforming lives — 10,000+ learners placed, 2,850+ workplace partners, 50+ accredited programmes across South Africa.{% endblock %}
+{% extends 'malitinne/site_base.html' %}
+{% load static %}
+{% block title %}...{% endblock %}
+{% block extra_head %}
+<style>
+    .impact-sector-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1300px; margin: 50px auto 0; }
+    .impact-sector-card { background: white; border: 1px solid rgba(159,119,52,0.15); border-radius: 16px; padding: 28px 26px; transition: all 0.3s; }
+    .impact-sector-card:hover { border-color: var(--gold); box-shadow: 0 16px 40px rgba(159,119,52,0.12); transform: translateY(-4px); }
+    .impact-sector-card .num { font-family: 'Cormorant Garamond', serif; font-size: 2.2rem; font-weight: 700; color: var(--gold-dark); }
+    .impact-sector-card h4 { font-size: 0.92rem; font-weight: 700; color: var(--navy); margin: 6px 0; }
+    .impact-sector-card p { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+    @media (max-width: 900px) { .impact-sector-grid { grid-template-columns: 1fr 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<section class="impact-section" style="padding-top:160px;">
+    <div class="max-container">
+        <div class="section-tag fade-in"><i class="fas fa-chart-line"></i> Our Impact</div>
+        <h1 class="section-title fade-in">Numbers That <em>Tell Our Story</em></h1>
+        <p class="section-sub fade-in">Over a decade of transforming lives and building competencies across South Africa.</p>
+    </div>
+    <div class="impact-grid fade-in">
+        <div class="impact-item"><div class="impact-number">10,000+</div><div class="impact-label">Learners, graduates & apprentices placed</div></div>
+        <div class="impact-item"><div class="impact-number">2,850+</div><div class="impact-label">Workplace partners in public & private sector</div></div>
+        <div class="impact-item"><div class="impact-number">50+</div><div class="impact-label">Accredited training programmes offered</div></div>
+        <div class="impact-item"><div class="impact-number">15+</div><div class="impact-label">Years of skills development excellence</div></div>
+    </div>
+</section>
+
+<!-- Impact by Sector -->
+<section style="background: var(--off-white); padding: 100px 8%;">
+    <div class="max-container" style="text-align:center;">
+        <div class="section-tag" style="margin:0 auto 12px;"><i class="fas fa-sitemap"></i> Sector Reach</div>
+        <h2 class="section-title">Impact Across <em>Key Sectors</em></h2>
+    </div>
+    <div class="impact-sector-grid">
+        <div class="impact-sector-card fade-in"><div class="num">1,850+</div><h4>Construction (CETA)</h4><p>Apprenticeships, learnerships and HET/TVET placements in civil and building trades since 2018.</p></div>
+        <div class="impact-sector-card fade-in"><div class="num">545</div><h4>Culture & Hospitality (CATHSSETA)</h4><p>EPWP project management and work-integrated learning across arts, culture and cookery.</p></div>
+        <div class="impact-sector-card fade-in"><div class="num">487</div><h4>Manufacturing (FP&M SETA)</h4><p>Learnerships in clothing, textile and forestry, delivered with municipal partners.</p></div>
+        <div class="impact-sector-card fade-in"><div class="num">450+</div><h4>Services (Services SETA)</h4><p>Hairdressing, beauty and new venture creation learnerships since 2015.</p></div>
+        <div class="impact-sector-card fade-in"><div class="num">100+</div><h4>Local Government (LGSETA)</h4><p>Councillor development, LED and municipal skills programmes across KZN.</p></div>
+        <div class="impact-sector-card fade-in"><div class="num">1,550</div><h4>Energy & Water (EW SETA)</h4><p>Internships and workplace placements delivered in partnership with Edinvest, 2014–2020.</p></div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section style="background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-light) 100%); padding: 80px 8%; text-align: center;">
+    <h2 style="font-family: 'Cormorant Garamond', serif; font-size: clamp(2rem, 4vw, 3rem); color: white; margin-bottom: 16px;">Be Part of Our Next Chapter</h2>
+    <p style="color: rgba(255,255,255,0.85); font-size: 1rem; margin-bottom: 30px;">Partner with Malitinne to extend this impact into your organisation or community.</p>
+    <a href="{% url 'contact' %}" class="btn-white"><i class="fas fa-handshake"></i> Partner With Us</a>
+</section>
+
+{% endblock %}

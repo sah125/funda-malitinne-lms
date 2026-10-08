@@ -1,0 +1,60 @@
+{% extends 'malitinne/site_base.html' %}
+{% block title %}Our Services | Malitinne{% endblock %}
+{% block meta_description %}Malitinne offers skills development, workplace placements, project management, CSR consulting, career guidance and an online LMS platform.{% endblock %}
+{% extends 'malitinne/site_base.html' %}
+{% load static %}
+{% block title %}...{% endblock %}
+{% block extra_head %}
+<style>
+    .process-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; max-width: 1300px; margin: 50px auto 0; counter-reset: step; }
+    .process-step { position: relative; padding: 30px 24px; background: white; border: 1px solid rgba(159,119,52,0.15); border-radius: 16px; }
+    .process-step::before { counter-increment: step; content: counter(step); position: absolute; top: -18px; left: 24px; width: 36px; height: 36px; border-radius: 50%; background: var(--gold); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; }
+    .process-step h4 { margin-top: 10px; font-size: 0.95rem; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+    .process-step p { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+    @media (max-width: 900px) { .process-steps { grid-template-columns: 1fr 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<section class="services-section" style="padding-top:160px;">
+    <div class="services-header fade-in">
+        <div>
+            <div class="section-tag" style="background:rgba(159,119,52,0.15);color:var(--gold-light);border-color:var(--gold);"><i class="fas fa-briefcase"></i> What We Do</div>
+            <h1 class="section-title" style="color:white;">Our Core <em>Services</em></h1>
+        </div>
+        <a href="{% url 'contact' %}" class="btn-primary">Get a Proposal <i class="fas fa-arrow-right"></i></a>
+    </div>
+    <div class="services-grid">
+        <div class="service-card fade-in"><div class="service-icon"><i class="fas fa-chalkboard-teacher"></i></div><h3>Skills Development & Training</h3><p>Accredited training programmes and learnerships across multiple SETAs including AgriSETA, Services SETA, FP&M SETA and LGSETA.</p></div>
+        <div class="service-card fade-in"><div class="service-icon"><i class="fas fa-briefcase"></i></div><h3>Workplace Placements</h3><p>Graduate, undergraduate, TVET and apprenticeship placements in over 2,850 workplaces across the Public and Private Sector.</p></div>
+        <div class="service-card fade-in"><div class="service-icon"><i class="fas fa-tasks"></i></div><h3>Project Management</h3><p>End-to-end management of skills development projects including EPWP, candidacy programmes, and community training initiatives.</p></div>
+        <div class="service-card fade-in"><div class="service-icon"><i class="fas fa-handshake"></i></div><h3>CSR Programme Consulting</h3><p>Designing and implementing community skills development programmes as part of Corporate Social Responsibility initiatives.</p></div>
+        <div class="service-card fade-in"><div class="service-icon"><i class="fas fa-compass"></i></div><h3>Career Guidance & Development</h3><p>Career pathing, mentoring, coaching and youth empowerment services to prepare learners for sustainable employment.</p></div>
+        <div class="service-card fade-in"><div class="service-icon"><i class="fas fa-laptop"></i></div><h3>Online LMS Platform</h3><p>Our Funda Malitinne Learning Management System provides digital access to courses, assessments, and learner tracking.</p></div>
+    </div>
+</section>
+
+<!-- How We Work -->
+<section style="background: var(--off-white); padding: 100px 8%;">
+    <div class="max-container" style="text-align:center;">
+        <div class="section-tag" style="margin:0 auto 12px;"><i class="fas fa-route"></i> Our Process</div>
+        <h2 class="section-title">How We <em>Work With You</em></h2>
+        <p class="section-sub" style="margin:0 auto;">A simple, embedded partnership from first conversation to placement.</p>
+    </div>
+    <div class="process-steps">
+        <div class="process-step fade-in"><h4>Consult</h4><p>We assess your skills gap, compliance needs and workforce goals.</p></div>
+        <div class="process-step fade-in"><h4>Design</h4><p>We design an accredited programme or placement plan matched to your sector.</p></div>
+        <div class="process-step fade-in"><h4>Deliver</h4><p>Training, placement or project management is rolled out with dedicated support.</p></div>
+        <div class="process-step fade-in"><h4>Track</h4><p>Progress, compliance and outcomes are tracked through our LMS and reporting.</p></div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section style="background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-light) 100%); padding: 80px 8%; text-align: center;">
+    <h2 style="font-family: 'Cormorant Garamond', serif; font-size: clamp(2rem, 4vw, 3rem); color: white; margin-bottom: 16px;">Ready to Get Started?</h2>
+    <p style="color: rgba(255,255,255,0.85); font-size: 1rem; margin-bottom: 30px;">Tell us about your skills development needs and we'll design a tailored solution.</p>
+    <a href="{% url 'contact' %}" class="btn-white"><i class="fas fa-paper-plane"></i> Get a Proposal</a>
+</section>
+
+{% endblock %}

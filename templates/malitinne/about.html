@@ -1,0 +1,93 @@
+{% extends 'malitinne/site_base.html' %}
+{% block title %}About Us | Malitinne{% endblock %}
+{% block meta_description %}Malitinne is a South African black-women owned Human Capital Development company specializing in skills development, learnerships and workplace placements.{% endblock %}
+{% extends 'malitinne/site_base.html' %}
+{% load static %}
+{% block title %}...{% endblock %}
+{% block extra_head %}
+<style>
+    .timeline { max-width: 900px; margin: 60px auto 0; position: relative; }
+    .timeline::before { content: ''; position: absolute; left: 24px; top: 0; bottom: 0; width: 2px; background: rgba(159,119,52,0.25); }
+    .timeline-item { position: relative; padding-left: 70px; margin-bottom: 40px; }
+    .timeline-dot { position: absolute; left: 16px; top: 4px; width: 18px; height: 18px; border-radius: 50%; background: var(--gold); border: 3px solid white; box-shadow: 0 0 0 3px rgba(159,119,52,0.25); }
+    .timeline-year { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 700; color: var(--gold-dark); margin-bottom: 4px; }
+    .timeline-item p { color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; max-width: 560px; }
+    .why-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; max-width: 1300px; margin: 50px auto 0; }
+    .why-card { background: white; border: 1px solid rgba(159,119,52,0.15); border-radius: 16px; padding: 30px 24px; text-align: center; transition: all 0.3s; }
+    .why-card:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(159,119,52,0.15); border-color: var(--gold); }
+    .why-card i { font-size: 1.8rem; color: var(--gold); margin-bottom: 16px; }
+    .why-card h4 { font-size: 0.95rem; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+    .why-card p { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+    @media (max-width: 768px) { .why-grid { grid-template-columns: 1fr 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="about-section" id="about" style="padding-top:160px;">
+    <div class="about-grid">
+        <div class="about-visual fade-in">
+            <div class="about-img-main"><img src="{% static 'images/classroom-2.jpg' %}" alt="Malitinne training session"></div>
+            <div class="about-img-overlay"><div class="big-num">15+</div><p>Years empowering South African youth</p></div>
+        </div>
+        <div class="about-content fade-in">
+            <div class="section-tag"><i class="fas fa-info-circle"></i> Who We Are</div>
+            <h1 class="section-title">A Consulting Partner That Pays <em>Attention to Your Exact Needs</em></h1>
+            <p class="section-sub">Malitinne is a South African black-women owned Human Capital Development company. Our roots are in placement of learners in apprenticeship programmes — we have grown to offer holistic turnkey skills development and training solutions.</p>
+            <p class="section-sub" style="margin-top:16px;">We are accredited with several SETAs for learnerships and short-skills programmes, and we embed ourselves to become part of our client's business — with in-depth knowledge to improve their productivity and contribute to economic growth.</p>
+            <div class="values-list">
+                <div class="value-item"><div class="value-dot"></div><div><strong>Compassion</strong><span>We care and express this through all our stakeholder dealings</span></div></div>
+                <div class="value-item"><div class="value-dot"></div><div><strong>Integrity</strong><span>Highest standards of personal and professional ethics</span></div></div>
+                <div class="value-item"><div class="value-dot"></div><div><strong>Collaboration</strong><span>We work as a team and share knowledge for growth</span></div></div>
+                <div class="value-item"><div class="value-dot"></div><div><strong>Empowerment</strong><span>Delivering operational excellence through innovation</span></div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Why Choose Us -->
+<section style="background: var(--off-white); padding: 100px 8%;">
+    <div class="max-container" style="text-align:center;">
+        <div class="section-tag" style="margin:0 auto 12px;"><i class="fas fa-check-circle"></i> Why Malitinne</div>
+        <h2 class="section-title">What Sets Us <em>Apart</em></h2>
+    </div>
+    <div class="why-grid">
+        <div class="why-card fade-in"><i class="fas fa-female"></i><h4>Black-Women Owned</h4><p>A proudly South African, black-women owned business driving transformation.</p></div>
+        <div class="why-card fade-in"><i class="fas fa-certificate"></i><h4>15+ SETA Accreditations</h4><p>Accredited across agriculture, services, construction, local government and more.</p></div>
+        <div class="why-card fade-in"><i class="fas fa-map-marked-alt"></i><h4>National Footprint</h4><p>Operational capacity to deploy resources anywhere in South Africa.</p></div>
+        <div class="why-card fade-in"><i class="fas fa-hands-helping"></i><h4>End-to-End Support</h4><p>From training to placement to project management — we stay with you.</p></div>
+    </div>
+</section>
+
+<!-- Timeline -->
+<section style="background: white; padding: 100px 8%;">
+    <div class="max-container" style="text-align:center;">
+        <div class="section-tag" style="margin:0 auto 12px;"><i class="fas fa-history"></i> Our Journey</div>
+        <h2 class="section-title">A Decade of <em>Growth</em></h2>
+    </div>
+    <div class="timeline">
+        <div class="timeline-item fade-in"><div class="timeline-dot"></div><div class="timeline-year">Early Years</div><p>Malitinne begins by placing learners in apprenticeship programmes, driven by founder Sibusisiwe Kraai's passion for youth empowerment.</p></div>
+        <div class="timeline-item fade-in"><div class="timeline-dot"></div><div class="timeline-year">Within 5 Years</div><p>Over 10,000 graduates and apprentices placed across 2,850+ workplaces in the public and private sectors.</p></div>
+        <div class="timeline-item fade-in"><div class="timeline-dot"></div><div class="timeline-year">Today</div><p>Accredited with 15+ SETAs, delivering learnerships, skills programmes, project management and a full digital LMS platform.</p></div>
+    </div>
+</section>
+
+<!-- Founder -->
+<section class="founder-section">
+    <div class="founder-inner">
+        <div class="founder-img-wrap fade-in">
+            <div class="founder-img"><img src="{% static 'images/Boss_Lady.png' %}" alt="Sibusisiwe Kraai - Founder"></div>
+            <div class="founder-quote-card"><p>"Bridging available and required skills to improve competencies in Africa"</p></div>
+        </div>
+        <div class="founder-content fade-in">
+            <div class="section-tag" style="background:rgba(159,119,52,0.15);color:var(--gold-light);border-color:var(--gold);"><i class="fas fa-user"></i> Our Founder</div>
+            <h2 class="section-title" style="color:white;">Sibusisiwe Kraai — <em>Visionary Leader</em></h2>
+            <p class="section-sub">Sibusisiwe Kraai, a compassionate skills development and youth empowerment practitioner, founded Malitinne. She was moved by the plight of youth — especially girls — unable to secure their futures in the economy due to inadequate preparation.</p>
+            <p class="section-sub" style="margin-top:16px;">Having been in the skills development arena from a tender age, Sibu realized that many youths, especially from disadvantaged backgrounds, were not privy to abundant opportunities. Within 5 years of Malitinne's existence, she managed to place over 10,000 graduates and apprentices in over 2,850 workplaces.</p>
+            <div class="founder-name"><div class="founder-line"></div><div class="founder-name-text"><strong>Sibusisiwe Kraai</strong><span>Founder, Skills Development & CSI Practitioner</span></div></div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
