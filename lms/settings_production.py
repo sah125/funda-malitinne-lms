@@ -35,6 +35,7 @@ CSRF_TRUSTED_ORIGINS = [
 # ─────────────────────────────────────────────
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+MAX_UPLOAD_SIZE = 50 * 1024 * 1024
 
 # ─────────────────────────────────────────────
 # APPLICATIONS
@@ -59,6 +60,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'core.middleware.UploadSizeLimitMiddleware',
     'corsheaders.middleware.CorsMiddleware',            # moved above SessionMiddleware (correct position)
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

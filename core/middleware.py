@@ -3,10 +3,32 @@ Custom middleware for error handling and logging
 """
 import logging
 
-from django.http import JsonResponse
+from django.conf import settings
+from django.http import HttpResponse, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 
 logger = logging.getLogger('django')
+
+
+class UploadSizeLimitMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.method in {'POST', 'PUT', 'PATCH'} and request.content_type == 'multipart/form-data':
+            max_size = settings.MAX_UPLOAD_SIZE
+            if any(
+                uploaded_file.size > max_size
+                for _, uploaded_files in request.FILES.lists()
+                for uploaded_file in uploaded_files
+            ):
+                message = f'Each uploaded file must be {max_size // (1024 * 1024)} MB or smaller.'
+                if request.path.startswith('/api/'):
+                    return JsonResponse({'error': message}, status=413)
+                return HttpResponse(message, status=413)
+
+        return self.get_response(request)
+
 
 class ErrorHandlingMiddleware(MiddlewareMixin):
     """Custom middleware for handling errors"""

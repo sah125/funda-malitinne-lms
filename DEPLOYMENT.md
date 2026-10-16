@@ -97,6 +97,10 @@ sudo docker-compose exec web python manage.py createsuperuser --settings=lms.set
 sudo docker-compose exec web python manage.py collectstatic --noinput --settings=lms.settings_production
 ```
 
+## Upload Limits
+
+Each uploaded file is limited to 50 MB by Django's `MAX_UPLOAD_SIZE` setting. The Nginx request-body limit also applies to the combined size of a multipart request, so a request containing multiple files may be rejected before it reaches Django.
+
 ## 🔒 SSL/TLS Certificate Setup
 
 ### Using Let's Encrypt with Certbot
