@@ -1,8 +1,9 @@
 # lms/urls.py
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
 from django.contrib.sitemaps.views import sitemap
-from django.views.generic import TemplateView
+from django.views.generic import RedirectView, TemplateView
+from django.templatetags.static import static as static_url
 from core import views
 from core.api import HealthCheckView
 from core.sitemaps import sitemaps
@@ -10,6 +11,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+    path('favicon.ico', RedirectView.as_view(url=static_url('favicon.ico'), permanent=True)),
     # ===== ADMIN =====
     path('admin/', admin.site.urls),
     path('health/', HealthCheckView.health_check, name='health_check'),
