@@ -48,6 +48,9 @@ static_collected/
 *.zip
 *.rar
 *.tar.gz
+!static/favicon.ico
+!static/favicon-*.png
+!static/apple-touch-icon.png
 
 # IDE
 .vscode/
@@ -65,6 +68,17 @@ desktop.ini
 .env.production
 .env.staging
 *.env
+
+# Local secrets, learner data, and database exports
+auth_data.json
+*_dump*.json
+core_data.json
+data.json
+clean_export.sql
+students.csv
+
+# Local IDE configuration
+.claude/settings.local.json
 
 # Database Backups
 *.sqlite3.backup
