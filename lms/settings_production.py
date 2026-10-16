@@ -20,7 +20,7 @@ environ.Env.read_env(BASE_DIR / '.env')
 # CORE SECURITY  (no defaults — fail fast if .env is missing)
 # ─────────────────────────────────────────────
 SECRET_KEY = env('SECRET_KEY')          # REQUIRED — no fallback
-DEBUG = env.bool('DEBUG', default=False)
+DEBUG = False
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['malitinne.co.za', 'www.malitinne.co.za'])
 
@@ -33,8 +33,8 @@ CSRF_TRUSTED_ORIGINS = [
 # ─────────────────────────────────────────────
 # FILE UPLOAD LIMITS
 # ─────────────────────────────────────────────
-FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800   # 50 MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800   # 50 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
 # ─────────────────────────────────────────────
 # APPLICATIONS
@@ -225,6 +225,7 @@ CSRF_COOKIE_SECURE = True
 
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
 
 # HSTS — tell browsers to always use HTTPS
 # WARNING: set SECURE_HSTS_SECONDS to 60 first, confirm everything works,

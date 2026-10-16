@@ -630,9 +630,10 @@ def forgot_password(request):
         try:
             user = User.objects.get(email=email)
             user.send_reset_email()
-            messages.success(request, 'Password reset link sent to your email.')
         except User.DoesNotExist:
-            messages.error(request, 'No account found with that email address.')
+            pass
+
+        messages.success(request, 'If an account exists, a password reset link has been sent.')
 
     return render(request, 'forgot_password.html')
 

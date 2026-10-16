@@ -179,7 +179,21 @@ class PasswordResetTests(TestCase):
         self.assertEqual(response.status_code, 200)
         user.refresh_from_db()
         self.assertTrue(user.reset_password_token)
-        self.assertContains(response, "Password reset link sent to your email.")
+        self.assertContains(
+            response,
+            "If an account exists, a password reset link has been sent.",
+        )
+
+    def test_unknown_email_gets_generic_password_reset_message(self):
+        response = self.client.post(
+            reverse("forgot_password"),
+            {"email": "missing-user@test.local"},
+        )
+
+        self.assertContains(
+            response,
+            "If an account exists, a password reset link has been sent.",
+        )
 
     def test_valid_reset_token_renders_reset_form(self):
         user = make_student(username="valid-reset")
