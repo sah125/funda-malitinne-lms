@@ -103,7 +103,6 @@ def get_urgent_actions():
     """
     actions = []
     now = timezone.now()
-    thirty_days_ago = now - timedelta(days=30)
 
     # 1. Learners without POE
     learners_without_poe = User.objects.filter(

@@ -17,7 +17,6 @@ from core.models import (
     Lesson,
     Quiz,
     QuizQuestion,
-    User,
 )
 
 User = get_user_model()
@@ -573,7 +572,7 @@ Submit via LMS for final assessment.""",
         ]
 
         for assign in assignments_data:
-            assign_obj, created = Assignment.objects.get_or_create(
+            _assign_obj, created = Assignment.objects.get_or_create(
                 course=course,
                 title=assign['title'],
                 defaults={

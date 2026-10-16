@@ -16,4 +16,21 @@ ignore = [
     "SIM102",   # nested ifs are fine
     "BLE001",   # blind Exception in API views is intentional
     "E501",     # line length - too noisy
+    "RUF001",   # intentional Unicode in user-facing strings
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"core/tests/**" = ["S105", "S106", "S107"]
+"create_*.py" = ["E402", "F811", "RUF001"]
+"load_*.py" = ["E402", "RUF001"]
+"setup_*.py" = ["E402", "RUF001"]
+"make_favicons.py" = ["E402"]
+"add_course.py" = ["E402"]
+"core/management/commands/create_demo_data.py" = ["S106"]
+"core/views.py" = ["W293"]
+"core/management/commands/load_qcto_project_manager_course.py" = ["W291"]
+"create_basic_emergency_first_aid_course.py" = ["W291"]
+"create_commercial_cleaner_course.py" = ["W291"]
+"create_new_venture_course.py" = ["W291"]
+"load_qcto_course.py" = ["W291"]
+"setup_hairstylist_course.py" = ["W291"]

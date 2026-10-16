@@ -2,6 +2,7 @@
 import csv
 import io
 import json
+import logging
 import mimetypes
 import os
 import time
@@ -86,6 +87,8 @@ from .portal_helpers import (
     get_overall_stats,
     get_urgent_actions,
 )
+logger = logging.getLogger(__name__)
+
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -452,7 +455,7 @@ def popia_consent_api(request):
         if not consent:
             return JsonResponse({'error': 'Consent must be true'}, status=400)
 
-        profile, created = LearnerProfile.objects.get_or_create(user=request.user)
+        profile, _created = LearnerProfile.objects.get_or_create(user=request.user)
         profile.popia_consent = True
         profile.popia_consent_date = timezone.now()
         profile.save()
@@ -603,8 +606,8 @@ def register(request):
                     f'Dear {first_name},\n\nYour registration has been received. You will receive an email once approved.\n\nRegards,\nFunda Malitinne Team',
                     'noreply@fundamalitinne.com', [email], html_message=html_message, fail_silently=True
                 )
-            except:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to send registration confirmation email: %s", exc)
 
             admins = User.objects.filter(role='admin', is_approved=True)
             for admin in admins:
@@ -615,8 +618,8 @@ def register(request):
                         f'A new student has registered. Please review and approve their account.\n\nUsername: {username}\nEmail: {email}',
                         'noreply@fundamalitinne.com', [admin.email], html_message=html_message, fail_silently=True
                     )
-                except:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to send admin registration notification: %s", exc)
 
             messages.success(request, 'Registration submitted! Please wait for admin approval.')
             return redirect('login')
@@ -736,7 +739,7 @@ def course_detail(request, course_id):
         if request.user not in course.students.all():
             messages.warning(request, 'You need to enroll in this course first.')
             return redirect('student_dashboard')
-        progress, created = Progress.objects.get_or_create(student=request.user, course=course)
+        progress, _created = Progress.objects.get_or_create(student=request.user, course=course)
 
     for lesson in lessons:
         if hasattr(lesson, 'quiz'):
@@ -784,7 +787,7 @@ def lesson_detail(request, lesson_id):
         messages.warning(request, 'You need to enroll in this course first.')
         return redirect('course_detail', course_id=course.id)
 
-    progress, created = Progress.objects.get_or_create(student=request.user, course=course)
+    progress, _created = Progress.objects.get_or_create(student=request.user, course=course)
 
     quiz_attempt = None
     if hasattr(lesson, 'quiz'):
@@ -795,7 +798,7 @@ def lesson_detail(request, lesson_id):
             progress.completed_lessons.add(lesson)
             messages.success(request, f'Lesson "{lesson.title}" marked as complete!')
             if progress.progress_percentage == 100:
-                certificate, cert_created = Certificate.objects.get_or_create(student=request.user, course=course)
+                _certificate, cert_created = Certificate.objects.get_or_create(student=request.user, course=course)
                 if cert_created:
                     messages.success(request, 'CONGRATULATIONS! You have completed the course!')
         else:
@@ -832,7 +835,7 @@ def view_document(request, lesson_id):
         response = HttpResponse(file_data, content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{os.path.basename(file_path)}"'
     else:
-        mime_type, encoding = mimetypes.guess_type(file_path)
+        mime_type, _encoding = mimetypes.guess_type(file_path)
         response = HttpResponse(file_data, content_type=mime_type or 'application/octet-stream')
         response['Content-Disposition'] = f'inline; filename="{os.path.basename(file_path)}"'
 
@@ -932,7 +935,7 @@ def certificates(request):
 @login_required
 def debug_progress(request, course_id):
     course = get_object_or_404(Course, id=course_id)
-    progress, created = Progress.objects.get_or_create(student=request.user, course=course)
+    progress, _created = Progress.objects.get_or_create(student=request.user, course=course)
 
     return JsonResponse({
         'course_title': course.title,
@@ -953,7 +956,7 @@ def download_certificate(request, course_id):
         messages.error(request, 'You must complete 100% of the course to get a certificate.')
         return redirect('course_detail', course_id=course.id)
 
-    certificate, created = Certificate.objects.get_or_create(student=request.user, course=course)
+    certificate, _created = Certificate.objects.get_or_create(student=request.user, course=course)
 
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=landscape(A4))
@@ -1153,7 +1156,7 @@ def add_quiz(request, lesson_id):
         return redirect('instructor_dashboard')
 
     if request.method == 'POST':
-        quiz, created = Quiz.objects.get_or_create(lesson=lesson)
+        quiz, _created = Quiz.objects.get_or_create(lesson=lesson)
         quiz.title = request.POST.get('title', f'Quiz: {lesson.title}')
         quiz.description = request.POST.get('description', '')
         quiz.passing_score = request.POST.get('passing_score', 70)
@@ -1262,8 +1265,8 @@ def grade_submission(request, submission_id):
                         f'Hello {submission.student.username},\n\nYour assignment "{submission.assignment.title}" has been graded.\n\nGrade: {grade}/{max_points}\n\nFeedback: {feedback}\n\nLogin to view details.\n\nRegards,\nFunda Malitinne LMS',
                         'noreply@fundamalitinne.com', [submission.student.email], fail_silently=True
                     )
-                except:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to send grade notification: %s", exc)
 
                 messages.success(request, 'Grade submitted! Student notified.')
                 return redirect('view_submissions', assignment_id=submission.assignment.id)
@@ -1289,7 +1292,8 @@ def api_users(request):
             data = json.loads(request.body)
             User.objects.filter(id=data.get('id')).delete()
             return JsonResponse({'success': True})
-        except:
+        except Exception as exc:
+            logger.warning("Failed to delete user via API: %s", exc)
             return JsonResponse({'error': 'Failed to delete'}, status=400)
 
     return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -1399,8 +1403,8 @@ def bulk_upload_process(request):
                                 f'Hello {username},\n\nYour account has been created.\n\nUsername: {username}\nPassword: {password}\n\nLogin here: /login/\n\nRegards,\nFunda Malitinne Team',
                                 'noreply@fundamalitinne.com', [email], fail_silently=True
                             )
-                        except:
-                            pass
+                        except Exception as exc:
+                            logger.warning("Failed to send learner welcome email: %s", exc)
                 else:
                     if user.role != 'student':
                         user.role = 'student'
@@ -1911,7 +1915,7 @@ def api_module_complete(request, module_id):
         if not UserModuleProgress.objects.filter(student=request.user, module=prev_module, completed=True).exists():
             return JsonResponse({'error': f'Complete "{prev_module.title}" first', 'required_module': prev_module.title}, status=403)
 
-    progress, created = UserModuleProgress.objects.get_or_create(student=request.user, module=module)
+    progress, _created = UserModuleProgress.objects.get_or_create(student=request.user, module=module)
 
     if progress.completed:
         return JsonResponse({'success': False, 'message': 'Module already completed'})
@@ -2140,7 +2144,7 @@ def instructor_student_view(request, user_id):
         messages.error(request, 'You can only view students enrolled in your courses.')
         return redirect('instructor_dashboard')
 
-    profile, created = LearnerProfile.objects.get_or_create(user=student)
+    profile, _created = LearnerProfile.objects.get_or_create(user=student)
     documents = student.documents.all()
     logbooks = student.logbook_entries.all().order_by('-entry_date')[:10]
 
@@ -2174,7 +2178,7 @@ def instructor_student_view(request, user_id):
 @user_passes_test(is_admin)
 def learner_profile_view(request, user_id):
     learner = get_object_or_404(User, id=user_id)
-    profile, created = LearnerProfile.objects.get_or_create(user=learner)
+    profile, _created = LearnerProfile.objects.get_or_create(user=learner)
 
     AuditLog.objects.create(user=request.user, action='view', resource_type='LearnerProfile', resource_id=user_id, ip_address=get_client_ip(request))
 
@@ -2194,7 +2198,7 @@ def save_learner_profile(request, user_id):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
     learner = get_object_or_404(User, id=user_id)
-    profile, created = LearnerProfile.objects.get_or_create(user=learner)
+    profile, _created = LearnerProfile.objects.get_or_create(user=learner)
 
     try:
         data = json.loads(request.body)
@@ -2347,7 +2351,7 @@ def add_logbook_entry(request, user_id):
 @user_passes_test(is_admin)
 def export_learner_report(request, user_id):
     learner = get_object_or_404(User, id=user_id)
-    profile = LearnerProfile.objects.get_or_create(user=learner)[0]
+    LearnerProfile.objects.get_or_create(user=learner)
     documents = learner.documents.all()
     logbooks = learner.logbook_entries.all().order_by('-entry_date')
 
@@ -2603,8 +2607,8 @@ def apply_for_opportunity(request, opportunity_id):
                     recipient_list=[application.email],
                     fail_silently=True
                 )
-            except:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to send application confirmation email: %s", exc)
 
             admin_emails = User.objects.filter(role='admin', is_active=True).values_list('email', flat=True)
             for email in admin_emails:
@@ -2616,8 +2620,8 @@ def apply_for_opportunity(request, opportunity_id):
                         recipient_list=[email],
                         fail_silently=True
                     )
-                except:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to send admin application notification: %s", exc)
 
             messages.success(request, f'Application submitted successfully! Your reference number is {application.application_number}')
             return redirect('application_success', application_number=application.application_number)
@@ -2747,7 +2751,6 @@ def learner_detail_view(request, user_id):
 
 @login_required
 def ai_query_count_api(request):
-    today = timezone.now().date()
     count = 0
     return JsonResponse({'count': count})
 
@@ -3085,7 +3088,7 @@ def get_portfolio_status(request, course_id):
     else:
         return JsonResponse({'error': 'Permission denied'}, status=403)
 
-    portfolio, created = PortfolioOfEvidence.objects.get_or_create(student=student, course=course)
+    portfolio, _created = PortfolioOfEvidence.objects.get_or_create(student=student, course=course)
     modules = course.learning_modules.filter(module_type__in=['practical', 'work_experience'])
 
     evidence_counts = {module.id: ModuleEvidence.objects.filter(student=student, module=module).count() for module in modules}
@@ -3110,7 +3113,7 @@ def submit_portfolio(request, course_id):
         return JsonResponse({'error': 'Only students can submit portfolios'}, status=403)
 
     course = get_object_or_404(Course, id=course_id)
-    portfolio, created = PortfolioOfEvidence.objects.get_or_create(student=request.user, course=course)
+    portfolio, _created = PortfolioOfEvidence.objects.get_or_create(student=request.user, course=course)
 
     missing_signoffs = []
     for module in course.learning_modules.filter(module_type='practical'):
@@ -3204,7 +3207,7 @@ def grade_iisa(request, assessment_id):
         if all_passed:
             progress = Progress.objects.get(student=student, course=assessment.course)
             if progress.progress_percentage == 100:
-                certificate, created = Certificate.objects.get_or_create(student=student, course=assessment.course)
+                _certificate, created = Certificate.objects.get_or_create(student=student, course=assessment.course)
                 if created:
                     send_notification(student, f'Qualification Complete! - {assessment.course.title}', 'Congratulations! You have successfully completed all requirements including the IISA.', '/certificates/')
 
@@ -3231,12 +3234,12 @@ def assessor_signoff(request, module_id):
             if outcome == 'competent' and completed < checklist_items.count():
                 return JsonResponse({'error': f'Cannot sign off as competent. Only {completed}/{checklist_items.count()} checklist items completed.'}, status=400)
 
-    signoff, created = AssessorSignOff.objects.update_or_create(
+    signoff, _created = AssessorSignOff.objects.update_or_create(
         student=student, module=module,
         defaults={'assessor': request.user, 'outcome': outcome, 'comments': comments, 'signed_at': timezone.now()}
     )
 
-    progress, _ = Progress.objects.get_or_create(student=student, course=module.course)
+    _progress, _ = Progress.objects.get_or_create(student=student, course=module.course)
 
     return JsonResponse({'success': True, 'outcome': outcome, 'signed_at': signoff.signed_at.strftime('%Y-%m-%d %H:%M'), 'message': f'Module signed off as {outcome.replace("_", " ").upper()}'})
 

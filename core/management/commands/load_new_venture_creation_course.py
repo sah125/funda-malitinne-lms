@@ -522,7 +522,7 @@ class Command(BaseCommand):
                     modules = LESSON_MODULES.get(lesson_data["title"], [])
                     self.stdout.write(f"Creating {len(modules)} modules for lesson {index}")
                     for module_index, module_data in enumerate(modules, start=1):
-                        module, module_created = LessonModule.objects.update_or_create(
+                        _module, module_created = LessonModule.objects.update_or_create(
                             lesson=lesson,
                             title=module_data["title"],
                             defaults={
@@ -554,7 +554,7 @@ class Command(BaseCommand):
                     checklist_items = CHECKLIST_SAMPLES.get(elo["title"], [])
                     self.stdout.write(f"Creating {len(checklist_items)} checklist items for ELO {elo_index}")
                     for item_index, item_description in enumerate(checklist_items, start=1):
-                        item, item_created = ObservationChecklistItem.objects.update_or_create(
+                        _item, item_created = ObservationChecklistItem.objects.update_or_create(
                             module=learning_module,
                             description=item_description,
                             defaults={"order": item_index},
@@ -571,7 +571,7 @@ class Command(BaseCommand):
                         "The learner must submit evidence in their Portfolio of Evidence. "
                         "Prepare evidence showing the relevant work and reflection for this outcome."
                     )
-                    assessment, assessment_created = SummativeAssessment.objects.update_or_create(
+                    _assessment, assessment_created = SummativeAssessment.objects.update_or_create(
                         course=course,
                         title=assessment_title,
                         defaults={

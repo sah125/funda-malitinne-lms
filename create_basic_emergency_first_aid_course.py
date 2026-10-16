@@ -17,7 +17,7 @@ django.setup()
 from django.contrib.auth import get_user_model
 from core.models import (
     Course, Lesson, LearningModule, LessonModule, 
-    Quiz, QuizQuestion, Assignment, User
+    Quiz, QuizQuestion, Assignment
 )
 
 User = get_user_model()
@@ -662,7 +662,7 @@ Reference: PM-01-PS01
     ]
     
     for assignment_data in assignments:
-        assignment, created = Assignment.objects.get_or_create(
+        _assignment, created = Assignment.objects.get_or_create(
             course=course,
             title=assignment_data['title'],
             defaults={

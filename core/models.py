@@ -1,3 +1,4 @@
+import logging
 import secrets
 
 from django.contrib.auth.models import AbstractUser
@@ -7,6 +8,9 @@ from django.db import models
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.crypto import get_random_string
+
+
+logger = logging.getLogger(__name__)
 
 
 class User(AbstractUser):
@@ -65,8 +69,8 @@ class User(AbstractUser):
                 html_message=html_message,
                 fail_silently=True
             )
-        except:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to send password reset email for user %s: %s", self.pk, exc)
 
 class Course(models.Model):
     LEVEL_CHOICES = (
@@ -477,7 +481,7 @@ class LearningModule(models.Model):
 
     @property
     def total_duration(self):
-        return sum(l.duration for l in self.lessons.all())
+        return sum(lesson.duration for lesson in self.lessons.all())
 
 
 # ==================== LEARNER PROFILE SYSTEM (QCTO COMPLIANT) ====================

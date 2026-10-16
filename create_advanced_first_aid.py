@@ -30,7 +30,7 @@ except Exception as e:
     sys.exit(1)
 
 from django.contrib.auth import get_user_model
-from core.models import Course, LearningModule, Lesson, Quiz, QuizQuestion, Assignment, User
+from core.models import Course, LearningModule, Lesson, Quiz, QuizQuestion, Assignment
 
 User = get_user_model()
 
@@ -582,7 +582,7 @@ coordinate responses, and provide critical care until professional medical help 
     ]
     
     for idx, q_data in enumerate(quiz_questions, 1):
-        question, created = QuizQuestion.objects.get_or_create(
+        _question, created = QuizQuestion.objects.get_or_create(
             quiz=quiz,
             question_text=q_data['question'],
             defaults={

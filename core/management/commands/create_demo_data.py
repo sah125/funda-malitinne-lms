@@ -27,7 +27,7 @@ class Command(BaseCommand):
 
         # Create test instructor
         if not User.objects.filter(username='instructor').exists():
-            instructor = User.objects.create_user(
+            User.objects.create_user(
                 username='instructor',
                 email='instructor@fundamalitinne.com',
                 password='instructor123456',
@@ -40,7 +40,7 @@ class Command(BaseCommand):
 
         # Create test student
         if not User.objects.filter(username='student').exists():
-            student = User.objects.create_user(
+            User.objects.create_user(
                 username='student',
                 email='student@fundamalitinne.com',
                 password='student123456',

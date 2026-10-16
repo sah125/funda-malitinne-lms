@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.models import Assignment, Course, Lesson, Quiz, QuizQuestion, User
+from core.models import Assignment, Course, Lesson, Quiz, QuizQuestion
 
 User = get_user_model()
 
@@ -170,7 +170,7 @@ This qualification replaces:
         ]
 
         for km_data in knowledge_modules_data:
-            lesson, created = Lesson.objects.get_or_create(
+            _lesson, created = Lesson.objects.get_or_create(
                 course=course,
                 title=f"{km_data['code']}: {km_data['title']}",
                 defaults={
@@ -365,7 +365,7 @@ This qualification replaces:
         ]
 
         for pm_data in practical_modules_data:
-            lesson, created = Lesson.objects.get_or_create(
+            _lesson, created = Lesson.objects.get_or_create(
                 course=course,
                 title=f"{pm_data['code']}: {pm_data['title']}",
                 defaults={
@@ -491,7 +491,7 @@ MINIMUM DURATION: 100 hours of workplace exposure"""
         ]
 
         for wm_data in work_modules_data:
-            lesson, created = Lesson.objects.get_or_create(
+            _lesson, created = Lesson.objects.get_or_create(
                 course=course,
                 title=f"{wm_data['code']}: {wm_data['title']}",
                 defaults={
@@ -767,7 +767,7 @@ Submit complete closure documentation (10-15 pages).""",
         ]
 
         for assign_data in assignments_data:
-            assignment, created = Assignment.objects.get_or_create(
+            _assignment, created = Assignment.objects.get_or_create(
                 course=course,
                 title=assign_data['title'],
                 defaults={

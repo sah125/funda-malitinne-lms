@@ -28,7 +28,7 @@ The curriculum is built around a structured learning model that integrates knowl
 
 
 def lesson_duration_for_credits(credits):
-    return max(2, int(round((credits * 10) / 32)))
+    return max(2, round((credits * 10) / 32))
 
 
 LESSONS = [
@@ -572,7 +572,6 @@ class Command(BaseCommand):
         parser.add_argument("--noinput", action="store_true", help="Skip confirmation prompts.")
 
     def _resolve_instructor(self, username=None):
-        match = None
         if username:
             try:
                 return User.objects.get(username=username)

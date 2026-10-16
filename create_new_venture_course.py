@@ -8,7 +8,7 @@ from decimal import Decimal
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'lms.settings')
 django.setup()
 
-from core.models import Course, Lesson, User, Progress, Quiz, QuizQuestion, Assignment
+from core.models import Course, Lesson, Progress, Quiz, QuizQuestion, Assignment
 
 User = get_user_model()
 
