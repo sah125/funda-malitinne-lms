@@ -15,7 +15,7 @@ if not instructor:
     print("   Create a user with role='instructor'")
 else:
     print(f"✅ Using instructor: {instructor.username}")
-    
+
     # Create New Venture Creation Course
     course, created = Course.objects.get_or_create(
         title="New Venture Creation - NQF Level 2 (SAQA ID: 2110010232)",
@@ -38,12 +38,12 @@ This course combines knowledge, practical skills, and workplace application for 
             'price': 0
         }
     )
-    
+
     if created:
         print(f"✅ Created course: {course.title}")
     else:
         print(f"📚 Course already exists: {course.title}")
-    
+
     # Add all topics as lessons
     topics = [
         (1, "Being an Entrepreneur", "Learn what it takes to be a successful entrepreneur. Understand the entrepreneurial mindset, characteristics, and success factors."),
@@ -59,7 +59,7 @@ This course combines knowledge, practical skills, and workplace application for 
         (11, "SMART Goals", "Setting Specific, Measurable, Achievable, Relevant, Time-bound goals for business success."),
         (12, "Business Planning", "Creating a comprehensive business plan that attracts investors and guides operations."),
     ]
-    
+
     print("\n📚 Adding lessons:")
     for order, title, content in topics:
         lesson, created = Lesson.objects.get_or_create(
@@ -75,6 +75,6 @@ This course combines knowledge, practical skills, and workplace application for 
             print(f"  ✅ Added lesson {order}: {title}")
         else:
             print(f"  📖 Lesson already exists: {title}")
-    
+
     print(f"\n🎉 Course setup complete! Total lessons: {course.lessons.count()}")
     print(f"\n🔗 View course at: http://127.0.0.1:8000/course/{course.id}/")

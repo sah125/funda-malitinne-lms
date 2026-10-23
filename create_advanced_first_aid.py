@@ -13,7 +13,7 @@ Or: python3 create_advanced_first_aid.py (if using django-extensions)
 import os
 import sys
 import django
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.utils import timezone
 from django.utils.text import slugify
@@ -36,16 +36,16 @@ User = get_user_model()
 
 def create_advanced_course():
     """Create the Advanced Emergency First Aid Responder course"""
-    
+
     print("\n" + "="*70)
     print("ADVANCED EMERGENCY FIRST AID RESPONDER COURSE CREATION")
     print("="*70)
-    
+
     # ============================================================
     # 1. CREATE COURSE
     # ============================================================
     print("\n[1] Creating Course...")
-    
+
     instructor, _ = User.objects.get_or_create(
         username='advanced_first_aid_instructor',
         defaults={
@@ -68,22 +68,22 @@ coordinate responses, and provide critical care until professional medical help 
         'status': 'published',
         'price': 0.00,
     }
-    
+
     course, created = Course.objects.get_or_create(
         slug=course_data['slug'],
         defaults=course_data
     )
-    
+
     if created:
         print(f"  ✅ Created Course: {course.title}")
     else:
         print(f"  ℹ️ Course already exists: {course.title}")
-    
+
     # ============================================================
     # 2. KNOWLEDGE MODULE - KM-01
     # ============================================================
     print("\n[2] Creating Knowledge Module (KM-01)...")
-    
+
     km_data = {
         'course': course,
         'title': 'Concepts and Principles of Advanced Emergency First Aid',
@@ -92,23 +92,23 @@ coordinate responses, and provide critical care until professional medical help 
         'order': 1,
         'is_visible': True,
     }
-    
+
     km, created = LearningModule.objects.get_or_create(
         course=course,
         title=km_data['title'],
         defaults=km_data
     )
-    
+
     if created:
         print(f"  ✅ Created Knowledge Module: {km.title}")
     else:
-        print(f"  ℹ️ Knowledge Module already exists.")
-    
+        print("  ℹ️ Knowledge Module already exists.")
+
     # ============================================================
     # 3. KNOWLEDGE TOPICS (KT01 - KT04)
     # ============================================================
     print("\n[3] Creating Knowledge Topics...")
-    
+
     knowledge_topics = {
         'KT01': {
             'title': 'Principles for Providing Risk Based First Aid',
@@ -188,7 +188,7 @@ coordinate responses, and provide critical care until professional medical help 
             ]
         }
     }
-    
+
     for topic_code, topic_data in knowledge_topics.items():
         lesson, created = Lesson.objects.get_or_create(
             course=course,
@@ -211,12 +211,12 @@ coordinate responses, and provide critical care until professional medical help 
             print(f"  ✅ Created Knowledge Topic: {lesson.title}")
         else:
             print(f"  ℹ️ Knowledge Topic already exists: {lesson.title}")
-    
+
     # ============================================================
     # 4. PRACTICAL MODULE - PM-01
     # ============================================================
     print("\n[4] Creating Practical Module (PM-01)...")
-    
+
     pm_data = {
         'course': course,
         'title': 'Applying Advanced Emergency First Aid Techniques',
@@ -225,23 +225,23 @@ coordinate responses, and provide critical care until professional medical help 
         'order': 2,
         'is_visible': True,
     }
-    
+
     pm, created = LearningModule.objects.get_or_create(
         course=course,
         title=pm_data['title'],
         defaults=pm_data
     )
-    
+
     if created:
         print(f"  ✅ Created Practical Module: {pm.title}")
     else:
-        print(f"  ℹ️ Practical Module already exists.")
-    
+        print("  ℹ️ Practical Module already exists.")
+
     # ============================================================
     # 5. PRACTICAL SKILLS
     # ============================================================
     print("\n[5] Creating Practical Skills...")
-    
+
     practical_skills = [
         {
             'title': 'Scene Assessment and Management (Primary Survey)',
@@ -359,7 +359,7 @@ coordinate responses, and provide critical care until professional medical help 
             ]
         }
     ]
-    
+
     for skill in practical_skills:
         lesson, created = Lesson.objects.get_or_create(
             course=course,
@@ -382,12 +382,12 @@ coordinate responses, and provide critical care until professional medical help 
             print(f"  ✅ Created Practical Skill: {lesson.title}")
         else:
             print(f"  ℹ️ Practical Skill already exists: {lesson.title}")
-    
+
     # ============================================================
     # 6. QUIZZES FOR KNOWLEDGE MODULE
     # ============================================================
     print("\n[6] Creating Quizzes for Knowledge Module...")
-    
+
     knowledge_lesson = Lesson.objects.filter(course=course, module=km).order_by('order').first()
     quiz_data = {
         'title': 'Advanced Emergency First Aid - Knowledge Assessment',
@@ -396,23 +396,23 @@ coordinate responses, and provide critical care until professional medical help 
         'time_limit': 45,
         'lesson': knowledge_lesson,
     }
-    
+
     quiz, created = Quiz.objects.get_or_create(
         title=quiz_data['title'],
         lesson=knowledge_lesson,
         defaults=quiz_data
     )
-    
+
     if created:
         print(f"  ✅ Created Quiz: {quiz.title}")
     else:
-        print(f"  ℹ️ Quiz already exists.")
-    
+        print("  ℹ️ Quiz already exists.")
+
     # ============================================================
     # 7. QUIZ QUESTIONS
     # ============================================================
     print("\n[7] Creating Quiz Questions...")
-    
+
     quiz_questions = [
         {
             'question': 'What does the "A" stand for in the ABCDE primary survey approach?',
@@ -580,7 +580,7 @@ coordinate responses, and provide critical care until professional medical help 
             'explanation': 'For an unconscious patient: open the airway, check for breathing for 10 seconds, and start CPR immediately if there is no breathing or only gasping (agonal) breathing.'
         }
     ]
-    
+
     for idx, q_data in enumerate(quiz_questions, 1):
         _question, created = QuizQuestion.objects.get_or_create(
             quiz=quiz,
@@ -598,12 +598,12 @@ coordinate responses, and provide critical care until professional medical help 
         )
         if created:
             print(f"  ✅ Created Question {idx}: {q_data['question'][:50]}...")
-    
+
     # ============================================================
     # 8. ASSIGNMENTS
     # ============================================================
     print("\n[8] Creating Assignments...")
-    
+
     assignments = [
         {
             'title': 'Principles of Risk-Based First Aid',
@@ -714,7 +714,7 @@ Complete this assignment to demonstrate your understanding of advanced emergency
             'order': 4
         }
     ]
-    
+
     for idx, assignment_data in enumerate(assignments, 1):
         assignment, created = Assignment.objects.get_or_create(
             title=assignment_data['title'],
@@ -729,7 +729,7 @@ Complete this assignment to demonstrate your understanding of advanced emergency
             print(f"  ✅ Created Assignment {idx}: {assignment.title}")
         else:
             print(f"  ℹ️ Assignment already exists: {assignment.title}")
-    
+
     # ============================================================
     # 9. SUMMARY
     # ============================================================
@@ -750,7 +750,7 @@ Complete this assignment to demonstrate your understanding of advanced emergency
     print("\n" + "="*70)
     print("✅ Advanced Emergency First Aid Responder course creation complete!")
     print("="*70)
-    
+
     return course, km, pm, quiz
 
 # ============================================================

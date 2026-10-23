@@ -16,8 +16,7 @@ django.setup()
 
 from django.contrib.auth import get_user_model
 from core.models import (
-    Course, Lesson, LearningModule, LessonModule, 
-    Quiz, QuizQuestion, Assignment
+    Course, Lesson, LearningModule, Quiz, QuizQuestion, Assignment
 )
 
 User = get_user_model()
@@ -318,28 +317,28 @@ QUIZ_QUESTIONS = [
 
 def create_course():
     """Create the complete Basic Emergency First Aid Responder course"""
-    
+
     print("=" * 70)
     print("🏥 CREATING BASIC EMERGENCY FIRST AID RESPONDER SKILLS PROGRAMME")
     print("=" * 70)
     print()
-    
+
     # Get or create instructor
     instructor = User.objects.filter(role='instructor').first()
     if not instructor:
         instructor = User.objects.filter(is_superuser=True).first()
-    
+
     if not instructor:
         print("❌ No instructor found. Please create an instructor user first.")
         return
-    
+
     print(f"📋 Instructor: {instructor.username} ({instructor.email})")
     print()
-    
+
     # ============================================================
     # 1. CREATE THE COURSE
     # ============================================================
-    
+
     print("📚 Creating Course...")
     course, created = Course.objects.get_or_create(
         title=COURSE_DATA['title'],
@@ -352,20 +351,20 @@ def create_course():
             'price': COURSE_DATA['price'],
         }
     )
-    
+
     if created:
         print(f"   ✅ Created: {course.title}")
     else:
         print(f"   ⏭️ Already exists: {course.title}")
-    
+
     print()
-    
+
     # ============================================================
     # 2. CREATE KNOWLEDGE MODULE
     # ============================================================
-    
+
     print("📖 Creating Knowledge Module...")
-    
+
     km, created = LearningModule.objects.get_or_create(
         course=course,
         title=KNOWLEDGE_MODULE['title'],
@@ -376,12 +375,12 @@ def create_course():
             'is_visible': KNOWLEDGE_MODULE['is_visible'],
         }
     )
-    
+
     if created:
         print(f"   ✅ Created Knowledge Module: {km.title}")
     else:
         print(f"   ⏭️ Knowledge Module already exists: {km.title}")
-    
+
     km_lesson, created = Lesson.objects.get_or_create(
         course=course,
         title=f"Knowledge: {KNOWLEDGE_MODULE['title'][:50]}...",
@@ -392,19 +391,19 @@ def create_course():
         }
     )
     print(f"   ✅ Knowledge Lesson created: {km_lesson.title}")
-    
+
     print()
-    
+
     # ============================================================
     # 3. CREATE KNOWLEDGE TOPICS AS LESSONS
     # ============================================================
-    
+
     print("📝 Creating Knowledge Topics...")
-    
+
     topic_order = 2
     for topic in KNOWLEDGE_TOPICS:
         topic_title = f"{topic['topic_code']}: {topic['title']}"
-        
+
         lesson, created = Lesson.objects.get_or_create(
             course=course,
             title=topic_title[:200],
@@ -427,15 +426,15 @@ After completing this topic, you will be able to:
         )
         print(f"   ✅ Topic: {topic['topic_code']} - {topic['title'][:40]}...")
         topic_order += 1
-    
+
     print()
-    
+
     # ============================================================
     # 4. CREATE PRACTICAL MODULE
     # ============================================================
-    
+
     print("🩹 Creating Practical Module...")
-    
+
     pm, created = LearningModule.objects.get_or_create(
         course=course,
         title=PRACTICAL_MODULE['title'],
@@ -446,12 +445,12 @@ After completing this topic, you will be able to:
             'is_visible': PRACTICAL_MODULE['is_visible'],
         }
     )
-    
+
     if created:
         print(f"   ✅ Created Practical Module: {pm.title}")
     else:
         print(f"   ⏭️ Practical Module already exists: {pm.title}")
-    
+
     pm_lesson, created = Lesson.objects.get_or_create(
         course=course,
         title=f"Practical: {PRACTICAL_MODULE['title'][:50]}...",
@@ -463,15 +462,15 @@ After completing this topic, you will be able to:
     )
     print(f"   ✅ Practical Lesson created: {pm_lesson.title}")
     topic_order += 1
-    
+
     print()
-    
+
     # ============================================================
     # 5. CREATE PRACTICAL SKILLS
     # ============================================================
-    
+
     print("🔧 Creating Practical Skills...")
-    
+
     for skill in PRACTICAL_SKILLS:
         for element in skill['elements']:
             skill_title = f"{element['code']}: {element['title']}"
@@ -506,29 +505,29 @@ Simulation Guidelines:
             )
             print(f"   ✅ Practical Skill: {element['code']} - {element['title'][:40]}...")
             topic_order += 1
-    
+
     print()
-    
+
     # ============================================================
     # 6. CREATE QUIZZES FOR KNOWLEDGE TOPICS (FIXED)
     # ============================================================
-    
+
     print("📝 Creating Quizzes...")
-    
+
     for topic in KNOWLEDGE_TOPICS:
         topic_code = topic['topic_code']
         topic_title = topic['title']
-        
+
         # Find the lesson for this topic
         lesson = Lesson.objects.filter(
             course=course,
             title__icontains=topic_code
         ).first()
-        
+
         if lesson:
             # Check if quiz already exists
             existing_quiz = Quiz.objects.filter(lesson=lesson).first()
-            
+
             if existing_quiz:
                 print(f"   ⏭️ Quiz already exists: {topic_title[:40]}...")
                 quiz = existing_quiz
@@ -542,7 +541,7 @@ Simulation Guidelines:
                     time_limit=10,
                 )
                 print(f"   ✅ Created Quiz: {topic_title[:40]}...")
-            
+
             # Add questions for this topic (only if quiz was newly created)
             if not existing_quiz:
                 topic_questions = [q for q in QUIZ_QUESTIONS if q.get('topic') == topic_code]
@@ -561,15 +560,15 @@ Simulation Guidelines:
                         explanation=q_data.get('explanation', ''),
                     )
                 print(f"      ✅ Added {len(topic_questions[:5])} questions")
-    
+
     print()
-    
+
     # ============================================================
     # 7. CREATE ASSIGNMENTS
     # ============================================================
-    
+
     print("📋 Creating Assignments...")
-    
+
     assignments = [
         {
             'title': 'Module 1: Knowledge Assessment - First Aid Principles',
@@ -660,7 +659,7 @@ Reference: PM-01-PS01
             'order': 4,
         },
     ]
-    
+
     for assignment_data in assignments:
         _assignment, created = Assignment.objects.get_or_create(
             course=course,
@@ -672,18 +671,18 @@ Reference: PM-01-PS01
                 'order': assignment_data['order'],
             }
         )
-        
+
         if created:
             print(f"   ✅ Created Assignment: {assignment_data['title'][:40]}...")
         else:
             print(f"   ⏭️ Assignment already exists: {assignment_data['title'][:40]}...")
-    
+
     print()
-    
+
     # ============================================================
     # 8. SUMMARY
     # ============================================================
-    
+
     print("=" * 70)
     print("✅ SKILLS PROGRAMME CREATION COMPLETE!")
     print("=" * 70)
@@ -694,9 +693,9 @@ Reference: PM-01-PS01
     print(f"   • Level: {course.level}")
     print(f"   • Status: {course.status}")
     print()
-    print(f"📖 MODULES:")
-    print(f"   • Knowledge Module: 1")
-    print(f"   • Practical Module: 1")
+    print("📖 MODULES:")
+    print("   • Knowledge Module: 1")
+    print("   • Practical Module: 1")
     print()
     print(f"📝 LESSONS: {Lesson.objects.filter(course=course).count()}")
     print(f"   • Knowledge Topics: {len(KNOWLEDGE_TOPICS)}")
@@ -707,10 +706,10 @@ Reference: PM-01-PS01
     print()
     print("=" * 70)
     print("🎯 QCTO COMPLIANCE:")
-    print(f"   • Curriculum Code: 900232-000-00-00")
-    print(f"   • Skills Programme ID: SP-230801")
-    print(f"   • NQF Level: 2")
-    print(f"   • Credits: 2")
+    print("   • Curriculum Code: 900232-000-00-00")
+    print("   • Skills Programme ID: SP-230801")
+    print("   • NQF Level: 2")
+    print("   • Credits: 2")
     print("=" * 70)
 
 

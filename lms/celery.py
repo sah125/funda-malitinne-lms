@@ -32,7 +32,7 @@ def send_registration_email(user_id):
         }
         html_message = render_to_string('email/registration_approved.html', context)
         plain_message = strip_tags(html_message)
-        
+
         send_mail(
             'Welcome to Funda Malitinne LMS',
             plain_message,
@@ -52,7 +52,7 @@ def send_course_enrollment_email(user_id, course_id):
         from core.models import User, Course
         user = User.objects.get(id=user_id)
         course = Course.objects.get(id=course_id)
-        
+
         context = {
             'user': user,
             'course': course,
@@ -60,7 +60,7 @@ def send_course_enrollment_email(user_id, course_id):
         }
         html_message = render_to_string('email/course_enrollment.html', context)
         plain_message = strip_tags(html_message)
-        
+
         send_mail(
             f'Welcome to {course.title}',
             plain_message,
@@ -79,7 +79,7 @@ def send_submission_grade_email(submission_id):
     try:
         from core.models import Submission
         submission = Submission.objects.get(id=submission_id)
-        
+
         context = {
             'student': submission.student,
             'assignment': submission.assignment,
@@ -88,7 +88,7 @@ def send_submission_grade_email(submission_id):
         }
         html_message = render_to_string('email/submission_graded.html', context)
         plain_message = strip_tags(html_message)
-        
+
         send_mail(
             f'Your assignment has been graded: {submission.assignment.title}',
             plain_message,
@@ -107,10 +107,10 @@ def send_announcement_notification(announcement_id):
     try:
         from core.models import Announcement
         announcement = Announcement.objects.get(id=announcement_id)
-        
+
         # Get all students enrolled in the course
         students = announcement.course.students.all()
-        
+
         for student in students:
             context = {
                 'student': student,
@@ -119,7 +119,7 @@ def send_announcement_notification(announcement_id):
             }
             html_message = render_to_string('email/announcement.html', context)
             plain_message = strip_tags(html_message)
-            
+
             send_mail(
                 f'New announcement in {announcement.course.title}',
                 plain_message,
@@ -139,18 +139,18 @@ def update_daily_streak():
         from core.models import DailyStreak
         from django.utils import timezone
         from datetime import timedelta
-        
+
         yesterday = timezone.now().date() - timedelta(days=1)
-        
+
         for streak in DailyStreak.objects.all():
             # Check if user logged in yesterday
             last_access = streak.user.last_login.date() if streak.user.last_login else None
-            
+
             if last_access == yesterday:
                 streak.current_streak += 1
             elif last_access != timezone.now().date():
                 streak.current_streak = 0
-            
+
             streak.save()
     except Exception as e:
         print(f"Error updating streaks: {e}")
@@ -163,17 +163,17 @@ def send_deadline_reminder():
         from core.models import Assignment
         from django.utils import timezone
         from datetime import timedelta
-        
+
         tomorrow = timezone.now() + timedelta(days=1)
-        
+
         assignments = Assignment.objects.filter(
             due_date__date=tomorrow.date(),
             due_date__gte=timezone.now()
         )
-        
+
         for assignment in assignments:
             students = assignment.course.students.all()
-            
+
             for student in students:
                 context = {
                     'student': student,
@@ -182,7 +182,7 @@ def send_deadline_reminder():
                 }
                 html_message = render_to_string('email/assignment_reminder.html', context)
                 plain_message = strip_tags(html_message)
-                
+
                 send_mail(
                     f'Assignment due tomorrow: {assignment.title}',
                     plain_message,

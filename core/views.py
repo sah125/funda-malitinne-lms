@@ -5,7 +5,6 @@ import json
 import logging
 import mimetypes
 import os
-import time
 from datetime import datetime, timedelta
 from io import BytesIO
 
@@ -87,8 +86,8 @@ from .portal_helpers import (
     get_overall_stats,
     get_urgent_actions,
 )
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 
 # ==================== HELPER FUNCTIONS ====================
 

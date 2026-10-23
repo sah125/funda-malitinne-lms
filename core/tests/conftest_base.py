@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 
-from core.models import Course, Lesson, Progress
+from core.models import Course, Progress
 
 User = get_user_model()
 

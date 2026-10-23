@@ -15,7 +15,7 @@ urlpatterns = [
     # ===== ADMIN =====
     path('admin/', admin.site.urls),
     path('health/', HealthCheckView.health_check, name='health_check'),
-    
+
     # ===== COMPANY WEBSITE =====
     path('', views.company_home, name='company_home'),
     path('about/', views.about_page, name='about'),
@@ -26,17 +26,17 @@ urlpatterns = [
     path('contact/', views.contact_page, name='contact'),
     path('news/', views.news_list, name='news_list'),
     path('news/<slug:slug>/', views.news_detail, name='news_detail'),
-    
+
     # ===== AUTH =====
     path('login/', views.user_login, name='login'),
     path('logout/', views.user_logout, name='logout'),
     path('register/', views.register, name='register'),
     path('forgot-password/', views.forgot_password, name='forgot_password'),
     path('reset-password/<str:token>/', views.reset_password, name='reset_password'),
-    
+
     # ===== LMS PORTAL =====
     path('lms/', views.lms_portal, name='lms_portal'),
-    
+
     # ===== STUDENT =====
     path('student/', views.student_dashboard, name='student_dashboard'),
     path('course/<int:course_id>/', views.course_detail, name='course_detail'),
@@ -47,7 +47,7 @@ urlpatterns = [
     path('submit/<int:assignment_id>/', views.submit_assignment, name='submit_assignment'),
     path('certificates/', views.certificates, name='certificates'),
     path('certificate/<int:course_id>/download/', views.download_certificate, name='download_certificate'),
-    
+
     # ===== INSTRUCTOR =====
     path('instructor/', views.instructor_dashboard, name='instructor_dashboard'),
     path('instructor/student/<int:user_id>/', views.instructor_student_view, name='instructor_student_view'),
@@ -65,25 +65,25 @@ urlpatterns = [
     path('instructor/bulk-upload/', views.bulk_upload_page, name='bulk_upload_page'),
     path('instructor/bulk-upload-process/', views.bulk_upload_process, name='bulk_upload_process'),
     path('instructor/course/<int:course_id>/bulk-upload/', views.bulk_upload_students, name='bulk_upload_students'),
-    
+
     # ===== ADMIN DASHBOARD =====
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('delete-user/<int:user_id>/', views.delete_user, name='delete_user'),
-    
+
     # ===== STAFF PORTAL =====
     path('staff-portal/', views.staff_portal, name='staff_portal'),
-    
+
     # ===== SHARED DRIVE =====
     path('shared-drive/', views.shared_drive, name='shared_drive'),
     path('shared-drive/upload/', views.upload_document, name='upload_document'),
     path('shared-drive/download/<int:doc_id>/', views.download_document, name='download_document'),
     path('shared-drive/delete/<int:doc_id>/', views.delete_document, name='delete_document'),
-    
+
     # ===== TENDER MANAGEMENT =====
     path('tender-dashboard/', views.tender_dashboard, name='tender_dashboard'),
     path('tender-crawl/', views.run_tender_crawl, name='run_tender_crawl'),
     path('tender/<int:tender_id>/', views.tender_detail, name='tender_detail'),
-    
+
     # ===== LEARNER PROFILE =====
     path('learner-profile/<int:user_id>/', views.learner_profile_view, name='learner_profile'),
     path('admin/learner/<int:user_id>/', views.learner_profile_view, name='learner_profile_admin'),
@@ -94,7 +94,7 @@ urlpatterns = [
     path('api/learner/<int:user_id>/logbook/add/', views.add_logbook_entry, name='add_logbook_entry'),
     path('api/learner/<int:user_id>/export-pdf/', views.export_learner_report, name='export_learner_report'),
     path('api/backup/log/', views.get_backup_log_api, name='get_backup_log_api'),
-    
+
     # ===== API =====
     path('api/ai-command/', views.ai_command_api, name='ai_command_api'),
     path('api/popia-consent/', views.popia_consent_api, name='popia_consent_api'),
@@ -104,12 +104,12 @@ urlpatterns = [
     path('api/bulk-upload/', views.api_bulk_upload, name='api_bulk_upload'),
     path('api/notifications/', views.get_notifications, name='get_notifications'),
     path('api/notifications/mark/<int:notification_id>/', views.mark_notification_read, name='mark_notification_read'),
-    
+
     # ===== ANNOUNCEMENTS =====
     path('course/<int:course_id>/announcements/', views.course_announcements, name='course_announcements'),
     path('api/announcements/<int:announcement_id>/toggle-pin/', views.toggle_announcement_pin, name='toggle_announcement_pin'),
     path('api/announcements/<int:announcement_id>/delete/', views.delete_announcement, name='delete_announcement'),
-    
+
     # ===== DISCUSSIONS =====
     path('lesson/<int:lesson_id>/discussions/', views.lesson_discussions, name='lesson_discussions'),
     path('discussion/<int:topic_id>/', views.discussion_detail, name='discussion_detail'),
@@ -119,12 +119,12 @@ urlpatterns = [
     path('api/discussion/<int:discussion_id>/toggle-close/', views.toggle_discussion_lock, name='toggle_discussion_close'),
     path('api/reply/<int:reply_id>/delete/', views.delete_reply, name='delete_reply'),
     path('api/reply/<int:reply_id>/like/', views.like_reply, name='like_reply'),
-    
+
     # ===== COURSE ROSTER & ATTENDANCE =====
     path('course/<int:course_id>/roster/', views.course_roster, name='course_roster'),
     path('course/<int:course_id>/attendance/', views.course_attendance, name='course_attendance'),
     path('api/attendance/mark/', views.mark_attendance, name='mark_attendance'),
-    
+
     # ===== QCTO SYSTEM =====
     path('api/module/<int:module_id>/content/', views.api_module_content, name='api_module_content'),
     path('api/module/<int:module_id>/complete/', views.api_module_complete, name='api_module_complete'),
@@ -144,18 +144,18 @@ urlpatterns = [
     path('api/iisa/<int:assessment_id>/submit/', views.submit_iisa, name='submit_iisa'),
     path('api/iisa/<int:assessment_id>/grade/', views.grade_iisa, name='grade_iisa'),
     path('api/module/<int:module_id>/signoff/', views.assessor_signoff, name='assessor_signoff'),
-    
+
     # ===== OPPORTUNITIES =====
     path('opportunities/', views.opportunities_list, name='opportunities'),
     path('apply/<int:opportunity_id>/', views.apply_for_opportunity, name='apply'),
     path('application/<str:application_number>/', views.application_success, name='application_success'),
-    
+
     # ===== CONTACT =====
     path('contact/submit/', views.contact_form_submit, name='contact_submit'),
-    
+
     # ===== ROBOTS =====
     path('robots.txt', TemplateView.as_view(template_name='robots.txt', content_type='text/plain'), name='robots'),
-    
+
     # ===== SITEMAP =====
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
 

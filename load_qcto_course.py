@@ -94,7 +94,7 @@ Total credits: 316, NQF Level 5.""",
             }
         )
         if created:
-            print(f"✓ Created quiz for KM-01")
+            print("✓ Created quiz for KM-01")
             QuizQuestion.objects.get_or_create(
                 quiz=quiz,
                 order=1,
@@ -124,7 +124,7 @@ Total credits: 316, NQF Level 5.""",
                 }
             )
         else:
-            print(f"⚠ Quiz already exists for KM-01")
+            print("⚠ Quiz already exists for KM-01")
 
     # Create a sample assignment
     Assignment.objects.get_or_create(

@@ -8,13 +8,13 @@ from decimal import Decimal
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'lms.settings')
 django.setup()
 
-from core.models import Course, Lesson, Progress, Quiz, QuizQuestion, Assignment
+from core.models import Course, Lesson, Quiz, QuizQuestion
 
 User = get_user_model()
 
 def create_new_venture_course():
     """Create the complete New Venture Creation course with all lessons"""
-    
+
     # Get the instructor (assuming Phumlani exists, or create one)
     instructor, created = User.objects.get_or_create(
         username='phumlani',
@@ -27,20 +27,20 @@ def create_new_venture_course():
             'is_active': True
         }
     )
-    
+
     if created:
         instructor.set_password('Phumlani@123')
         instructor.save()
         print(f"✓ Created instructor: {instructor.username}")
     else:
         print(f"✓ Found instructor: {instructor.username}")
-    
+
     # Delete existing "New Venture Creation" course if it exists
     existing_course = Course.objects.filter(title__icontains='New Venture Creation').first()
     if existing_course:
         existing_course.delete()
         print("✓ Removed existing New Venture Creation course")
-    
+
     # Create the main course
     course = Course.objects.create(
         title='New Venture Creation - NQF Level 2 (SAQA ID: 2110010232)',
@@ -61,7 +61,7 @@ This course combines knowledge, practical skills, and workplace application for 
         status='published'
     )
     print(f"✓ Created course: {course.title}")
-    
+
     # ==================== LESSON 1: Being an Entrepreneur ====================
     lesson1 = Lesson.objects.create(
         course=course,
@@ -101,7 +101,7 @@ Why Entrepreneurship Matters for South Africa:
         order=1
     )
     print(f"✓ Created Lesson 1: {lesson1.title}")
-    
+
     # Quiz for Lesson 1
     quiz1 = Quiz.objects.create(
         lesson=lesson1,
@@ -109,7 +109,7 @@ Why Entrepreneurship Matters for South Africa:
         description='Test your understanding of entrepreneurship fundamentals',
         passing_score=70
     )
-    
+
     # Quiz Questions for Lesson 1
     QuizQuestion.objects.create(
         quiz=quiz1,
@@ -123,7 +123,7 @@ Why Entrepreneurship Matters for South Africa:
         option_d="Someone who manages an existing business inherited from family",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz1,
         question_text="Which characteristic is MOST important for entrepreneurs when facing business failure?",
@@ -136,7 +136,7 @@ Why Entrepreneurship Matters for South Africa:
         option_d="Impulsiveness",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz1,
         question_text="According to the lesson, which statement about entrepreneurs is TRUE?",
@@ -149,7 +149,7 @@ Why Entrepreneurship Matters for South Africa:
         option_d="Entrepreneurs need completely unique ideas to succeed",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz1,
         question_text="How does entrepreneurship benefit South Africa's economy?",
@@ -162,7 +162,7 @@ Why Entrepreneurship Matters for South Africa:
         option_d="Reduces competition in markets",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz1,
         question_text="What is the FIRST step in the entrepreneurial process?",
@@ -175,7 +175,7 @@ Why Entrepreneurship Matters for South Africa:
         option_d="Growth Management",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz1,
         question_text="True or False: Successful entrepreneurs take blind, uncalculated risks.",
@@ -186,7 +186,7 @@ Why Entrepreneurship Matters for South Africa:
         option_b="False (They take calculated, researched risks)",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz1,
         question_text="True or False: Innovation is NOT important for entrepreneurs.",
@@ -197,7 +197,7 @@ Why Entrepreneurship Matters for South Africa:
         option_b="False (Innovation is critical for entrepreneurs)",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz1,
         question_text="True or False: Entrepreneurs contribute to GDP growth in South Africa.",
@@ -208,8 +208,8 @@ Why Entrepreneurship Matters for South Africa:
         option_b="False",
         correct_answer="A"
     )
-    print(f"  ✓ Added 8 quiz questions for Lesson 1")
-    
+    print("  ✓ Added 8 quiz questions for Lesson 1")
+
     # ==================== LESSON 2: Know Yourself ====================
     lesson2 = Lesson.objects.create(
         course=course,
@@ -249,14 +249,14 @@ Personal Development Plan (PDP) for Entrepreneurs:
         order=2
     )
     print(f"✓ Created Lesson 2: {lesson2.title}")
-    
+
     quiz2 = Quiz.objects.create(
         lesson=lesson2,
         title='Know Yourself - Quiz',
         description='Test your understanding of self-assessment for entrepreneurs',
         passing_score=70
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz2,
         question_text="What does the 'S' in a personal SWOT analysis stand for?",
@@ -269,7 +269,7 @@ Personal Development Plan (PDP) for Entrepreneurs:
         option_d="Sales",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz2,
         question_text="In Simon Sinek's Golden Circle, what comes at the CENTER (most important)?",
@@ -282,7 +282,7 @@ Personal Development Plan (PDP) for Entrepreneurs:
         option_d="When (Timing)",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz2,
         question_text="Which of the following is an example of an EXTERNAL factor in personal analysis?",
@@ -295,7 +295,7 @@ Personal Development Plan (PDP) for Entrepreneurs:
         option_d="Your time management",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz2,
         question_text="A personal development plan (PDP) helps entrepreneurs to:",
@@ -308,7 +308,7 @@ Personal Development Plan (PDP) for Entrepreneurs:
         option_d="Avoid all business risks",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz2,
         question_text="Which entrepreneurial competency involves understanding money management?",
@@ -321,8 +321,8 @@ Personal Development Plan (PDP) for Entrepreneurs:
         option_d="Negotiation",
         correct_answer="C"
     )
-    print(f"  ✓ Added 5 quiz questions for Lesson 2")
-    
+    print("  ✓ Added 5 quiz questions for Lesson 2")
+
     # ==================== LESSON 3: Know Your Industry ====================
     lesson3 = Lesson.objects.create(
         course=course,
@@ -357,14 +357,14 @@ Market Research Methods:
         order=3
     )
     print(f"✓ Created Lesson 3: {lesson3.title}")
-    
+
     quiz3 = Quiz.objects.create(
         lesson=lesson3,
         title='Know Your Industry - Quiz',
         description='Test your understanding of industry analysis',
         passing_score=70
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz3,
         question_text="What does the 'E' in PESTLE analysis stand for?",
@@ -377,7 +377,7 @@ Market Research Methods:
         option_d="External",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz3,
         question_text="Which market research method is BEST for collecting numerical data from many people?",
@@ -390,7 +390,7 @@ Market Research Methods:
         option_d="Observation",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz3,
         question_text="In PESTLE analysis, 'interest rates' and 'inflation' fall under which category?",
@@ -403,7 +403,7 @@ Market Research Methods:
         option_d="Technological",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz3,
         question_text="Why is competitor analysis important for a new venture?",
@@ -416,8 +416,8 @@ Market Research Methods:
         option_d="To avoid selling any products",
         correct_answer="C"
     )
-    print(f"  ✓ Added 4 quiz questions for Lesson 3")
-    
+    print("  ✓ Added 4 quiz questions for Lesson 3")
+
     # ==================== LESSON 4: Identifying Market Opportunities ====================
     lesson4 = Lesson.objects.create(
         course=course,
@@ -460,14 +460,14 @@ Township Economy Opportunities in South Africa:
         order=4
     )
     print(f"✓ Created Lesson 4: {lesson4.title}")
-    
+
     quiz4 = Quiz.objects.create(
         lesson=lesson4,
         title='Identifying Market Opportunities - Quiz',
         description='Test your understanding of market opportunity identification',
         passing_score=70
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz4,
         question_text="What is a market opportunity?",
@@ -480,7 +480,7 @@ Township Economy Opportunities in South Africa:
         option_d="A type of marketing strategy",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz4,
         question_text="Which of the following is a VALID source of market opportunities?",
@@ -493,7 +493,7 @@ Township Economy Opportunities in South Africa:
         option_d="Only doing what you already know",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz4,
         question_text="What is market segmentation?",
@@ -506,7 +506,7 @@ Township Economy Opportunities in South Africa:
         option_d="Selling products in different countries",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz4,
         question_text="When evaluating an opportunity, a score below 20 out of 35 suggests:",
@@ -519,7 +519,7 @@ Township Economy Opportunities in South Africa:
         option_d="The scoring is incorrect",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz4,
         question_text="True or False: Market opportunities can only come from completely new ideas.",
@@ -530,7 +530,7 @@ Township Economy Opportunities in South Africa:
         option_b="False (Opportunities can come from improving existing products/services)",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz4,
         question_text="True or False: Customer frustrations and complaints can be sources of business opportunities.",
@@ -541,8 +541,8 @@ Township Economy Opportunities in South Africa:
         option_b="False",
         correct_answer="A"
     )
-    print(f"  ✓ Added 6 quiz questions for Lesson 4")
-    
+    print("  ✓ Added 6 quiz questions for Lesson 4")
+
     # ==================== LESSON 5: Innovation ====================
     lesson5 = Lesson.objects.create(
         course=course,
@@ -582,14 +582,14 @@ Simple Innovation Techniques - SCAMPER:
         order=5
     )
     print(f"✓ Created Lesson 5: {lesson5.title}")
-    
+
     quiz5 = Quiz.objects.create(
         lesson=lesson5,
         title='Innovation - Quiz',
         description='Test your understanding of innovation for entrepreneurs',
         passing_score=70
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz5,
         question_text="What is the difference between invention and innovation?",
@@ -602,7 +602,7 @@ Simple Innovation Techniques - SCAMPER:
         option_d="Both create completely new things",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz5,
         question_text="Which type of innovation changes how products are made or delivered?",
@@ -615,7 +615,7 @@ Simple Innovation Techniques - SCAMPER:
         option_d="Social innovation",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz5,
         question_text="What is the FIRST step in the Design Thinking process?",
@@ -628,7 +628,7 @@ Simple Innovation Techniques - SCAMPER:
         option_d="Prototype",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz5,
         question_text="What does the 'C' in SCAMPER stand for?",
@@ -641,7 +641,7 @@ Simple Innovation Techniques - SCAMPER:
         option_d="Calculate",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz5,
         question_text="True or False: Innovation is only for large corporations with big budgets.",
@@ -652,8 +652,8 @@ Simple Innovation Techniques - SCAMPER:
         option_b="False (Small businesses can innovate with minimal resources)",
         correct_answer="B"
     )
-    print(f"  ✓ Added 5 quiz questions for Lesson 5")
-    
+    print("  ✓ Added 5 quiz questions for Lesson 5")
+
     # ==================== LESSON 6: Customer Service ====================
     lesson6 = Lesson.objects.create(
         course=course,
@@ -692,14 +692,14 @@ Customer Service in the South African Context:
         order=6
     )
     print(f"✓ Created Lesson 6: {lesson6.title}")
-    
+
     quiz6 = Quiz.objects.create(
         lesson=lesson6,
         title='Customer Service - Quiz',
         description='Test your understanding of customer service for entrepreneurs',
         passing_score=70
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz6,
         question_text="How many people does one unhappy customer typically tell?",
@@ -712,7 +712,7 @@ Customer Service in the South African Context:
         option_d="50+ people",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz6,
         question_text="What does the 'A' stand for in the HEAT method for handling complaints?",
@@ -725,7 +725,7 @@ Customer Service in the South African Context:
         option_d="Approve",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz6,
         question_text="How much more does it cost to acquire a new customer compared to retaining an existing one?",
@@ -738,7 +738,7 @@ Customer Service in the South African Context:
         option_d="Same cost",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz6,
         question_text="Which of the following is a simple way to build customer loyalty for a small business?",
@@ -751,7 +751,7 @@ Customer Service in the South African Context:
         option_d="Make it difficult to contact you",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz6,
         question_text="List the FOUR steps of the HEAT method for handling complaints.",
@@ -764,8 +764,8 @@ Customer Service in the South African Context:
         option_d="Hold, Execute, Advance, Teach",
         correct_answer="B"
     )
-    print(f"  ✓ Added 5 quiz questions for Lesson 6")
-    
+    print("  ✓ Added 5 quiz questions for Lesson 6")
+
     # ==================== LESSON 7: Financial and Cash Flow Management ====================
     lesson7 = Lesson.objects.create(
         course=course,
@@ -800,14 +800,14 @@ Cash Flow Warning Signs:
         order=7
     )
     print(f"✓ Created Lesson 7: {lesson7.title}")
-    
+
     quiz7 = Quiz.objects.create(
         lesson=lesson7,
         title='Financial and Cash Flow Management - Quiz',
         description='Test your understanding of financial management',
         passing_score=70
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz7,
         question_text="Define start-up capital.",
@@ -820,7 +820,7 @@ Cash Flow Warning Signs:
         option_d="Loan from bank with high interest",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz7,
         question_text="What is the key difference between fixed capital and working capital?",
@@ -833,7 +833,7 @@ Cash Flow Warning Signs:
         option_d="There is no difference",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz7,
         question_text="Which is an example of LONG-TERM finance?",
@@ -846,7 +846,7 @@ Cash Flow Warning Signs:
         option_d="Payday loan",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz7,
         question_text="True or False: A business can have high profit but still run out of cash and fail.",
@@ -857,7 +857,7 @@ Cash Flow Warning Signs:
         option_b="False",
         correct_answer="A"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz7,
         question_text="Why is cash flow management critical?",
@@ -870,8 +870,8 @@ Cash Flow Warning Signs:
         option_d="To measure customer satisfaction",
         correct_answer="B"
     )
-    print(f"  ✓ Added 5 quiz questions for Lesson 7")
-    
+    print("  ✓ Added 5 quiz questions for Lesson 7")
+
     # ==================== LESSON 8: Basic Business Financial Statements ====================
     lesson8 = Lesson.objects.create(
         course=course,
@@ -905,14 +905,14 @@ Sources of Information:
         order=8
     )
     print(f"✓ Created Lesson 8: {lesson8.title}")
-    
+
     quiz8 = Quiz.objects.create(
         lesson=lesson8,
         title='Basic Business Financial Statements - Quiz',
         description='Test your understanding of financial statements',
         passing_score=70
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz8,
         question_text="What is the purpose of an Income and Expenditure Statement?",
@@ -925,7 +925,7 @@ Sources of Information:
         option_d="List names of all shareholders",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz8,
         question_text="What is the purpose of a Balance Sheet?",
@@ -938,7 +938,7 @@ Sources of Information:
         option_d="Calculate income tax owed",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz8,
         question_text="Which is a CURRENT LIABILITY?",
@@ -951,7 +951,7 @@ Sources of Information:
         option_d="Owner's personal house",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz8,
         question_text="How do you determine financial net worth from the balance sheet?",
@@ -964,8 +964,8 @@ Sources of Information:
         option_d="Total Cash - Total Expenses",
         correct_answer="C"
     )
-    print(f"  ✓ Added 4 quiz questions for Lesson 8")
-    
+    print("  ✓ Added 4 quiz questions for Lesson 8")
+
     # ==================== LESSON 9: Pricing of Goods and Services ====================
     lesson9 = Lesson.objects.create(
         course=course,
@@ -1003,14 +1003,14 @@ Factors Affecting Pricing:
         order=9
     )
     print(f"✓ Created Lesson 9: {lesson9.title}")
-    
+
     quiz9 = Quiz.objects.create(
         lesson=lesson9,
         title='Pricing of Goods and Services - Quiz',
         description='Test your understanding of pricing strategies',
         passing_score=70
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz9,
         question_text="What is the break-even point?",
@@ -1023,7 +1023,7 @@ Factors Affecting Pricing:
         option_d="When profit is 50%",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz9,
         question_text="Which pricing strategy sets prices lower than competitors to gain market share?",
@@ -1036,7 +1036,7 @@ Factors Affecting Pricing:
         option_d="Psychological pricing",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz9,
         question_text="A product costs R40 to make. You want a 60% markup. What is the selling price?",
@@ -1049,7 +1049,7 @@ Factors Affecting Pricing:
         option_d="R100",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz9,
         question_text="Why is psychological pricing (e.g., R99 instead of R100) effective?",
@@ -1062,8 +1062,8 @@ Factors Affecting Pricing:
         option_d="It guarantees sales",
         correct_answer="B"
     )
-    print(f"  ✓ Added 4 quiz questions for Lesson 9")
-    
+    print("  ✓ Added 4 quiz questions for Lesson 9")
+
     # ==================== LESSON 10: Marketing ====================
     lesson10 = Lesson.objects.create(
         course=course,
@@ -1103,14 +1103,14 @@ Example: "Gain 50 new customers in first 3 months"
         order=10
     )
     print(f"✓ Created Lesson 10: {lesson10.title}")
-    
+
     quiz10 = Quiz.objects.create(
         lesson=lesson10,
         title='Marketing - Quiz',
         description='Test your understanding of marketing for entrepreneurs',
         passing_score=70
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz10,
         question_text="Which of the following is NOT one of the 7 Ps of Marketing?",
@@ -1123,7 +1123,7 @@ Example: "Gain 50 new customers in first 3 months"
         option_d="Promotion",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz10,
         question_text="What does USP stand for?",
@@ -1136,7 +1136,7 @@ Example: "Gain 50 new customers in first 3 months"
         option_d="Ultimate Service Plan",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz10,
         question_text="Which marketing strategy typically has the LOWEST cost?",
@@ -1149,7 +1149,7 @@ Example: "Gain 50 new customers in first 3 months"
         option_d="Billboards",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz10,
         question_text="Why is WhatsApp considered an effective marketing tool for South African small businesses?",
@@ -1162,8 +1162,8 @@ Example: "Gain 50 new customers in first 3 months"
         option_d="Government requires all businesses to use it",
         correct_answer="B"
     )
-    print(f"  ✓ Added 4 quiz questions for Lesson 10")
-    
+    print("  ✓ Added 4 quiz questions for Lesson 10")
+
     # ==================== LESSON 11: SMART Goals ====================
     lesson11 = Lesson.objects.create(
         course=course,
@@ -1205,14 +1205,14 @@ To REDUCE COSTS:
         order=11
     )
     print(f"✓ Created Lesson 11: {lesson11.title}")
-    
+
     quiz11 = Quiz.objects.create(
         lesson=lesson11,
         title='SMART Goals - Quiz',
         description='Test your understanding of SMART goal setting',
         passing_score=70
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz11,
         question_text="What does the 'M' in SMART goals stand for?",
@@ -1225,7 +1225,7 @@ To REDUCE COSTS:
         option_d="Manageable",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz11,
         question_text="Which of the following is a SMART goal?",
@@ -1238,7 +1238,7 @@ To REDUCE COSTS:
         option_d="Be better than competitors",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz11,
         question_text="The Current Ratio measures:",
@@ -1251,7 +1251,7 @@ To REDUCE COSTS:
         option_d="Employee productivity",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz11,
         question_text="Which strategy would increase income?",
@@ -1264,8 +1264,8 @@ To REDUCE COSTS:
         option_d="Reducing marketing",
         correct_answer="B"
     )
-    print(f"  ✓ Added 4 quiz questions for Lesson 11")
-    
+    print("  ✓ Added 4 quiz questions for Lesson 11")
+
     # ==================== LESSON 12: Business Planning ====================
     lesson12 = Lesson.objects.create(
         course=course,
@@ -1304,14 +1304,14 @@ Taxation Requirements for South Africa:
         order=12
     )
     print(f"✓ Created Lesson 12: {lesson12.title}")
-    
+
     quiz12 = Quiz.objects.create(
         lesson=lesson12,
         title='Business Planning - Quiz',
         description='Test your understanding of business planning',
         passing_score=70
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz12,
         question_text="Which is the BEST accounting system for a brand new small venture with very few transactions?",
@@ -1324,7 +1324,7 @@ Taxation Requirements for South Africa:
         option_d="No system at all",
         correct_answer="B"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz12,
         question_text="At what annual revenue must a business register for VAT in South Africa?",
@@ -1337,7 +1337,7 @@ Taxation Requirements for South Africa:
         option_d="R5,000,000",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz12,
         question_text="How often should a small business reconcile its bank statements?",
@@ -1350,7 +1350,7 @@ Taxation Requirements for South Africa:
         option_d="Every 5 years",
         correct_answer="C"
     )
-    
+
     QuizQuestion.objects.create(
         quiz=quiz12,
         question_text="Why should the Executive Summary be written LAST when creating a business plan?",
@@ -1363,19 +1363,19 @@ Taxation Requirements for South Africa:
         option_d="Because only accountants can write it",
         correct_answer="B"
     )
-    print(f"  ✓ Added 4 quiz questions for Lesson 12")
-    
+    print("  ✓ Added 4 quiz questions for Lesson 12")
+
     # Summary
     print("\n" + "="*60)
     print("✅ COURSE CREATION COMPLETE!")
     print("="*60)
     print(f"\n📚 Course: {course.title}")
-    print(f"📖 Total Lessons: 12")
-    print(f"❓ Total Quiz Questions: 54")
+    print("📖 Total Lessons: 12")
+    print("❓ Total Quiz Questions: 54")
     print(f"👨‍🏫 Instructor: {instructor.get_full_name() or instructor.username}")
     print(f"\n🔗 Course URL: http://127.0.0.1:8000/course/{course.id}/")
     print("\n✨ Students can now enroll and start learning!")
-    
+
     return course
 
 if __name__ == '__main__':

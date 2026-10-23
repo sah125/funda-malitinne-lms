@@ -551,14 +551,14 @@ def make_checklist_items_for_lesson(lesson_title, module_type):
         f"Explains the key concepts and issues associated with {label}.",
         f"Applies {label} to a realistic organisational scenario or case.",
         f"Uses evidence to assess the relevance of {label} for business improvement.",
-        f"Communicates findings and recommendations clearly and professionally.",
+        "Communicates findings and recommendations clearly and professionally.",
     ]
     return base if module_type != "practical" and module_type != "work_experience" else [
         f"Carries out the required task for {label} in a structured and professional manner.",
         f"Collects and reviews relevant evidence for {label}.",
         f"Uses the relevant method or procedure correctly for {label}.",
         f"Identifies gaps, risks or opportunities linked to {label}.",
-        f"Reports findings and recommendations clearly for action and review.",
+        "Reports findings and recommendations clearly for action and review.",
     ]
 
 
