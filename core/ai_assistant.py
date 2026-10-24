@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from .models import ForumTopic, PortfolioOfEvidence, TenderOpportunity, User
 from .portal_helpers import (
+    delivery_projects,
     calculate_project_health,
     get_overall_stats,
     get_urgent_actions,
@@ -196,7 +197,7 @@ def extract_days(query):
 
 def get_projects_below_attendance(threshold=80):
     """Find projects with attendance below threshold"""
-    projects = TenderOpportunity.objects.filter(status__in=['new', 'viewed', 'active'])
+    projects = delivery_projects()
     results = []
 
     for project in projects:
@@ -256,7 +257,7 @@ def get_missing_poe_learners():
 
 def get_high_risk_projects():
     """Get projects marked as high risk"""
-    projects = TenderOpportunity.objects.filter(status__in=['new', 'viewed', 'active'])
+    projects = delivery_projects()
     results = []
 
     for project in projects:
@@ -305,7 +306,7 @@ def get_compliance_status():
     consented = LearnerProfile.objects.filter(popia_consent=True).count()
 
     # Attendance compliance (80%+)
-    projects = TenderOpportunity.objects.filter(status__in=['new', 'viewed', 'active'])
+    projects = delivery_projects()
     compliant_projects = 0
     for project in projects:
         health = calculate_project_health(project)

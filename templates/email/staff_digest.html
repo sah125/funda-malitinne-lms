@@ -1,0 +1,20 @@
+{% extends 'email/_base.html' %}
+{% block body %}
+<h2 style="font-family:Georgia,serif;color:#1a1a2e;margin:0 0 6px;">Staff portal: {{ today|date:"l j F" }}</h2>
+<p style="margin:0 0 18px;color:#888;font-size:13px;">The morning scan of eTenders and SETA / NYDA / NSF pages.</p>
+{% if new_matches %}
+<h3 style="color:#1a1a2e;font-size:16px;margin:18px 0 8px;">{{ new_matches|length }} new opportunit{{ new_matches|length|pluralize:"y,ies" }} that fit us</h3>
+<table role="presentation" cellspacing="0" cellpadding="8" style="font-size:14px;border-collapse:collapse;width:100%;">
+{% for t in new_matches %}<tr style="border-bottom:1px solid #eee;">
+  <td style="width:44px;font-weight:bold;color:{% if t.fit_verdict == 'strong' %}#1e7a52{% else %}#9a5f0c{% endif %};font-size:18px;">{{ t.fit_score }}</td>
+  <td><a href="{{ site_url }}{{ t.get_absolute_url }}" style="color:#1a1a2e;font-weight:bold;text-decoration:none;">{{ t.title|truncatechars:110 }}</a><br>
+  <span style="color:#888;font-size:13px;">{{ t.department|default:"" }}{% if t.closing_date %} · closes {{ t.closing_date|date:"j M Y" }}{% endif %} · {{ t.get_eligibility_status_display }}</span></td></tr>{% endfor %}
+</table>
+{% endif %}
+{% if expiring %}
+<h3 style="color:#1a1a2e;font-size:16px;margin:22px 0 8px;">Bid documents to renew</h3>
+<ul style="padding-left:18px;margin:0;">{% for d in expiring %}<li style="margin-bottom:6px;"><strong>{{ d.title }}</strong> {% if d.days_to_expiry < 0 %}expired on{% else %}expires on{% endif %} {{ d.expiry_date|date:"j M Y" }}</li>{% endfor %}</ul>
+{% endif %}
+{% if errors %}<p style="font-size:13px;color:#b42318;margin-top:18px;">{{ errors|length }} source{{ errors|length|pluralize }} could not be checked today. See Tenders &amp; grants → Where we look.</p>{% endif %}
+{% include 'email/_button.html' with href=portal_url label='Open the staff portal' %}
+{% endblock %}

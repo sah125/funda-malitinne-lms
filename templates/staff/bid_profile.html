@@ -1,0 +1,13 @@
+{% extends 'staff/base.html' %}
+{% block title %}Bid profile{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{% url 'tender_dashboard' %}">Tenders &amp; grants</a> / Bid profile</div>
+<div class="page-head"><div>
+  <h1>Bid profile</h1>
+  <p>What Malitinne does and holds. Every tender and grant is scored against this. Saving re-scores all open opportunities.</p>
+</div></div>
+<form method="post" class="panel" style="max-width:980px">{% csrf_token %}
+  <div class="panel-body">{% include 'staff/partials/form_fields.html' with form=form wide='company_name' %}</div>
+  <div class="panel-foot" style="display:flex;gap:10px;justify-content:flex-end"><a class="btn quiet" href="{% url 'tender_dashboard' %}">Cancel</a><button class="btn primary" type="submit">Save and re-score</button></div>
+</form>
+{% endblock %}

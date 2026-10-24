@@ -1,0 +1,86 @@
+{% extends 'staff/base.html' %}
+{% block title %}Tenders & grants{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Tenders &amp; grants</h1>
+    <p>Found daily on eTenders and SETA, NYDA and NSF pages, scored against our services and checked against our bid documents.</p>
+  </div>
+  <div class="page-actions">
+    {% if user.role == 'admin' %}
+    <a class="btn quiet" href="{% url 'bid_profile' %}"><i class="fas fa-sliders"></i> Bid profile</a>
+    <form method="post" action="{% url 'run_tender_crawl' %}">{% csrf_token %}<button class="btn" type="submit" {% if scan_running %}disabled{% endif %}><i class="fas fa-rotate{% if scan_running %} fa-spin{% endif %}"></i> {% if scan_running %}Scanning...{% else %}Scan now{% endif %}</button></form>
+    {% endif %}
+    <a class="btn primary" href="{% url 'tender_create' %}"><i class="fas fa-plus"></i> Add opportunity</a>
+  </div>
+</div>
+
+<div class="kpis">
+  <a class="kpi good" href="?verdict=strong"><div class="v">{{ stat_strong }}</div><div class="l">Strong fits open</div></a>
+  <a class="kpi {% if stat_closing %}alert{% endif %}" href="?sort=closing"><div class="v">{{ stat_closing }}</div><div class="l">Good fits closing in 7 days</div></a>
+  <a class="kpi" href="?kind=grant"><div class="v">{{ stat_grants }}</div><div class="l">Grants &amp; funding windows open</div></a>
+  <a class="kpi" href="?view=all&status=preparing"><div class="v">{{ stat_in_progress }}</div><div class="l">Bids in progress</div></a>
+  <a class="kpi" href="?view=closed&status=won"><div class="v">{{ stat_won }}</div><div class="l">Won this year</div></a>
+</div>
+
+<section class="panel">
+  <nav class="tabs" aria-label="Views">
+    <a href="?view=open" class="{% if view == 'open' %}on{% endif %}">Open</a>
+    <a href="?view=mine" class="{% if view == 'mine' %}on{% endif %}">Assigned to me</a>
+    <a href="?view=closed" class="{% if view == 'closed' %}on{% endif %}">Closed &amp; decided</a>
+    <a href="?view=all" class="{% if view == 'all' %}on{% endif %}">Everything</a>
+  </nav>
+  <form class="toolbar" method="get">
+    <input type="hidden" name="view" value="{{ view }}">
+    <div class="search"><i class="fas fa-magnifying-glass"></i><label class="sr-only" for="tq">Search</label><input id="tq" type="search" name="q" value="{{ filters.q }}" placeholder="Search title, buyer, bid number"></div>
+    <select name="kind" aria-label="Type"><option value="">All types</option>{% for k, l in kinds %}<option value="{{ k }}" {% if filters.kind == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+    <select name="verdict" aria-label="Fit"><option value="">Any fit</option>{% for k, l in verdicts %}<option value="{{ k }}" {% if filters.verdict == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+    <select name="eligibility" aria-label="Eligibility"><option value="">Any eligibility</option>{% for k, l in eligibilities %}<option value="{{ k }}" {% if filters.eligibility == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+    <select name="province" aria-label="Province"><option value="">All provinces</option>{% for p in provinces %}<option {% if filters.province == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select>
+    <select name="sort" aria-label="Sort"><option value="score" {% if sort == 'score' %}selected{% endif %}>Best fit first</option><option value="closing" {% if sort == 'closing' %}selected{% endif %}>Closing soonest</option><option value="newest" {% if sort == 'newest' %}selected{% endif %}>Newest found</option></select>
+    <button class="btn dark" type="submit">Apply</button>
+    {% if filters.q or filters.kind or filters.verdict or filters.eligibility or filters.province or filters.status %}<a class="btn quiet" href="?view={{ view }}">Clear</a>{% endif %}
+  </form>
+
+  {% if page.object_list %}
+  <div class="table-wrap"><table class="data">
+    <thead><tr><th>Fit</th><th>Opportunity</th><th class="hide-sm">Province</th><th class="hide-sm">Eligibility</th><th>Closes</th><th class="hide-sm">Status</th></tr></thead>
+    <tbody>
+    {% for t in page.object_list %}
+      <tr class="row-link" data-href="{{ t.get_absolute_url }}">
+        <td><div class="dial {{ t.fit_verdict }}" style="--v:{{ t.fit_score }}" title="{{ t.get_fit_verdict_display }}"><b>{{ t.fit_score }}</b></div></td>
+        <td class="title-cell">
+          <a href="{{ t.get_absolute_url }}">{{ t.title|truncatechars:110 }}</a>
+          <div class="meta">{% if t.kind != 'tender' %}<span class="pill {% if t.kind == 'grant' %}violet{% else %}info{% endif %}" style="margin-right:6px">{{ t.get_kind_display }}</span>{% endif %}{{ t.department|default:"Issuer not stated" }}{% if t.reference %} · {{ t.reference }}{% endif %}</div>
+        </td>
+        <td class="hide-sm nowrap">{{ t.province|default:"-" }}</td>
+        <td class="hide-sm">{% include 'staff/partials/eligibility_pill.html' with t=t %}</td>
+        <td class="nowrap">{% include 'staff/partials/closing.html' with t=t %}</td>
+        <td class="hide-sm"><span class="pill {% if t.status == 'won' %}ok{% elif t.status in 'preparing applied shortlisted' %}gold{% elif t.status in 'lost declined expired' %}{% elif t.status == 'new' %}info{% endif %}">{{ t.get_status_display }}</span>{% if t.assigned_to %}<div class="faint" style="font-size:12.5px;margin-top:3px">{{ t.assigned_to.first_name|default:t.assigned_to.username }}</div>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="pager"><span>{{ page.paginator.count }} opportunit{{ page.paginator.count|pluralize:"y,ies" }}</span>
+    <div class="btns">{% if page.has_previous %}<a class="btn sm" href="?{{ querystring }}&page={{ page.previous_page_number }}">Previous</a>{% endif %}<span style="align-self:center">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a class="btn sm" href="?{{ querystring }}&page={{ page.next_page_number }}">Next</a>{% endif %}</div></div>
+  {% else %}
+  <div class="empty"><i class="fas fa-file-circle-question"></i>
+    <h3>{% if filters.q or filters.kind or filters.verdict or filters.eligibility or filters.province %}Nothing matches these filters{% else %}No opportunities here yet{% endif %}</h3>
+    <p>{% if user.role == 'admin' %}Run a scan to pull today's tenders, or add one you heard about.{% else %}New tenders and grants are found every morning. You can also add one you heard about.{% endif %}</p>
+    <a class="btn primary" href="{% url 'tender_create' %}">Add opportunity</a></div>
+  {% endif %}
+</section>
+
+<details class="panel sources">
+  <summary><div><h2>Where we look ({{ sources|length }} sources)</h2><div class="sub muted" style="font-size:13px">Checked every morning at 06:00. Administrators can add or change sources in Data admin, under Tender sources.</div></div><i class="fas fa-chevron-down chev"></i></summary>
+  <div class="table-wrap"><table class="data">
+    <thead><tr><th>Source</th><th>Type</th><th>Last checked</th><th>Result</th></tr></thead>
+    <tbody>{% for s in sources %}
+      <tr><td><strong>{{ s.name }}</strong>{% if not s.is_active %} <span class="pill">Paused</span>{% endif %}<div class="faint" style="font-size:12.5px;overflow-wrap:anywhere">{{ s.base_url }}</div></td>
+        <td class="nowrap">{% if s.source_type == 'ocds' %}Tender feed{% else %}Grant page{% endif %}</td>
+        <td class="nowrap">{{ s.last_crawled|date:"j M, H:i"|default:"Not yet" }}</td>
+        <td><span class="{% if 'Failed' in s.last_result %}state-expired{% else %}muted{% endif %}">{{ s.last_result|default:"-"|truncatechars:90 }}</span></td></tr>
+    {% empty %}<tr><td colspan="4" class="muted">No sources configured.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</details>
+{% endblock %}

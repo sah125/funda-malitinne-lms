@@ -1,0 +1,14 @@
+{% extends 'staff/base.html' %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Notifications</h1></div>
+  <div class="page-actions">{% if notification_count %}<form method="post">{% csrf_token %}<button class="btn" type="submit"><i class="fas fa-check-double"></i> Mark all as read</button></form>{% endif %}</div></div>
+<section class="panel">
+  {% if items %}<ul class="list">{% for n in items %}
+    <li style="{% if not n.is_read %}background:#fbf8f1{% endif %}"><span class="kind-dot" style="background:{% if n.is_read %}var(--line-strong){% else %}var(--gold){% endif %}"></span>
+      <div class="grow">{% if n.link %}<a class="t" href="{{ n.link }}">{{ n.title }}</a>{% else %}<span class="t">{{ n.title }}</span>{% endif %}<span class="s">{{ n.message|truncatechars:160 }}</span></div>
+      <span class="faint nowrap" style="font-size:13px">{{ n.created_at|timesince }} ago</span></li>
+  {% endfor %}</ul>
+  {% else %}<div class="empty"><i class="far fa-bell"></i><h3>You're all caught up</h3></div>{% endif %}
+</section>
+{% endblock %}

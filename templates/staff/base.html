@@ -1,0 +1,83 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}Staff portal{% endblock %} | Funda Malitinne</title>
+  {% include 'partials/favicons.html' %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="{% static 'css/staff.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body class="staff">
+<a class="sr-only" href="#main">Skip to content</a>
+
+<aside class="sidebar" aria-label="Staff portal navigation">
+  <a class="brand" href="{% url 'staff_portal' %}">
+    <span class="brand-mark" aria-hidden="true"><i class="fas fa-chess-queen"></i></span>
+    <span><strong>Funda Malitinne</strong><small>Operations centre</small></span>
+  </a>
+  <nav class="nav">
+    <div class="nav-group" style="margin-top:0">
+      <a href="{% url 'staff_portal' %}" class="{% if active_nav == 'dashboard' %}active{% endif %}"><i class="fas fa-gauge-high"></i> Dashboard</a>
+      <a href="{% url 'tender_dashboard' %}" class="{% if active_nav == 'tenders' %}active{% endif %}"><i class="fas fa-file-contract"></i> Tenders &amp; grants{% if nav_urgent_tenders %}<span class="badge hot" title="Good-fit opportunities closing within 7 days">{{ nav_urgent_tenders }}</span>{% endif %}</a>
+      <a href="{% url 'tender_calendar' %}" class="{% if active_nav == 'calendar' %}active{% endif %}"><i class="fas fa-calendar-days"></i> Calendar</a>
+      <a href="{% url 'tender_report' %}" class="{% if active_nav == 'report' %}active{% endif %}"><i class="fas fa-chart-column"></i> Reports</a>
+      <a href="{% url 'shared_drive' %}" class="{% if active_nav == 'drive' %}active{% endif %}"><i class="fas fa-folder-open"></i> Shared drive{% if nav_expiring_docs %}<span class="badge" title="Bid documents expired or expiring within 30 days">{{ nav_expiring_docs }}</span>{% endif %}</a>
+      <a href="{% url 'discussions_list' %}" class="{% if active_nav == 'discussions' %}active{% endif %}"><i class="fas fa-comments"></i> Discussions</a>
+    </div>
+    {% if user.role == 'admin' %}
+    <div class="nav-group">
+      <span>Administration</span>
+      <a href="{% url 'pending_approvals' %}"><i class="fas fa-user-check"></i> Learner approvals{% if nav_pending_approvals %}<span class="badge hot">{{ nav_pending_approvals }}</span>{% endif %}</a>
+      <a href="{% url 'admin_dashboard' %}"><i class="fas fa-user-gear"></i> Admin dashboard</a>
+      <a href="/admin/"><i class="fas fa-database"></i> Data admin</a>
+    </div>
+    {% endif %}
+    <div class="nav-group">
+      <span>Elsewhere</span>
+      <a href="{% url 'lms_portal' %}"><i class="fas fa-graduation-cap"></i> LMS portal</a>
+      <a href="{% url 'company_home' %}"><i class="fas fa-globe-africa"></i> Public website</a>
+    </div>
+  </nav>
+  <div class="sidebar-foot">
+    <div class="me">
+      <span class="avatar" aria-hidden="true">{{ user.first_name|default:user.username|slice:":1"|upper }}</span>
+      <div><div class="me-name">{{ user.get_full_name|default:user.username }}</div><div class="me-role">{{ user.get_role_display }}</div></div>
+      <a class="signout" href="{% url 'logout' %}" title="Sign out" aria-label="Sign out"><i class="fas fa-right-from-bracket"></i></a>
+    </div>
+    <div class="popia-note"><i class="fas fa-shield-halved"></i> POPIA: downloads are logged</div>
+  </div>
+</aside>
+<div class="scrim"></div>
+
+<div class="main">
+  <header class="topbar">
+    <button class="icon-btn menu-btn" data-nav-toggle aria-label="Open menu"><i class="fas fa-bars"></i></button>
+    <form class="global-search" action="{% url 'shared_drive' %}" method="get" role="search">
+      <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+      <label class="sr-only" for="gsearch">Find a document</label>
+      <input id="gsearch" type="search" name="q" placeholder="Find a document: CIPC, tax PIN, appointment letter...">
+    </form>
+    <div class="topbar-actions">
+      <a class="icon-btn" href="{% url 'tender_calendar' %}" title="Calendar" aria-label="Calendar"><i class="far fa-calendar"></i></a>
+      <a class="icon-btn" href="{% url 'notifications' %}" title="Notifications" aria-label="Notifications"><i class="far fa-bell"></i>{% if notification_count %}<span class="dot"></span>{% endif %}</a>
+    </div>
+  </header>
+
+  <main class="content" id="main">
+    {% if messages %}{% for m in messages %}
+      <div class="flash {{ m.tags }}" role="status"><i class="fas {% if m.tags == 'success' %}fa-circle-check{% elif m.tags == 'error' %}fa-circle-exclamation{% else %}fa-circle-info{% endif %}" style="margin-top:3px"></i><div>{{ m }}</div></div>
+    {% endfor %}{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<script src="{% static 'js/staff.js' %}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

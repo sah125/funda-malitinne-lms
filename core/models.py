@@ -107,6 +107,9 @@ class Course(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     featured_image = models.ImageField(upload_to='courses/', blank=True, null=True)
     students = models.ManyToManyField(User, related_name='enrolled_courses', blank=True)
+    project = models.ForeignKey(
+        'TenderOpportunity', on_delete=models.SET_NULL, null=True, blank=True, related_name='delivery_courses',
+        help_text='The won tender / funded project this course delivers (powers the project health monitor).')
     level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='beginner')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -1104,6 +1107,8 @@ class StaffAnnouncement(models.Model):
 class TenderSource(models.Model):
     """Sources to crawl for opportunities (eTenders, SETA portals, etc.)"""
     SOURCE_TYPES = (
+        ('ocds', 'eTenders open data API (automatic)'),
+        ('watch_page', 'Watched web page (grants, SETA windows)'),
         ('etenders', 'National eTenders Portal'),
         ('seta', 'SETA Portal'),
         ('municipality', 'Municipality Website'),
@@ -1116,6 +1121,8 @@ class TenderSource(models.Model):
     is_active = models.BooleanField(default=True)
     last_crawled = models.DateTimeField(null=True, blank=True)
     crawl_frequency_hours = models.IntegerField(default=24)
+    default_kind = models.CharField(max_length=20, default='tender', help_text='tender or grant')
+    last_result = models.CharField(max_length=300, blank=True)
 
     def __str__(self):
         return self.name
@@ -1125,13 +1132,32 @@ class TenderOpportunity(models.Model):
     """Crawled tender/opportunity from various sources"""
     STATUS_CHOICES = (
         ('new', 'New'),
-        ('viewed', 'Viewed'),
-        ('applied', 'Applied'),
+        ('viewed', 'Reviewing'),
+        ('preparing', 'Preparing bid'),
+        ('applied', 'Submitted'),
         ('shortlisted', 'Shortlisted'),
         ('won', 'Won'),
         ('lost', 'Lost'),
+        ('declined', 'Not bidding'),
         ('expired', 'Expired'),
     )
+    KIND_CHOICES = (
+        ('tender', 'Tender'),
+        ('rfq', 'Quotation (RFQ)'),
+        ('grant', 'Grant / funding window'),
+    )
+    VERDICT_CHOICES = (
+        ('strong', 'Strong fit'),
+        ('possible', 'Possible fit'),
+        ('low', 'Low fit'),
+    )
+    ELIGIBILITY_CHOICES = (
+        ('eligible', 'Eligible'),
+        ('missing_docs', 'Documents needed'),
+        ('not_eligible', 'Not eligible'),
+        ('unknown', 'Check manually'),
+    )
+    ACTIVE_STATUSES = ('new', 'viewed', 'preparing', 'applied', 'shortlisted')
 
     CATEGORY_CHOICES = (
         ('training', 'Training & Skills Development'),
@@ -1143,18 +1169,28 @@ class TenderOpportunity(models.Model):
 
     source = models.ForeignKey(TenderSource, on_delete=models.SET_NULL, null=True, related_name='opportunities')
     tender_id = models.CharField(max_length=100, help_text="Original tender ID from source")
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default='tender')
+    reference = models.CharField(max_length=120, blank=True, help_text='Tender / bid number as published')
+    ocid = models.CharField(max_length=80, blank=True, db_index=True)
+    source_url = models.URLField(max_length=500, blank=True, help_text='Page where this opportunity was found')
     title = models.CharField(max_length=500)
     description = models.TextField()
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='training')
 
     published_date = models.DateField(null=True, blank=True)
-    closing_date = models.DateField()
+    closing_date = models.DateField(null=True, blank=True, help_text='Leave empty if the closing date is not announced yet')
+    closing_time = models.TimeField(null=True, blank=True)
+    briefing_at = models.DateTimeField(null=True, blank=True)
+    briefing_venue = models.CharField(max_length=300, blank=True)
+    briefing_compulsory = models.BooleanField(default=False)
     opening_date = models.DateField(null=True, blank=True)
 
     estimated_value = models.CharField(max_length=200, blank=True, help_text="Estimated value range")
     bidder_deposit = models.CharField(max_length=200, blank=True)
 
     location = models.CharField(max_length=200, blank=True)
+    province = models.CharField(max_length=60, blank=True)
+    value_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
     department = models.CharField(max_length=300, blank=True, help_text="Issuing department/agency")
 
     document_url = models.URLField(blank=True, help_text="Link to original tender document")
@@ -1163,6 +1199,10 @@ class TenderOpportunity(models.Model):
     ai_relevance_score = models.FloatField(default=0, help_text="0-100 score based on business fit")
     ai_confidence = models.FloatField(default=0, help_text="Confidence in scoring")
     ai_match_reasons = models.TextField(blank=True, help_text="Why this tender is relevant")
+    fit_verdict = models.CharField(max_length=20, choices=VERDICT_CHOICES, default='low')
+    eligibility_status = models.CharField(max_length=20, choices=ELIGIBILITY_CHOICES, default='unknown')
+    eligibility = models.JSONField(default=list, blank=True, help_text='Checklist produced by the scorer')
+    scored_at = models.DateTimeField(null=True, blank=True)
 
     internal_notes = models.TextField(blank=True)
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tenders')
@@ -1178,24 +1218,52 @@ class TenderOpportunity(models.Model):
     class Meta:
         unique_together = ['source', 'tender_id']
         ordering = ['closing_date', '-ai_relevance_score']
+        indexes = [models.Index(fields=['status', 'closing_date']), models.Index(fields=['fit_verdict'])]
 
     def __str__(self):
-        return f"{self.title} (Closes: {self.closing_date})"
+        return f"{self.title} (Closes: {self.closing_date or 'TBC'})"
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('tender_detail', args=[self.pk])
+
+    @property
+    def fit_score(self):
+        return int(round(self.ai_relevance_score or 0))
 
     @property
     def days_until_close(self):
+        if not self.closing_date:
+            return None
         from django.utils import timezone
-        delta = self.closing_date - timezone.now().date()
-        return delta.days
+        return (self.closing_date - timezone.localdate()).days
 
     @property
     def is_urgent(self):
-        return self.days_until_close <= 7 and self.status == 'new'
+        days = self.days_until_close
+        return days is not None and 0 <= days <= 7 and self.status in self.ACTIVE_STATUSES
 
     @property
     def is_open(self):
-        from django.utils import timezone
-        return self.closing_date >= timezone.now().date() and self.status not in ['expired', 'lost']
+        days = self.days_until_close
+        return (days is None or days >= 0) and self.status not in ('expired', 'lost', 'declined', 'won')
+
+    @property
+    def internal_deadline(self):
+        """Finish the bid two working days before it closes (time for printing, signing, delivery)."""
+        if not self.closing_date:
+            return None
+        from datetime import timedelta
+        day, left = self.closing_date, 2
+        while left:
+            day -= timedelta(days=1)
+            if day.weekday() < 5:
+                left -= 1
+        return day
+
+    @property
+    def match_reasons(self):
+        return [r for r in (self.ai_match_reasons or '').split('\n') if r.strip()]
 
 
 
@@ -1280,6 +1348,33 @@ class SharedDocument(models.Model):
 
     download_count = models.IntegerField(default=0)
 
+    DOC_TYPE_CHOICES = (
+        ('cipc_registration', 'CIPC registration (CoR14.3)'),
+        ('tax_compliance', 'SARS tax compliance (TCS PIN)'),
+        ('bbbee', 'B-BBEE certificate / affidavit'),
+        ('csd_report', 'CSD registration report'),
+        ('coida', 'COIDA letter of good standing'),
+        ('bank_letter', 'Bank confirmation letter'),
+        ('vat', 'VAT registration'),
+        ('accreditation_letter', 'Accreditation letter (QCTO / SETA)'),
+        ('company_profile', 'Company profile'),
+        ('director_id', "Directors' ID copies"),
+        ('referral_letter', 'Referral letter'),
+        ('appointment_letter', 'Appointment letter'),
+        ('reference_letter', 'Reference / testimonial letter'),
+        ('completion_certificate', 'Project completion certificate'),
+        ('contract', 'Contract / SLA'),
+        ('policy', 'Policy'),
+        ('template', 'Template / form'),
+        ('other', 'Other'),
+    )
+    doc_type = models.CharField(max_length=40, choices=DOC_TYPE_CHOICES, default='other', db_index=True)
+    reference_number = models.CharField(max_length=120, blank=True, help_text='e.g. registration number, PIN, certificate number')
+    issued_date = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True, db_index=True)
+    is_sensitive = models.BooleanField(default=False, help_text='Personal information (IDs etc.) - management only, every download logged')
+    is_current = models.BooleanField(default=True, help_text='False once a newer version of this document is uploaded')
+
     class Meta:
         ordering = ['-uploaded_at']
 
@@ -1287,11 +1382,44 @@ class SharedDocument(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        if self.file:
+        if self.file and not self.file_name:
             self.file_name = self.file.name.split('/')[-1]
-            if not self.file_size and hasattr(self.file, 'size'):
-                self.file_size = self.file.size
+        if self.file and not self.file_size and hasattr(self.file, 'size'):
+            self.file_size = self.file.size
         super().save(*args, **kwargs)
+
+    @property
+    def extension(self):
+        return (self.file_name.rsplit('.', 1)[-1] if '.' in (self.file_name or '') else '').lower()
+
+    @property
+    def icon(self):
+        return {'pdf': 'fa-file-pdf', 'doc': 'fa-file-word', 'docx': 'fa-file-word', 'xls': 'fa-file-excel',
+                'xlsx': 'fa-file-excel', 'csv': 'fa-file-csv', 'ppt': 'fa-file-powerpoint', 'pptx': 'fa-file-powerpoint',
+                'jpg': 'fa-file-image', 'jpeg': 'fa-file-image', 'png': 'fa-file-image', 'zip': 'fa-file-zipper',
+                }.get(self.extension, 'fa-file-lines')
+
+    @property
+    def can_preview(self):
+        return self.extension in ('pdf', 'jpg', 'jpeg', 'png', 'webp', 'gif', 'txt')
+
+    @property
+    def days_to_expiry(self):
+        if not self.expiry_date:
+            return None
+        from django.utils import timezone
+        return (self.expiry_date - timezone.localdate()).days
+
+    @property
+    def expiry_state(self):
+        days = self.days_to_expiry
+        if days is None:
+            return 'none'
+        if days < 0:
+            return 'expired'
+        if days <= 30:
+            return 'expiring'
+        return 'valid'
 
 
 class DocumentDownloadLog(models.Model):
@@ -1653,3 +1781,35 @@ class GalleryPhoto(models.Model):
         if self.static_path:
             return static(self.static_path.replace('.jpg', '-sm.jpg'))
         return ''
+
+
+class BidProfile(models.Model):
+    """What Malitinne does and holds - the tender scorer compares every tender
+    and grant against this. One row (edit it at Staff portal > Tenders > Bid profile)."""
+
+    company_name = models.CharField(max_length=200, default='Malitinne (Pty) Ltd')
+    core_keywords = models.TextField(help_text='Our core services - one keyword or phrase per line (strong match)')
+    related_keywords = models.TextField(blank=True, help_text='Related work we can do - one per line (weaker match)')
+    exclude_keywords = models.TextField(blank=True, help_text='Work we do not do - one per line (pushes the score down)')
+    home_province = models.CharField(max_length=60, default='KwaZulu-Natal')
+    target_provinces = models.TextField(blank=True, help_text='Other provinces we deliver in - one per line')
+    bbbee_level = models.PositiveSmallIntegerField(null=True, blank=True, help_text='1-8, blank if unknown')
+    cidb_grade = models.CharField(max_length=20, blank=True, help_text='Leave blank if not CIDB registered')
+    accreditations = models.TextField(blank=True, help_text='Bodies we are accredited with - one per line (QCTO, Services SETA ...)')
+    min_days_to_prepare = models.PositiveSmallIntegerField(default=5)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Bid profile'
+
+    def __str__(self):
+        return f'Bid profile - {self.company_name}'
+
+    @staticmethod
+    def _lines(text):
+        return [line.strip() for line in (text or '').replace(',', '\n').splitlines() if line.strip()]
+
+    @classmethod
+    def load(cls):
+        obj = cls.objects.order_by('pk').first()
+        return obj or cls.objects.create(core_keywords='training\nskills development')

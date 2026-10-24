@@ -1,0 +1,111 @@
+{% extends 'staff/base.html' %}
+{% block title %}Shared drive{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Shared drive</h1>
+    <p>Company documents in one place. The bid-ready set at the top is what tenders ask for; the tender checker reads it, including expiry dates.</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn primary" data-open="upload" data-set-doc_type="other" data-set-replaces="" data-title="Upload a document"><i class="fas fa-arrow-up-from-bracket"></i> Upload</button>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-head"><div><h2>Bid-ready documents</h2><div class="sub">One click to download for a tender. Upload a newer copy and the old one is kept as history.</div></div></div>
+  <div class="vault">
+    {% for r in vault_rows %}
+    <div class="vault-item {{ r.state }}">
+      <span class="vi"><i class="fas {{ r.icon }}"></i></span>
+      <div style="min-width:0">
+        <div class="vt">{{ r.label }}</div>
+        <div class="vs state-{{ r.state }}">
+          {% if r.state == 'missing' %}Not uploaded{% elif r.state == 'expired' %}Expired {{ r.doc.expiry_date|date:"j M Y" }}{% elif r.state == 'expiring' %}Expires in {{ r.doc.days_to_expiry }} day{{ r.doc.days_to_expiry|pluralize }}{% elif r.state == 'no_date' %}Add the expiry date{% elif r.doc.expiry_date %}Valid until {{ r.doc.expiry_date|date:"j M Y" }}{% else %}On file{% endif %}
+        </div>
+        {% if r.doc.reference_number and r.can_open %}<div class="faint" style="font-size:12.5px">{{ r.doc.reference_number }}</div>{% endif %}
+        {% if r.doc and not r.can_open %}<div class="faint" style="font-size:12.5px"><i class="fas fa-lock"></i> Management only</div>{% endif %}
+        <div class="va">
+          {% if r.can_open %}<a href="{% url 'download_document' r.doc.pk %}">Download</a>{% if r.doc.can_preview %}<a href="{% url 'download_document' r.doc.pk %}?inline=1" target="_blank" rel="noopener">View</a>{% endif %}{% endif %}
+          <button type="button" data-open="upload" data-set-doc_type="{{ r.key }}" data-set-replaces="{{ r.doc.pk|default:'' }}" data-title="{% if r.doc %}New version: {{ r.label }}{% else %}Upload {{ r.label }}{% endif %}">{% if r.doc %}Replace{% else %}Upload{% endif %}</button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel">
+  <div class="folders" aria-label="Folders">
+    <a class="folder {% if not filters.folder and not filters.type %}on{% endif %}" href="?"><i class="fas fa-layer-group"></i> Everything <span class="n">{{ total_docs }}</span></a>
+    {% for f in folders %}<a class="folder {% if filters.folder == f.obj.slug %}on{% endif %}" href="?folder={{ f.obj.slug }}" title="{{ f.obj.description }}"><i class="fas {{ f.obj.icon|default:'fa-folder' }}"></i> {{ f.obj.name }} <span class="n">{{ f.count }}</span></a>{% endfor %}
+  </div>
+  <form class="toolbar" method="get">
+    {% if filters.folder %}<input type="hidden" name="folder" value="{{ filters.folder }}">{% endif %}
+    <div class="search"><i class="fas fa-magnifying-glass"></i><label class="sr-only" for="dq">Search documents</label><input id="dq" type="search" name="q" value="{{ filters.q }}" placeholder="Search name, tag, reference number, file name"></div>
+    <select name="type" aria-label="Document type"><option value="">All document types</option>{% for k, l in doc_types %}<option value="{{ k }}" {% if filters.type == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+    <select name="state" aria-label="Expiry"><option value="">Any expiry</option><option value="expiring" {% if filters.state == 'expiring' %}selected{% endif %}>Expiring in 30 days</option><option value="expired" {% if filters.state == 'expired' %}selected{% endif %}>Expired</option></select>
+    <select name="sort" aria-label="Sort"><option value="recent" {% if sort == 'recent' %}selected{% endif %}>Newest first</option><option value="name" {% if sort == 'name' %}selected{% endif %}>Name A-Z</option><option value="popular" {% if sort == 'popular' %}selected{% endif %}>Most used</option><option value="expiry" {% if sort == 'expiry' %}selected{% endif %}>Expiry date</option></select>
+    <label class="check" style="font-size:13.5px"><input type="checkbox" name="versions" value="all" {% if show_old %}checked{% endif %}> Show old versions</label>
+    <button class="btn dark" type="submit">Apply</button>
+  </form>
+
+  {% if page.object_list %}
+  <div class="table-wrap"><table class="data">
+    <thead><tr><th>Document</th><th class="hide-sm">Type</th><th class="hide-sm">Expiry</th><th class="hide-sm">Added</th><th><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {% for d in page.object_list %}
+      <tr>
+        <td class="title-cell"><div style="display:flex;gap:12px;align-items:center">
+          <span class="file-ic fas {{ d.icon }}" aria-hidden="true"></span>
+          <div style="min-width:0"><a href="{% url 'download_document' d.pk %}">{{ d.title }}</a>{% if not d.is_current %} <span class="pill">Old version</span>{% endif %}{% if d.is_sensitive %} <span class="pill bad" title="Personal information: management only"><i class="fas fa-lock"></i> Sensitive</span>{% elif d.visibility == 'management' %} <span class="pill info">Management</span>{% elif d.visibility == 'private' %} <span class="pill">Only me</span>{% endif %}
+            <div class="meta">{{ d.category.name|default:"No folder" }}{% if d.reference_number %} · {{ d.reference_number }}{% endif %} · v{{ d.version }} · {{ d.file_size|filesizeformat }}</div></div>
+        </div></td>
+        <td class="hide-sm">{{ d.get_doc_type_display }}</td>
+        <td class="hide-sm nowrap">{% if d.expiry_date %}<span class="state-{{ d.expiry_state }}">{{ d.expiry_date|date:"j M Y" }}</span>{% else %}<span class="faint">-</span>{% endif %}</td>
+        <td class="hide-sm nowrap"><span>{{ d.uploaded_at|date:"j M Y" }}</span><div class="faint" style="font-size:12.5px">{{ d.uploaded_by.first_name|default:d.uploaded_by.username }}</div></td>
+        <td><div class="row-actions">
+          {% if d.can_preview %}<a class="btn sm quiet" href="{% url 'download_document' d.pk %}?inline=1" target="_blank" rel="noopener" title="View in a new tab"><i class="far fa-eye"></i><span class="sr-only">View</span></a>{% endif %}
+          <a class="btn sm quiet" href="{% url 'download_document' d.pk %}" title="Download"><i class="fas fa-download"></i><span class="sr-only">Download</span></a>
+          {% if d.is_current %}<button class="btn sm quiet" type="button" data-open="upload" data-set-doc_type="{{ d.doc_type }}" data-set-replaces="{{ d.pk }}" data-set-title="{{ d.title }}" data-title="New version: {{ d.title }}" title="Upload a new version"><i class="fas fa-code-branch"></i><span class="sr-only">New version</span></button>{% endif %}
+          {% if can_manage or d.uploaded_by_id == user.pk %}<form method="post" action="{% url 'delete_document' d.pk %}" data-confirm="Delete '{{ d.title }}'? This cannot be undone.">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn sm quiet danger" type="submit" title="Delete"><i class="far fa-trash-can"></i><span class="sr-only">Delete</span></button></form>{% endif %}
+        </div></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="pager"><span>{{ page.paginator.count }} document{{ page.paginator.count|pluralize }}</span>
+    <div class="btns">{% if page.has_previous %}<a class="btn sm" href="?{{ querystring }}&page={{ page.previous_page_number }}">Previous</a>{% endif %}<span style="align-self:center">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a class="btn sm" href="?{{ querystring }}&page={{ page.next_page_number }}">Next</a>{% endif %}</div></div>
+  {% else %}
+  <div class="empty"><i class="far fa-folder-open"></i><h3>{% if filters.q or filters.type or filters.state or filters.folder %}No documents match{% else %}The drive is empty{% endif %}</h3>
+    <p>Upload company documents once and everyone can find them in seconds.</p>
+    <button class="btn primary" data-open="upload" data-set-doc_type="other" data-set-replaces="" data-title="Upload a document">Upload</button></div>
+  {% endif %}
+</section>
+
+<dialog class="sheet" id="upload" aria-labelledby="upTitle" {% if open_upload %}data-autoshow{% endif %}>
+  <form method="post" action="{% url 'upload_document' %}" enctype="multipart/form-data">{% csrf_token %}
+    <div class="sheet-head"><h2 id="upTitle" data-dialog-title>Upload a document</h2><button class="btn quiet sm" type="button" data-close aria-label="Close"><i class="fas fa-xmark"></i></button></div>
+    <div class="sheet-body" style="display:grid;gap:14px">
+      <label class="dropzone" data-dropzone>
+        <i class="fas fa-cloud-arrow-up"></i><strong data-file-label>Drop a file here or click to choose</strong>
+        <div style="font-size:13px;margin-top:4px">PDF, Word, Excel, PowerPoint, images or ZIP, up to 25 MB</div>
+        <input class="sr-only" type="file" name="file" required>
+      </label>
+      {{ form.replaces }}
+      <div class="form-grid">
+        <div class="field span-2"><label for="{{ form.title.id_for_label }}">Name</label>{{ form.title }}</div>
+        <div class="field"><label for="{{ form.doc_type.id_for_label }}">Document type</label>{{ form.doc_type }}</div>
+        <div class="field"><label for="{{ form.category.id_for_label }}">Folder</label>{{ form.category }}</div>
+        <div class="field"><label for="{{ form.reference_number.id_for_label }}">Reference number</label>{{ form.reference_number }}<span class="help">Registration no., PIN, certificate no.</span></div>
+        <div class="field"><label for="{{ form.visibility.id_for_label }}">Who can see it</label>{{ form.visibility }}</div>
+        <div class="field"><label for="{{ form.issued_date.id_for_label }}">Issued on</label>{{ form.issued_date }}</div>
+        <div class="field"><label for="{{ form.expiry_date.id_for_label }}">Expires on</label>{{ form.expiry_date }}<span class="help">Needed for tax, B-BBEE, CSD, COIDA, bank letters</span></div>
+        <div class="field span-2"><label for="{{ form.tags.id_for_label }}">Tags</label>{{ form.tags }}<span class="help">Words people might search for, e.g. municipality name, programme, year</span></div>
+      </div>
+      <p class="help" style="font-size:12.5px;color:var(--muted)"><i class="fas fa-shield-halved"></i> ID copies and learner files are automatically limited to management (POPIA).</p>
+    </div>
+    <div class="sheet-foot"><button class="btn quiet" type="button" data-close>Cancel</button><button class="btn primary" type="submit">Upload</button></div>
+  </form>
+</dialog>
+
+{% endblock %}

@@ -16,6 +16,12 @@ from .models import (
 )
 
 
+def delivery_projects():
+    """Projects we are delivering: tenders/grants that have at least one LMS course linked
+    (Course.project). Prospects in the tender pipeline are NOT projects."""
+    return TenderOpportunity.objects.filter(delivery_courses__isnull=False).distinct()
+
+
 def calculate_project_health(project):
     """
     Calculate health metrics for a project (tender opportunity)
@@ -25,7 +31,7 @@ def calculate_project_health(project):
     learners = User.objects.filter(
         role='student',
         is_approved=True,
-        enrolled_courses__tender_opportunity=project
+        enrolled_courses__project=project
     ).distinct()
 
     total_learners = learners.count()
@@ -63,11 +69,11 @@ def calculate_project_health(project):
     # Calculate Course Progress
     progress_records = Progress.objects.filter(
         student__in=learners,
-        course__tender_opportunity=project
+        course__project=project
     )
-    avg_progress = progress_records.aggregate(
-        avg=Avg('progress_percentage')
-    )['avg'] or 0
+    # progress_percentage is a Python property (lessons done / lessons in course), not a column
+    percentages = [p.progress_percentage for p in progress_records.select_related('course')]
+    avg_progress = round(sum(percentages) / len(percentages), 1) if percentages else 0
 
     # Count open tickets (forum topics marked as tickets)
     open_tickets = ForumTopic.objects.filter(
@@ -121,7 +127,7 @@ def get_urgent_actions():
         })
 
     # 2. Projects with low attendance
-    projects = TenderOpportunity.objects.filter(status__in=['new', 'viewed', 'active'])
+    projects = delivery_projects()
     low_attendance_projects = []
     for project in projects:
         health = calculate_project_health(project)
@@ -192,9 +198,7 @@ def get_overall_stats():
     """
     now = timezone.now()
 
-    total_projects = TenderOpportunity.objects.filter(
-        status__in=['new', 'viewed', 'active']
-    ).count()
+    total_projects = delivery_projects().count()
 
     total_learners = User.objects.filter(
         role='student',

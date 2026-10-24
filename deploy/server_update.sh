@@ -308,6 +308,31 @@ else
     if command -v nginx >/dev/null 2>&1; then nginx -t >/dev/null 2>&1 && systemctl reload nginx && ok "nginx reloaded" || warn "nginx config test failed; nginx left as it was"; fi
 fi
 
+step "Scheduling the daily tender & grant scan (06:00)"
+mkdir -p "$APP_DIR/logs"
+if [ "$MODE" = "docker" ]; then
+    JOB="cd $APP_DIR && $DC exec -T web python manage.py staff_daily --settings=$SETTINGS_MODULE"
+else
+    JOB="cd $APP_DIR && DJANGO_SETTINGS_MODULE=$SETTINGS_MODULE $PY manage.py staff_daily"
+fi
+if [ -d /etc/cron.d ] && [ "$(id -u)" -eq 0 ]; then
+    cat > /etc/cron.d/malitinne-staff-daily <<CRON
+# Malitinne staff portal: scan eTenders + SETA/NYDA/NSF pages, notify staff, remind about expiring bid documents
+SHELL=/bin/bash
+CRON_TZ=Africa/Johannesburg
+0 6 * * * root $JOB >> $APP_DIR/logs/staff_daily.log 2>&1
+CRON
+    chmod 644 /etc/cron.d/malitinne-staff-daily
+    ok "Daily scan scheduled (log: $APP_DIR/logs/staff_daily.log)"
+else
+    warn "Could not install the daily schedule automatically. Add this line with 'crontab -e':"
+    echo "    0 4 * * * $JOB >> $APP_DIR/logs/staff_daily.log 2>&1   (04:00 UTC = 06:00 SAST)"
+fi
+if [ "${SKIP_RESTART:-}" != "1" ]; then
+    (eval "$JOB --scan-only" >> "$APP_DIR/logs/staff_daily.log" 2>&1 &)
+    ok "First scan started in the background; tenders appear on the staff portal within a few minutes"
+fi
+
 step "Sending a test email to $MAILBOX"
 EMAIL_OK=""
 if MAIL_OUT="$(manage sendtestemail "$MAILBOX" 2>&1)"; then EMAIL_OK=1; ok "Test email sent; check the $MAILBOX inbox"
@@ -318,7 +343,7 @@ fi
 
 step "Checking the site responds"
 sleep 3
-for path in / /programmes/ /gallery/ /login/; do
+for path in / /programmes/ /gallery/ /login/ /staff-portal/; do
     code="$(curl -s -o /dev/null -w '%{http_code}' -H "Host: ${SITE_HOST:-malitinne.co.za}" -H 'X-Forwarded-Proto: https' "http://127.0.0.1:8000$path" 2>/dev/null || true)"
     [ "$code" = "000" ] && code="$(curl -sk -o /dev/null -w '%{http_code}' "https://127.0.0.1$path" -H "Host: ${SITE_HOST:-malitinne.co.za}" 2>/dev/null || true)"
     case "$code" in 200|301|302) ok "$path → $code";; *) warn "$path → $code (check: journalctl -u ${SERVICES[0]:-gunicorn} -n 50)";; esac

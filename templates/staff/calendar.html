@@ -1,0 +1,59 @@
+{% extends 'staff/base.html' %}
+{% block title %}Calendar{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ month|date:"F Y" }}</h1>
+    <p>Tender closing dates, our internal bid deadlines, briefing sessions, document expiries, meetings and tasks.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn" href="?month={{ prev_month|date:'Y-m' }}" aria-label="Previous month"><i class="fas fa-chevron-left"></i></a>
+    <a class="btn" href="?">Today</a>
+    <a class="btn" href="?month={{ next_month|date:'Y-m' }}" aria-label="Next month"><i class="fas fa-chevron-right"></i></a>
+    <button class="btn primary" data-open="subscribe"><i class="far fa-calendar-plus"></i> Add to Outlook / Google</button>
+  </div>
+</div>
+
+<div class="grid-2" style="grid-template-columns:minmax(0,2.2fr) minmax(0,1fr)">
+  <section class="panel">
+    <div class="cal" role="grid" aria-label="{{ month|date:'F Y' }}">
+      {% for d in "MTWTFSS" %}<div class="dow" role="columnheader">{% cycle 'Mon' 'Tue' 'Wed' 'Thu' 'Fri' 'Sat' 'Sun' %}</div>{% endfor %}
+      {% for week in grid %}{% for day in week %}
+        <div class="day {% if not day.in_month %}out{% endif %} {% if day.is_today %}today{% endif %}" role="gridcell">
+          <span class="dn">{{ day.date|date:"j" }}</span>
+          {% for e in day.events|slice:":4" %}
+            {% if e.url %}<a class="ev" href="{{ e.url }}" title="{{ e.title }}">{% else %}<span class="ev" title="{{ e.title }}">{% endif %}<span class="kind-dot k-{{ e.kind }}"></span><span>{% if e.time and e.kind != 'closing' %}{{ e.time|time:"H:i" }} {% endif %}{{ e.short }}</span>{% if e.url %}</a>{% else %}</span>{% endif %}
+          {% endfor %}
+          {% if day.events|length > 4 %}<div class="more">+{{ day.events|length|add:"-4" }} more</div>{% endif %}
+        </div>
+      {% endfor %}{% endfor %}
+    </div>
+    <div class="panel-foot legend">
+      <span><i class="kind-dot k-closing"></i>Tender closes</span><span><i class="kind-dot k-deadline"></i>Our bid ready</span><span><i class="kind-dot k-briefing"></i>Briefing</span>
+      <span><i class="kind-dot k-expiry"></i>Document expires</span><span><i class="kind-dot k-meeting"></i>Meeting</span><span><i class="kind-dot k-task"></i>Task</span><span><i class="kind-dot k-follow_up"></i>Follow up</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><div><h2>Coming up</h2><div class="sub">Next 45 days</div></div></div>
+    {% if upcoming %}<ul class="list">{% for e in upcoming %}
+      <li><div class="date-chip {% if e.date == today %}today{% endif %}"><div class="m">{{ e.date|date:"M" }}</div><div class="d">{{ e.date|date:"j" }}</div></div>
+        <div class="grow">{% if e.url %}<a class="t" href="{{ e.url }}">{{ e.title }}</a>{% else %}<span class="t">{{ e.title }}</span>{% endif %}<span class="s"><span class="kind-dot k-{{ e.kind }}" style="display:inline-block;margin-right:6px"></span>{{ e.date|date:"l" }}{% if e.time %}, {{ e.time|time:"H:i" }}{% endif %}</span></div></li>
+    {% endfor %}</ul>{% else %}<div class="empty"><i class="far fa-calendar"></i><h3>Nothing scheduled</h3></div>{% endif %}
+  </section>
+</div>
+
+<dialog class="sheet" id="subscribe" aria-labelledby="subTitle">
+  <div class="sheet-head"><h2 id="subTitle">Add this calendar to Outlook or Google</h2><button class="btn quiet sm" data-close aria-label="Close"><i class="fas fa-xmark"></i></button></div>
+  <div class="sheet-body" style="display:grid;gap:14px">
+    <p>Subscribe once and every closing date, briefing and expiry appears in your own calendar, with reminders two days before. It updates by itself.</p>
+    <div class="field"><label for="feed">Your private calendar link</label>
+      <div class="copy-field"><input id="feed" type="text" readonly value="{{ feed_url }}"><button class="btn" type="button" data-copy="feed">Copy</button></div>
+      <span class="help">Keep this link private: anyone with it can see these dates.</span></div>
+    <div><strong>Outlook:</strong> <span class="muted">Calendar → Add calendar → Subscribe from web → paste the link.</span></div>
+    <div><strong>Google Calendar:</strong> <span class="muted">Other calendars → + → From URL → paste the link.</span></div>
+    <div><strong>iPhone:</strong> <a href="{{ feed_webcal }}">Tap here to subscribe</a></div>
+  </div>
+  <div class="sheet-foot"><button class="btn" data-close>Done</button></div>
+</dialog>
+{% endblock %}

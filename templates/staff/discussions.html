@@ -1,0 +1,45 @@
+{% extends 'staff/base.html' %}
+{% block title %}Discussions{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Discussions</h1>
+    <p>Learner questions and support tickets from every course. Answer unanswered questions first; they are what learners wait on.</p>
+  </div>
+</div>
+
+<div class="kpis">
+  <a class="kpi" href="?tab=all"><div class="v">{{ count_all }}</div><div class="l">Topics</div></a>
+  <a class="kpi {% if count_unanswered %}alert{% endif %}" href="?tab=unanswered"><div class="v">{{ count_unanswered }}</div><div class="l">Waiting for a reply</div></a>
+  <a class="kpi {% if count_tickets %}alert{% endif %}" href="?tab=tickets"><div class="v">{{ count_tickets }}</div><div class="l">Open support tickets</div></a>
+</div>
+
+<section class="panel">
+  <nav class="tabs" aria-label="Filter">
+    <a href="?tab=all" class="{% if tab == 'all' %}on{% endif %}">All</a>
+    <a href="?tab=unanswered" class="{% if tab == 'unanswered' %}on{% endif %}">Waiting for a reply<span class="n">{{ count_unanswered }}</span></a>
+    <a href="?tab=tickets" class="{% if tab == 'tickets' %}on{% endif %}">Open tickets<span class="n">{{ count_tickets }}</span></a>
+    <a href="?tab=mine" class="{% if tab == 'mine' %}on{% endif %}">My courses</a>
+  </nav>
+  <form class="toolbar" method="get"><input type="hidden" name="tab" value="{{ tab }}">
+    <div class="search"><i class="fas fa-magnifying-glass"></i><label class="sr-only" for="dsq">Search</label><input id="dsq" type="search" name="q" value="{{ q }}" placeholder="Search topics, messages or learner"></div>
+    <button class="btn dark" type="submit">Search</button></form>
+  {% if page.object_list %}
+  <div class="table-wrap"><table class="data">
+    <thead><tr><th>Topic</th><th class="hide-sm">Course</th><th>Replies</th><th class="hide-sm">Last activity</th></tr></thead>
+    <tbody>{% for t in page.object_list %}
+      <tr class="row-link" data-href="{% url 'discussion_detail' t.pk %}">
+        <td class="title-cell"><a href="{% url 'discussion_detail' t.pk %}">{% if t.is_pinned %}<i class="fas fa-thumbtack" style="color:var(--gold);margin-right:6px"></i>{% endif %}{{ t.title }}</a>
+          <div class="meta">{{ t.author.get_full_name|default:t.author.username }}{% if t.is_ticket %} <span class="pill {% if t.is_resolved %}ok{% elif t.priority == 'critical' or t.priority == 'high' %}bad{% else %}warn{% endif %}">{% if t.is_resolved %}Resolved{% else %}Ticket · {{ t.get_priority_display }}{% endif %}</span>{% endif %}{% if t.is_closed %} <span class="pill">Closed</span>{% endif %}</div></td>
+        <td class="hide-sm">{{ t.lesson.course.title|truncatechars:40 }}<div class="faint" style="font-size:12.5px">{{ t.lesson.title|truncatechars:40 }}</div></td>
+        <td class="num">{% if t.replies %}{{ t.replies }}{% else %}<span class="pill warn">None yet</span>{% endif %}</td>
+        <td class="hide-sm nowrap">{{ t.updated_at|timesince }} ago</td>
+      </tr>{% endfor %}</tbody>
+  </table></div>
+  <div class="pager"><span>{{ page.paginator.count }} topic{{ page.paginator.count|pluralize }}</span>
+    <div class="btns">{% if page.has_previous %}<a class="btn sm" href="?tab={{ tab }}&q={{ q|urlencode }}&page={{ page.previous_page_number }}">Previous</a>{% endif %}{% if page.has_next %}<a class="btn sm" href="?tab={{ tab }}&q={{ q|urlencode }}&page={{ page.next_page_number }}">Next</a>{% endif %}</div></div>
+  {% else %}
+  <div class="empty"><i class="far fa-comments"></i><h3>{% if tab == 'unanswered' %}Every question has a reply{% elif tab == 'tickets' %}No open tickets{% else %}No discussions yet{% endif %}</h3><p>Learners start discussions from inside a lesson.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

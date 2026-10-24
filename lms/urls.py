@@ -4,7 +4,7 @@ from django.urls import path
 from django.contrib.sitemaps.views import sitemap
 from django.views.generic import RedirectView, TemplateView
 from django.templatetags.static import static as static_url
-from core import views
+from core import staff_views, views
 from core.api import HealthCheckView
 from core.sitemaps import sitemaps
 from django.conf import settings
@@ -81,19 +81,32 @@ urlpatterns = [
     path('admin-dashboard/approvals/enrolment/<int:request_id>/', views.decide_enrollment, name='decide_enrollment'),
     path('delete-user/<int:user_id>/', views.delete_user, name='delete_user'),
 
-    # ===== STAFF PORTAL =====
-    path('staff-portal/', views.staff_portal, name='staff_portal'),
+    # ===== STAFF PORTAL (core/staff_views.py) =====
+    path('staff-portal/', staff_views.staff_portal, name='staff_portal'),
+    path('staff-portal/shared-drive/', staff_views.shared_drive, name='shared_drive'),
+    path('staff-portal/shared-drive/upload/', staff_views.upload_document, name='upload_document'),
+    path('staff-portal/shared-drive/<int:doc_id>/open/', staff_views.download_document, name='download_document'),
+    path('staff-portal/shared-drive/<int:doc_id>/delete/', staff_views.delete_document, name='delete_document'),
+    path('staff-portal/tender-dashboard/', staff_views.tender_dashboard, name='tender_dashboard'),
+    path('staff-portal/tender-dashboard/add/', staff_views.tender_edit, name='tender_create'),
+    path('staff-portal/tender-dashboard/scan/', staff_views.run_tender_crawl, name='run_tender_crawl'),
+    path('staff-portal/tender-dashboard/bid-profile/', staff_views.bid_profile, name='bid_profile'),
+    path('staff-portal/tender-dashboard/calendar/', staff_views.tender_calendar, name='tender_calendar'),
+    path('staff-portal/tender-dashboard/calendar.ics', staff_views.calendar_ics, name='calendar_ics'),
+    path('staff-portal/tender-dashboard/report/', staff_views.tender_report, name='tender_report'),
+    path('staff-portal/tender-dashboard/<int:tender_id>/', staff_views.tender_detail, name='tender_detail'),
+    path('staff-portal/tender-dashboard/<int:tender_id>/edit/', staff_views.tender_edit, name='tender_edit'),
+    path('staff-portal/tender-dashboard/<int:tender_id>/calendar.ics', staff_views.tender_ics, name='tender_ics'),
+    path('staff-portal/discussions/', staff_views.discussions_list, name='discussions_list'),
+    path('staff-portal/notifications/', staff_views.notifications, name='notifications'),
 
-    # ===== SHARED DRIVE =====
-    path('shared-drive/', views.shared_drive, name='shared_drive'),
-    path('shared-drive/upload/', views.upload_document, name='upload_document'),
-    path('shared-drive/download/<int:doc_id>/', views.download_document, name='download_document'),
-    path('shared-drive/delete/<int:doc_id>/', views.delete_document, name='delete_document'),
-
-    # ===== TENDER MANAGEMENT =====
-    path('tender-dashboard/', views.tender_dashboard, name='tender_dashboard'),
-    path('tender-crawl/', views.run_tender_crawl, name='run_tender_crawl'),
-    path('tender/<int:tender_id>/', views.tender_detail, name='tender_detail'),
+    # old addresses -> new staff portal addresses (bookmarks and emails keep working)
+    path('shared-drive/', RedirectView.as_view(pattern_name='shared_drive', permanent=True, query_string=True)),
+    path('shared-drive/download/<int:doc_id>/', RedirectView.as_view(pattern_name='download_document', permanent=True)),
+    path('tender-dashboard/', RedirectView.as_view(pattern_name='tender_dashboard', permanent=True, query_string=True)),
+    path('tender/<int:tender_id>/', RedirectView.as_view(pattern_name='tender_detail', permanent=True)),
+    path('notifications/', RedirectView.as_view(pattern_name='notifications', permanent=False)),
+    path('discussions/', RedirectView.as_view(pattern_name='discussions_list', permanent=True, query_string=True)),
 
     # ===== LEARNER PROFILE =====
     path('learner-profile/<int:user_id>/', views.learner_profile_view, name='learner_profile'),
@@ -179,7 +192,6 @@ urlpatterns = [
 
     # Add to urlpatterns:
     path('api/ai-query-count/', views.ai_query_count_api, name='ai_query_count_api'),
-    path('discussions/', views.discussions_list, name='discussions_list'),
 ]
 
 handler404 = 'core.views.custom_404'

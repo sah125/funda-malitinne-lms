@@ -1,0 +1,117 @@
+{% extends 'staff/base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Good {% now "G" as hour %}{% if hour|add:0 < 12 %}morning{% elif hour|add:0 < 17 %}afternoon{% else %}evening{% endif %}, {{ user.first_name|default:user.username }}</h1>
+    <p>{{ today|date:"l j F Y" }}. Here is what needs attention across tenders, documents and learners.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn" href="{% url 'shared_drive' %}?upload=other"><i class="fas fa-arrow-up-from-bracket"></i> Upload document</a>
+    <a class="btn primary" href="{% url 'tender_create' %}"><i class="fas fa-plus"></i> Add opportunity</a>
+  </div>
+</div>
+
+<div class="kpis">
+  <a class="kpi good" href="{% url 'tender_dashboard' %}?verdict=strong"><div class="v">{{ kpi_strong }}</div><div class="l">Strong-fit opportunities open</div></a>
+  <a class="kpi {% if kpi_closing %}alert{% endif %}" href="{% url 'tender_dashboard' %}?sort=closing"><div class="v">{{ kpi_closing }}</div><div class="l">Good fits closing in 7 days</div></a>
+  <a class="kpi" href="{% url 'tender_dashboard' %}?status=preparing"><div class="v">{{ kpi_in_progress }}</div><div class="l">Bids in progress</div></a>
+  <a class="kpi {% if kpi_vault_ready < kpi_vault_total %}alert{% endif %}" href="{% url 'shared_drive' %}"><div class="v">{{ kpi_vault_ready }}<small> / {{ kpi_vault_total }}</small></div><div class="l">Bid documents ready</div></a>
+  {% if user.role == 'admin' %}
+  <a class="kpi {% if nav_pending_approvals %}alert{% endif %}" href="{% url 'pending_approvals' %}"><div class="v">{{ nav_pending_approvals }}</div><div class="l">Learners waiting for approval</div></a>
+  {% else %}
+  <div class="kpi"><div class="v">{{ active_learners }}</div><div class="l">Approved learners</div></div>
+  {% endif %}
+</div>
+
+<div class="grid-2">
+  <div class="stack">
+    <section class="panel">
+      <div class="panel-head"><div><h2>Best opportunities right now</h2><div class="sub">Open tenders and grants ranked by fit with our services</div></div><a href="{% url 'tender_dashboard' %}" class="btn sm">All opportunities</a></div>
+      {% if best_matches %}
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>Fit</th><th>Opportunity</th><th class="hide-sm">Eligibility</th><th>Closes</th></tr></thead>
+        <tbody>
+        {% for t in best_matches %}
+          <tr class="row-link" data-href="{{ t.get_absolute_url }}">
+            <td><div class="dial {{ t.fit_verdict }}" style="--v:{{ t.fit_score }}"><b>{{ t.fit_score }}</b></div></td>
+            <td class="title-cell"><a href="{{ t.get_absolute_url }}">{{ t.title|truncatechars:90 }}</a><div class="meta">{{ t.department|default:"Issuer not stated" }}{% if t.kind == 'grant' %} <span class="pill violet">Grant</span>{% endif %}</div></td>
+            <td class="hide-sm">{% include 'staff/partials/eligibility_pill.html' with t=t %}</td>
+            <td class="nowrap">{% include 'staff/partials/closing.html' with t=t %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}
+      <div class="empty"><i class="fas fa-magnifying-glass-chart"></i><h3>No good-fit opportunities open yet</h3><p>The scanner checks eTenders and SETA / NYDA pages every morning. You can also add one you heard about.</p><a class="btn" href="{% url 'tender_create' %}">Add opportunity</a></div>
+      {% endif %}
+    </section>
+
+    {% if projects_health %}
+    <section class="panel">
+      <div class="panel-head"><div><h2>Projects we are delivering</h2><div class="sub">Learner attendance, POE and progress per funded project</div></div></div>
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>Project</th><th>Learners</th><th>Attendance</th><th>POE</th><th>Progress</th><th>Risk</th></tr></thead>
+        <tbody>{% for p in projects_health %}
+          <tr><td class="title-cell"><a href="{% url 'tender_detail' p.id %}">{{ p.name|truncatechars:60 }}</a></td>
+            <td class="num">{{ p.learners }}</td>
+            <td class="nowrap"><span class="health-bar"><i style="width:{{ p.attendance }}%"></i></span>{{ p.attendance }}%</td>
+            <td class="num">{{ p.poe_completion }}%</td><td class="num">{{ p.avg_progress|floatformat:0 }}%</td>
+            <td><span class="pill {% if p.risk == 'high' %}bad{% elif p.risk == 'medium' %}warn{% else %}ok{% endif %}">{{ p.risk|capfirst }}</span></td></tr>
+        {% endfor %}</tbody>
+      </table></div>
+    </section>
+    {% endif %}
+
+    <section class="panel assistant" data-assistant="{% url 'ai_command_api' %}">
+      <div class="panel-head"><div><h2>Ask about operations</h2><div class="sub">Quick answers from learner, attendance and POE records</div></div></div>
+      <div class="panel-body">
+        <form><label class="sr-only" for="ask">Question</label><input id="ask" type="text" placeholder="e.g. Show learners inactive for 14 days" autocomplete="off"><button class="btn dark" type="submit">Ask</button></form>
+        <div class="chips"><button type="button">Show projects with low attendance</button><button type="button">List inactive learners</button><button type="button">Show missing POEs</button><button type="button">Show open tickets</button><button type="button">Compliance status</button></div>
+        <div class="answer" aria-live="polite"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="stack">
+    <section class="panel">
+      <div class="panel-head"><div><h2>Next 14 days</h2></div><a href="{% url 'tender_calendar' %}" class="btn sm">Calendar</a></div>
+      {% if agenda %}
+      <ul class="list">{% for e in agenda %}
+        <li>
+          <div class="date-chip {% if e.date == today %}today{% endif %}"><div class="m">{{ e.date|date:"M" }}</div><div class="d">{{ e.date|date:"j" }}</div></div>
+          <div class="grow">{% if e.url %}<a class="t" href="{{ e.url }}">{{ e.title }}</a>{% else %}<span class="t">{{ e.title }}</span>{% endif %}<span class="s"><span class="kind-dot k-{{ e.kind }}" style="display:inline-block;margin-right:6px"></span>{% if e.date == today %}Today{% else %}{{ e.date|date:"l" }}{% endif %}{% if e.time %}, {{ e.time|time:"H:i" }}{% endif %}</span></div>
+        </li>{% endfor %}
+      </ul>
+      {% else %}<div class="empty"><i class="far fa-calendar-check"></i><h3>Nothing due in the next two weeks</h3></div>{% endif %}
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><div><h2>Bid documents</h2><div class="sub">Every tender asks for these</div></div><a href="{% url 'shared_drive' %}" class="btn sm">Shared drive</a></div>
+      {% if vault_attention %}
+      <ul class="list">{% for r in vault_attention %}
+        <li><span class="file-ic"><i class="fas {{ r.icon }}"></i></span>
+          <div class="grow"><span class="t">{{ r.label }}</span><span class="s state-{{ r.state }}">{% if r.state == 'missing' %}Not uploaded yet{% elif r.state == 'expired' %}Expired {{ r.doc.expiry_date|date:"j M Y" }}{% else %}Expires {{ r.doc.expiry_date|date:"j M Y" }}{% endif %}</span></div>
+          <a class="btn sm" href="{% url 'shared_drive' %}?upload={{ r.key }}">{% if r.state == 'missing' %}Upload{% else %}Renew{% endif %}</a></li>
+      {% endfor %}</ul>
+      {% else %}<div class="empty" style="padding:26px"><i class="fas fa-circle-check" style="color:var(--ok)"></i><h3>All bid documents are valid</h3></div>{% endif %}
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>My tasks</h2></div>
+      {% if my_tasks %}<ul class="list">{% for t in my_tasks %}
+        <li><span class="pill {% if t.priority == 'high' %}bad{% elif t.priority == 'medium' %}warn{% endif %}">{{ t.get_priority_display }}</span><div class="grow"><span class="t">{{ t.title }}</span><span class="s">{% if t.due_date %}Due {{ t.due_date|date:"j M" }}{% else %}No due date{% endif %} · {{ t.get_status_display }}</span></div></li>
+      {% endfor %}</ul>{% else %}<div class="empty" style="padding:24px"><p>No open tasks assigned to you.</p></div>{% endif %}
+    </section>
+
+    {% if announcements %}
+    <section class="panel">
+      <div class="panel-head"><h2>Announcements</h2></div>
+      <ul class="list">{% for a in announcements %}
+        <li><div class="grow"><span class="t">{% if a.is_pinned %}<i class="fas fa-thumbtack" style="color:var(--gold);margin-right:6px"></i>{% endif %}{{ a.title }}</span><span class="s">{{ a.content|truncatechars:110 }}</span></div></li>
+      {% endfor %}</ul>
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

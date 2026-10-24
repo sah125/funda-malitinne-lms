@@ -1,0 +1,16 @@
+{% extends 'staff/base.html' %}
+{% block title %}{% if opp %}Edit opportunity{% else %}Add opportunity{% endif %}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{% url 'tender_dashboard' %}">Tenders &amp; grants</a>{% if opp %} / <a href="{{ opp.get_absolute_url }}">{{ opp.title|truncatechars:50 }}</a>{% endif %}</div>
+<div class="page-head"><div>
+  <h1>{% if opp %}Edit opportunity{% else %}Add an opportunity{% endif %}</h1>
+  <p>For tenders, RFQs and funding windows we heard about outside the daily scan. It is scored and checked for eligibility as soon as you save.</p>
+</div></div>
+<form method="post" class="panel" style="max-width:900px">{% csrf_token %}
+  <div class="panel-body">{% include 'staff/partials/form_fields.html' with form=form wide='title description source_url document_url department briefing_venue' %}</div>
+  <div class="panel-foot" style="display:flex;gap:10px;justify-content:flex-end">
+    <a class="btn quiet" href="{% if opp %}{{ opp.get_absolute_url }}{% else %}{% url 'tender_dashboard' %}{% endif %}">Cancel</a>
+    <button class="btn primary" type="submit">{% if opp %}Save changes{% else %}Add and score{% endif %}</button>
+  </div>
+</form>
+{% endblock %}

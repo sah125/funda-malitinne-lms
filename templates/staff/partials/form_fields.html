@@ -1,0 +1,9 @@
+<div class="form-grid">
+{% for field in form %}
+  {% if field.is_hidden %}{{ field }}{% else %}
+  <div class="field {% if field.field.widget.input_type == 'checkbox' %}{% elif field.name in wide %}span-2{% endif %}">
+    {% if field.field.widget.input_type == 'checkbox' %}<label class="check">{{ field }} {{ field.label }}</label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
+    {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}{{ field.errors }}
+  </div>{% endif %}
+{% endfor %}
+</div>

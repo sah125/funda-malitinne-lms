@@ -10,6 +10,9 @@ from django.utils import timezone
 
 from .emails import send_account_declined_email, send_enrollment_decision
 from .models import (
+    BidProfile,
+    CrawlLog,
+    TenderSource,
     Announcement,
     Accreditation,
     AccreditationProgramme,
@@ -634,51 +637,49 @@ class ForumPostAdmin(admin.ModelAdmin):
     )
 
 
-# ==================== TENDER OPPORTUNITY ====================
+# ==================== TENDERS & GRANTS (staff portal) ====================
 @admin.register(TenderOpportunity)
 class TenderOpportunityAdmin(admin.ModelAdmin):
-    list_display = ('title', 'status', 'category', 'closing_date', 'ai_relevance_score', 'created_at')
-    list_filter = ('status', 'category', 'closing_date')
-    search_fields = ('title', 'description', 'source', 'tender_id', 'internal_notes')
-    readonly_fields = ('created_at', 'updated_at', 'ai_relevance_score', 'ai_confidence')
-    ordering = ['-closing_date']
+    list_display = ('title', 'kind', 'status', 'fit_verdict', 'ai_relevance_score', 'eligibility_status', 'province', 'closing_date')
+    list_filter = ('kind', 'status', 'fit_verdict', 'eligibility_status', 'province', 'source')
+    search_fields = ('title', 'description', 'department', 'reference', 'tender_id', 'internal_notes')
+    readonly_fields = ('created_at', 'updated_at', 'ai_relevance_score', 'ai_confidence', 'fit_verdict',
+                       'eligibility_status', 'eligibility', 'ai_match_reasons', 'scored_at', 'ocid')
+    date_hierarchy = 'closing_date'
+    autocomplete_fields = ()
+    list_select_related = ('source',)
 
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('title', 'description', 'status', 'category')
-        }),
-        ('Dates', {
-            'fields': ('closing_date', 'opening_date', 'published_date', 'follow_up_date', 'follow_up_notes')
-        }),
-        ('Location & Value', {
-            'fields': ('location', 'estimated_value', 'bidder_deposit')
-        }),
-        ('Source', {
-            'fields': ('source', 'document_url', 'tender_id')
-        }),
-        ('AI & Notes', {
-            'fields': ('ai_relevance_score', 'ai_confidence', 'ai_match_reasons', 'internal_notes')
-        }),
-        ('Assignment', {
-            'fields': ('assigned_to', 'department')
-        }),
-        ('Documents', {
-            'fields': ('local_document',)
-        }),
-        ('Metadata', {
-            'fields': ('created_at', 'updated_at', 'created_by'),
-            'classes': ('collapse',)
-        })
-    )
+
+@admin.register(TenderSource)
+class TenderSourceAdmin(admin.ModelAdmin):
+    list_display = ('name', 'source_type', 'default_kind', 'is_active', 'last_crawled', 'last_result')
+    list_filter = ('source_type', 'is_active')
+    list_editable = ('is_active',)
+    readonly_fields = ('last_crawled', 'last_result')
+
+
+@admin.register(CrawlLog)
+class CrawlLogAdmin(admin.ModelAdmin):
+    list_display = ('source', 'started_at', 'status', 'opportunities_found', 'opportunities_new')
+    list_filter = ('status', 'source')
+    readonly_fields = [f.name for f in CrawlLog._meta.fields]
+
+
+@admin.register(BidProfile)
+class BidProfileAdmin(admin.ModelAdmin):
+    list_display = ('company_name', 'home_province', 'bbbee_level', 'updated_at')
+
+    def has_add_permission(self, request):
+        return not BidProfile.objects.exists()
 
 
 # ==================== SHARED DOCUMENTS ====================
 @admin.register(SharedDocument)
 class SharedDocumentAdmin(admin.ModelAdmin):
-    list_display = ('title', 'uploaded_by', 'uploaded_at', 'visibility', 'download_count')
-    list_filter = ('visibility', 'uploaded_at')
-    search_fields = ('title', 'description', 'tags', 'file_name')
-    readonly_fields = ('uploaded_at', 'download_count')
+    list_display = ('title', 'doc_type', 'category', 'expiry_date', 'is_current', 'visibility', 'is_sensitive', 'uploaded_by', 'uploaded_at', 'download_count')
+    list_filter = ('doc_type', 'category', 'is_current', 'visibility', 'is_sensitive')
+    search_fields = ('title', 'description', 'tags', 'file_name', 'reference_number')
+    readonly_fields = ('uploaded_at', 'download_count', 'file_size', 'mime_type')
 
 
 @admin.register(DocumentCategory)

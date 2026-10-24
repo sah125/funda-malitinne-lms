@@ -1,0 +1,90 @@
+{% extends 'staff/base.html' %}
+{% block title %}{{ opp.title|truncatechars:60 }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{% url 'tender_dashboard' %}">Tenders &amp; grants</a> / {{ opp.get_kind_display }}</div>
+<div class="page-head">
+  <div style="max-width:880px">
+    <h1>{{ opp.title }}</h1>
+    <p>{{ opp.department|default:"Issuer not stated" }}{% if opp.reference %} · Bid number {{ opp.reference }}{% endif %}{% if opp.province %} · {{ opp.province }}{% endif %}</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn quiet" href="{{ ics_url }}"><i class="far fa-calendar-plus"></i> Add to my calendar</a>
+    <a class="btn" href="{% url 'tender_edit' opp.pk %}"><i class="fas fa-pen"></i> Edit details</a>
+    {% if opp.source_url %}<a class="btn primary" href="{{ opp.source_url }}" target="_blank" rel="noopener noreferrer"><i class="fas fa-arrow-up-right-from-square"></i> Open source</a>{% endif %}
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="stack">
+    <section class="panel">
+      <div class="verdict">
+        <div class="dial lg {{ opp.fit_verdict }}" style="--v:{{ opp.fit_score }}"><b>{{ opp.fit_score }}</b><span>of 100</span></div>
+        <div>
+          <h2>{% if opp.fit_verdict == 'strong' %}Strong fit: worth bidding{% elif opp.fit_verdict == 'possible' %}Possible fit: read the scope{% else %}Low fit: probably skip{% endif %}</h2>
+          <div style="margin-top:6px">{% include 'staff/partials/eligibility_pill.html' with t=opp %} {% if opp.scored_at %}<span class="faint" style="font-size:12.5px;margin-left:6px">Checked {{ opp.scored_at|date:"j M, H:i" }}</span>{% endif %}</div>
+          <ul class="reasons">{% for r in opp.match_reasons %}<li>{{ r }}</li>{% endfor %}</ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><div><h2>Can we bid?</h2><div class="sub">Requirements read from the tender, checked against the Shared Drive</div></div>
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="rescore"><button class="btn sm" type="submit"><i class="fas fa-rotate"></i> Re-check</button></form></div>
+      {% if opp.eligibility %}
+      <ul class="checks">{% for c in opp.eligibility %}
+        <li class="{{ c.status }}">
+          <span class="ic"><i class="fas {% if c.status == 'ok' %}fa-check{% elif c.status == 'warn' %}fa-exclamation{% elif c.status == 'info' %}fa-info{% else %}fa-xmark{% endif %}"></i></span>
+          <div><div class="lbl">{{ c.label }}</div><div class="det">{{ c.detail }}</div></div>
+          <div>{% if c.doc_id and c.status != 'missing' %}<a class="btn sm quiet" href="{% url 'download_document' c.doc_id %}">Download</a>{% elif c.doc_type %}<a class="btn sm" href="{% url 'shared_drive' %}?upload={{ c.doc_type }}">{% if c.doc_id %}Renew{% else %}Upload{% endif %}</a>{% endif %}</div>
+        </li>{% endfor %}
+      </ul>
+      {% else %}<div class="empty"><p>Not checked yet. Press Re-check.</p></div>{% endif %}
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Scope</h2></div>
+      <div class="panel-body" style="white-space:pre-line;max-width:80ch">{{ opp.description|default:"No description captured. Open the source document for the full scope." }}</div>
+      {% if opp.document_url or opp.local_document %}
+      <div class="panel-foot">{% if opp.document_url %}<a href="{{ opp.document_url }}" target="_blank" rel="noopener noreferrer"><i class="fas fa-file-pdf"></i> Tender document</a>{% endif %}{% if opp.local_document %}<span style="margin-left:16px"><a href="{{ opp.local_document.url }}"><i class="fas fa-paperclip"></i> Our attached pack</a></span>{% endif %}</div>
+      {% endif %}
+    </section>
+  </div>
+
+  <div class="stack">
+    <section class="panel">
+      <div class="panel-head"><h2>Key dates</h2></div>
+      <ul class="timeline">
+        {% for item in timeline %}
+          <li class="{% if item.past %}past{% elif item.next %}next{% endif %}"><span>{{ item.label }}</span><b>{% if item.has_time %}{{ item.when|date:"D j M, H:i" }}{% else %}{{ item.when|date:"D j M Y" }}{% endif %}</b></li>
+        {% empty %}<li><span class="muted">Closing date not announced yet</span></li>{% endfor %}
+      </ul>
+      {% if opp.briefing_venue %}<div class="panel-foot"><i class="fas fa-location-dot" style="color:var(--gold)"></i> Briefing venue: {{ opp.briefing_venue }}{% if opp.briefing_compulsory %} <span class="pill bad">Compulsory</span>{% endif %}</div>{% endif %}
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><div><h2>Our bid</h2><div class="sub">Status, owner and follow-ups</div></div></div>
+      <form method="post" enctype="multipart/form-data" class="panel-body" style="display:grid;gap:14px">{% csrf_token %}
+        <input type="hidden" name="action" value="track">
+        {% for field in form %}
+          <div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>
+        {% endfor %}
+        <button class="btn primary" type="submit">Save</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Details</h2></div>
+      <div class="panel-body">
+        <dl class="facts">
+          <dt>Type</dt><dd>{{ opp.get_kind_display }}</dd>
+          {% if opp.value_amount %}<dt>Estimated value</dt><dd>R {{ opp.value_amount|floatformat:"0g" }}</dd>{% endif %}
+          {% if opp.closing_time %}<dt>Closing time</dt><dd>{{ opp.closing_time|time:"H:i" }}</dd>{% endif %}
+          <dt>Found via</dt><dd>{{ opp.source.name|default:"Added by staff" }}</dd>
+          <dt>First seen</dt><dd>{{ opp.created_at|date:"j M Y" }}</dd>
+          {% if opp.created_by %}<dt>Added by</dt><dd>{{ opp.created_by.get_full_name|default:opp.created_by.username }}</dd>{% endif %}
+        </dl>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

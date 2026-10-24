@@ -1,0 +1,76 @@
+{% extends 'staff/base.html' %}
+{% block title %}Tender report{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Tender &amp; grant report</h1>
+    <p>{{ start|date:"j F Y" }} to {{ today|date:"j F Y" }}. What we found, what we bid on and how it went.</p>
+  </div>
+  <div class="page-actions">
+    <nav class="tabs" style="border:0;padding:0" aria-label="Period">
+      <a href="?period=month" class="{% if period == 'month' %}on{% endif %}">This month</a>
+      <a href="?period=quarter" class="{% if period == 'quarter' %}on{% endif %}">This quarter</a>
+      <a href="?period=year" class="{% if period == 'year' %}on{% endif %}">This year</a>
+    </nav>
+    <a class="btn" href="?period={{ period }}&format=csv"><i class="fas fa-file-csv"></i> Export to Excel</a>
+    <button class="btn primary" onclick="window.print()"><i class="fas fa-print"></i> Print / PDF</button>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="v">{{ funnel.0.value }}</div><div class="l">Opportunities found</div></div>
+  <div class="kpi"><div class="v">{{ funnel.1.value }}</div><div class="l">Good fits</div></div>
+  <div class="kpi"><div class="v">{{ funnel.2.value }}</div><div class="l">Bids submitted</div></div>
+  <div class="kpi good"><div class="v">{{ funnel.4.value }}</div><div class="l">Won</div></div>
+  <div class="kpi"><div class="v">{% if win_rate is not None %}{{ win_rate }}%{% else %}-{% endif %}</div><div class="l">Win rate (won ÷ decided)</div></div>
+  <div class="kpi"><div class="v" style="font-size:22px">{% if value_won %}R {{ value_won|floatformat:"0g" }}{% else %}-{% endif %}</div><div class="l">Value won</div></div>
+</div>
+
+<div class="grid-even">
+  <section class="panel">
+    <div class="panel-head"><h2>Pipeline</h2></div>
+    <ul class="funnel">{% for f in funnel %}<li><span>{{ f.label }}</span><span class="bar"><i style="width:{{ f.pct }}%"></i></span><b>{{ f.value }}</b></li>{% endfor %}</ul>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2>Where opportunities came from</h2></div>
+    {% if by_province %}<ul class="bars">{% for p in by_province %}<li><span>{{ p.province }}</span><b class="num">{{ p.n }}</b><span class="bar"><i style="width:{% widthratio p.n by_province.0.n 100 %}%"></i></span></li>{% endfor %}</ul>
+    {% else %}<div class="empty"><p>No opportunities found in this period yet.</p></div>{% endif %}
+    {% if by_kind %}<div class="panel-foot">{% for k in by_kind %}<span class="pill" style="margin-right:6px">{% if k.kind == 'grant' %}Grants{% elif k.kind == 'rfq' %}RFQs{% else %}Tenders{% endif %}: {{ k.n }}</span>{% endfor %}</div>{% endif %}
+  </section>
+</div>
+
+<section class="panel" style="margin-top:18px">
+  <div class="panel-head"><div><h2>Closing in the next 30 days</h2><div class="sub">Good-fit opportunities still open</div></div></div>
+  {% if upcoming %}<div class="table-wrap"><table class="data">
+    <thead><tr><th>Fit</th><th>Opportunity</th><th>Eligibility</th><th>Bid owner</th><th>Status</th><th>Closes</th></tr></thead>
+    <tbody>{% for t in upcoming %}<tr class="row-link" data-href="{{ t.get_absolute_url }}">
+      <td><div class="dial {{ t.fit_verdict }}" style="--v:{{ t.fit_score }}"><b>{{ t.fit_score }}</b></div></td>
+      <td class="title-cell"><a href="{{ t.get_absolute_url }}">{{ t.title|truncatechars:80 }}</a><div class="meta">{{ t.department }}</div></td>
+      <td>{% include 'staff/partials/eligibility_pill.html' with t=t %}</td>
+      <td>{% if t.assigned_to %}{{ t.assigned_to.get_full_name|default:t.assigned_to.username }}{% else %}<span class="faint">Unassigned</span>{% endif %}</td>
+      <td>{{ t.get_status_display }}</td>
+      <td class="nowrap">{% include 'staff/partials/closing.html' with t=t %}</td></tr>{% endfor %}</tbody>
+  </table></div>{% else %}<div class="empty"><p>No good-fit opportunities closing in the next 30 days.</p></div>{% endif %}
+</section>
+
+<div class="grid-even" style="margin-top:18px">
+  <section class="panel">
+    <div class="panel-head"><h2>Buyers issuing work that fits us</h2></div>
+    {% if top_buyers %}<ul class="bars">{% for b in top_buyers %}<li><span>{{ b.department|truncatechars:60 }}</span><b class="num">{{ b.n }}</b><span class="bar"><i style="width:{% widthratio b.n top_buyers.0.n 100 %}%"></i></span></li>{% endfor %}</ul>
+    {% else %}<div class="empty"><p>Not enough data yet.</p></div>{% endif %}
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2>Bid document readiness</h2></div>
+    <ul class="list">{% for r in vault_rows %}
+      <li><span class="file-ic"><i class="fas {{ r.icon }}"></i></span><div class="grow"><span class="t">{{ r.label }}</span></div>
+        <span class="pill {% if r.state == 'valid' or r.state == 'none' %}ok{% elif r.state == 'expiring' or r.state == 'no_date' %}warn{% else %}bad{% endif %}">{% if r.state == 'missing' %}Missing{% elif r.state == 'expired' %}Expired{% elif r.state == 'expiring' %}Expires {{ r.doc.expiry_date|date:"j M" }}{% elif r.state == 'no_date' %}No expiry date{% else %}Ready{% endif %}</span></li>
+    {% endfor %}</ul>
+  </section>
+</div>
+
+<section class="panel" style="margin-top:18px">
+  <div class="panel-head"><h2>Source health</h2></div>
+  <div class="table-wrap"><table class="data"><thead><tr><th>Source</th><th>Last checked</th><th>Result</th></tr></thead>
+    <tbody>{% for s in sources %}<tr><td>{{ s.name }}</td><td class="nowrap">{{ s.last_crawled|date:"j M, H:i"|default:"Not yet" }}</td><td class="{% if 'Failed' in s.last_result %}state-expired{% else %}muted{% endif %}">{{ s.last_result|default:"-"|truncatechars:100 }}</td></tr>{% endfor %}</tbody></table></div>
+</section>
+{% endblock %}
