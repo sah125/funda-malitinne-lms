@@ -60,6 +60,17 @@
 </section>
 
 <!-- CTA -->
+{% if gallery_photos %}
+<section class="section-pad">
+    <div class="wrap">
+        <div class="section-tag"><i class="fas fa-camera"></i> Impact in pictures</div>
+        <h2 class="section-title" style="margin-bottom:30px;">Behind the <em>numbers</em></h2>
+        {% include 'malitinne/partials/gallery_grid.html' with photos=gallery_photos compact=True %}
+        <div style="text-align:center;margin-top:30px;"><a href="{% url 'gallery' %}" class="btn-primary">See all photos <i class="fas fa-arrow-right"></i></a></div>
+    </div>
+</section>
+{% endif %}
+
 <section style="background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-light) 100%); padding: 80px 8%; text-align: center;">
     <h2 style="font-family: 'Cormorant Garamond', serif; font-size: clamp(2rem, 4vw, 3rem); color: white; margin-bottom: 16px;">Be Part of Our Next Chapter</h2>
     <p style="color: rgba(255,255,255,0.85); font-size: 1rem; margin-bottom: 30px;">Partner with Malitinne to extend this impact into your organisation or community.</p>

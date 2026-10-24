@@ -1,39 +1,10 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body { font-family: Arial, sans-serif; }
-        .container { max-width: 600px; margin: auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
-        .content { padding: 20px; background: #f9f9f9; }
-        .button { background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>Funda Malitinne LMS</h2>
-        </div>
-        <div class="content">
-            <h3>Account Approved!</h3>
-            <p>Dear {{ user.get_full_name|default:user.username }},</p>
-            <p>Great news! Your registration has been approved by an administrator.</p>
-            <p>You can now log in to your account and start learning.</p>
-            <p style="text-align: center;">
-                <a href="http://127.0.0.1:8000/login/" class="button">Login Now</a>
-            </p>
-            <p><strong>Your Login Details:</strong></p>
-            <ul>
-                <li>Username: {{ user.username }}</li>
-                <li>Password: (the password you created during registration)</li>
-            </ul>
-            <p>If you have any issues logging in, please contact support.</p>
-            <p>Regards,<br>Funda Malitinne Team</p>
-        </div>
-        <div class="footer">
-            <p>&copy; 2026 Funda Malitinne Learning Management System</p>
-        </div>
-    </div>
-</body>
-</html>
+{% extends 'email/_base.html' %}
+{% block body %}
+<h2 style="font-family:Georgia,serif;color:#1a1a2e;margin:0 0 16px;">Welcome — your account is approved</h2>
+<p>Dear {{ user.first_name|default:user.username }},</p>
+<p>Good news! Your Funda Malitinne learning account has been <strong>approved</strong>. You can now log in and start learning from anywhere — on your phone, tablet or computer.</p>
+{% include 'email/_button.html' with href=login_url label='Log in to Funda Malitinne' %}
+<p style="background:#fbf3e4;border-left:4px solid #9f7734;padding:12px 16px;">Username: <strong>{{ user.username }}</strong><br>Password: the password you chose when you registered.</p>
+<p>Forgot your password? Use the “Forgot password” link on the login page.</p>
+<p>Warm regards,<br><strong>The Malitinne Team</strong></p>
+{% endblock %}

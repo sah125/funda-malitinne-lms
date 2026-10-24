@@ -1,0 +1,159 @@
+{% extends 'malitinne/site_base.html' %}
+{% load static %}
+{% block title %}{{ programme.title }}{% if programme.code %} ({{ programme.code }}){% endif %} | Malitinne{% endblock %}
+{% block meta_description %}{{ programme.summary|truncatechars:155 }}{% endblock %}
+{% block og_title %}{{ programme.title }} — Malitinne{% endblock %}
+{% block og_description %}{{ programme.summary|truncatechars:200 }}{% endblock %}
+
+{% block extra_head %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Course",
+  "name": "{{ programme.title|escapejs }}",
+  "description": "{{ programme.summary|escapejs }}",
+  {% if programme.code %}"courseCode": "{{ programme.code|escapejs }}",{% endif %}
+  "provider": {"@type": "Organization", "name": "Malitinne (Pty) Ltd", "sameAs": "https://malitinne.co.za"}
+}
+</script>
+{% endblock %}
+
+{% block page_banner %}
+<section class="page-banner">
+    <div class="page-banner-inner">
+        <div class="breadcrumb" role="navigation" aria-label="Breadcrumb" style="margin-bottom:18px;">
+            <a href="{% url 'company_home' %}">Home</a><i class="fas fa-chevron-right" aria-hidden="true"></i>
+            <a href="{% url 'programmes' %}">Programmes</a><i class="fas fa-chevron-right" aria-hidden="true"></i>
+            <span class="current" aria-current="page">{{ programme.title }}</span>
+        </div>
+        <h1>{{ programme.title }}</h1>
+        <p>{{ programme.summary }}</p>
+        <div class="pg-hero-meta">
+            {% if programme.status == 'accredited' %}<span class="chip"><i class="fas fa-circle-check" style="color:#7fd1a3;"></i> {{ programme.quality_partner }} accredited</span>{% else %}<span class="chip"><i class="fas fa-hourglass-half" style="color:var(--gold-light);"></i> Accreditation in progress</span>{% endif %}
+            {% if programme.code %}<span class="chip">Code {{ programme.code }}</span>{% endif %}
+            {% if programme.nqf_level %}<span class="chip">NQF Level {{ programme.nqf_level }}</span>{% endif %}
+            <span class="chip"><i class="fas {% if programme.delivery_mode == 'online' %}fa-laptop{% elif programme.delivery_mode == 'blended' %}fa-people-arrows{% else %}fa-chalkboard-user{% endif %}"></i> {{ programme.get_delivery_mode_display }}</span>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="section-pad">
+    <div class="wrap pg-layout">
+        <div>
+            <div class="pg-block">
+                <div class="facts-grid">
+                    {% if programme.credits %}<div class="fact"><div class="k">Credits</div><div class="v">{{ programme.credits }}</div></div>{% endif %}
+                    {% if programme.notional_hours %}<div class="fact"><div class="k">Notional hours</div><div class="v">{{ programme.notional_hours }}</div></div>{% endif %}
+                    {% if programme.nqf_level %}<div class="fact"><div class="k">NQF level</div><div class="v">{{ programme.nqf_level }}</div></div>{% endif %}
+                    {% if programme.duration_text %}<div class="fact"><div class="k">Duration</div><div class="v" style="font-size:1.25rem;">{{ programme.duration_text }}</div></div>{% endif %}
+                    <div class="fact"><div class="k">Quality partner</div><div class="v" style="font-size:1.25rem;">{{ programme.quality_partner }}</div></div>
+                </div>
+            </div>
+
+            {% if programme.outcomes_list %}
+            <div class="pg-block">
+                <h2>What you will be able to do</h2>
+                <ul class="tick-list">{% for item in programme.outcomes_list %}<li>{{ item }}</li>{% endfor %}</ul>
+            </div>
+            {% endif %}
+
+            {% if programme.audience_list %}
+            <div class="pg-block">
+                <h2>Who it is for</h2>
+                <ul class="tick-list">{% for item in programme.audience_list %}<li>{{ item }}</li>{% endfor %}</ul>
+            </div>
+            {% endif %}
+
+            {% if programme.module_titles %}
+            <div class="pg-block">
+                <h2>Programme outline</h2>
+                <p style="margin-bottom:16px;">A preview of the learning units. Full content, activities and assessments unlock for approved, enrolled learners on Funda Malitinne.</p>
+                <ol class="outline-list {% if programme.module_titles|length > 8 %}collapsed{% endif %}" id="outline">{% for title in programme.module_titles %}<li>{{ title }} <i class="fas fa-lock lock" aria-label="Locked"></i></li>{% endfor %}</ol>
+                {% if programme.module_titles|length > 8 %}<button type="button" class="outline-toggle" onclick="var o=document.getElementById('outline');o.classList.toggle('collapsed');this.textContent=o.classList.contains('collapsed')?'Show all {{ programme.module_titles|length }} learning units ↓':'Show fewer ↑';">Show all {{ programme.module_titles|length }} learning units ↓</button>{% endif %}
+            </div>
+            {% endif %}
+
+            <div class="pg-block">
+                <h2>How the programme is delivered</h2>
+                <div class="delivery-steps">
+                    <div class="delivery-step"><i class="fas fa-laptop"></i><h4>Knowledge online</h4><p>Short, guided lessons on Funda Malitinne with formative activities and quizzes — study from home, work or a community centre.</p></div>
+                    <div class="delivery-step"><i class="fas fa-people-group"></i><h4>Practical sessions</h4><p>Facilitated practical skills sessions, in person or live online, with real workplace scenarios.</p></div>
+                    <div class="delivery-step"><i class="fas fa-briefcase"></i><h4>Workplace experience</h4><p>Where the curriculum requires it, workplace modules are logged and signed off by your supervisor.</p></div>
+                    <div class="delivery-step"><i class="fas fa-folder-open"></i><h4>Digital PoE</h4><p>Evidence is uploaded securely and assessed by registered assessors before external assessment.</p></div>
+                </div>
+            </div>
+
+            {% if programme.requirements_list %}
+            <div class="pg-block">
+                <h2>Entry requirements</h2>
+                <ul class="tick-list">{% for item in programme.requirements_list %}<li>{{ item }}</li>{% endfor %}</ul>
+            </div>
+            {% endif %}
+        </div>
+
+        <aside class="side-panel" id="enquire" aria-label="Enquire about this programme">
+            <div class="side-panel-head">
+                <h3>Interested?</h3>
+                <p>Tell us who you are and we will respond within two working days.</p>
+            </div>
+            <div class="tabs" role="tablist">
+                <button type="button" class="on" data-type="join" role="tab">Join</button>
+                <button type="button" data-type="partner" role="tab">Partner</button>
+                <button type="button" data-type="programme" role="tab">Ask</button>
+            </div>
+            <form method="post" action="{% url 'contact_submit' %}">
+                {% csrf_token %}
+                <input type="hidden" name="programme" value="{{ programme.pk }}">
+                <input type="hidden" name="enquiry_type" value="join" id="enqType">
+                <input type="hidden" name="return_to" value="{{ request.path }}#enquire">
+                <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+                <div class="field"><label for="enq-name">Full name</label><input id="enq-name" name="name" required maxlength="150" autocomplete="name"></div>
+                <div class="field-row">
+                    <div class="field"><label for="enq-email">Email</label><input id="enq-email" type="email" name="email" required autocomplete="email"></div>
+                    <div class="field"><label for="enq-phone">Phone</label><input id="enq-phone" type="tel" name="phone" maxlength="30" autocomplete="tel"></div>
+                </div>
+                <div class="field" id="orgField" style="display:none;"><label for="enq-org">Organisation</label><input id="enq-org" name="organisation" maxlength="200" placeholder="Municipality, company, SETA…"></div>
+                <div class="field"><label for="enq-msg" id="msgLabel">Tell us a little about yourself</label><textarea id="enq-msg" name="message" required maxlength="5000" placeholder="Where are you based? Are you employed? Do you have a workplace?"></textarea></div>
+                <label class="consent"><input type="checkbox" name="popia_consent" value="1" required> <span>I agree that Malitinne may use these details to respond to me (<a href="{% url 'privacy' %}">POPIA notice</a>).</span></label>
+                <button class="btn btn-gold btn-block" type="submit"><i class="fas fa-paper-plane"></i> <span id="enqBtn">Send my request</span></button>
+                <p style="text-align:center;font-size:.8rem;color:#888;">Ready to start? <a href="{% url 'register' %}" style="color:var(--gold-dark);font-weight:600;">Register on Funda Malitinne</a></p>
+            </form>
+        </aside>
+    </div>
+</section>
+
+{% if related %}
+<section class="section-pad bg-off">
+    <div class="wrap">
+        <h2 class="section-title" style="font-size:2.2rem;margin-bottom:28px;">Related <em>programmes</em></h2>
+        <div class="pg-grid">{% for p in related %}{% include 'malitinne/partials/programme_card.html' %}{% endfor %}</div>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+    var copy = {
+        join: ['Tell us a little about yourself', 'Where are you based? Are you employed? Do you have a workplace?', 'Send my request', false],
+        partner: ['How would you like to partner?', 'How many learners? Funding source (SETA, municipality, CSI)? Location and timeline?', 'Request a proposal', true],
+        programme: ['Your question', 'Ask anything about this programme…', 'Send question', false]
+    };
+    document.querySelectorAll('.tabs button').forEach(function (b) {
+        b.addEventListener('click', function () {
+            document.querySelectorAll('.tabs button').forEach(function (x) { x.classList.remove('on'); });
+            b.classList.add('on');
+            var c = copy[b.dataset.type];
+            document.getElementById('enqType').value = b.dataset.type;
+            document.getElementById('msgLabel').textContent = c[0];
+            document.getElementById('enq-msg').placeholder = c[1];
+            document.getElementById('enqBtn').textContent = c[2];
+            document.getElementById('orgField').style.display = c[3] ? '' : 'none';
+        });
+    });
+})();
+</script>
+{% endblock %}

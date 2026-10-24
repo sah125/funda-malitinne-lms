@@ -41,7 +41,7 @@
             <p>Whether you are a corporate looking for skills development solutions, a learner seeking placements, or a government entity seeking a reliable partner — we are here for you.</p>
             <div class="contact-detail"><div class="contact-icon"><i class="fas fa-map-marker-alt"></i></div><div><strong>Physical Address</strong><p>Office 1138, 11th Floor, Commercial City Building<br>40 DR A B Xuma Road, Durban, 4001</p></div></div>
             <div class="contact-detail"><div class="contact-icon"><i class="fas fa-phone"></i></div><div><strong>Phone</strong><p>073 931 7923 | 086 246 0207 | (031) 301 0835</p></div></div>
-            <div class="contact-detail"><div class="contact-icon"><i class="fas fa-envelope"></i></div><div><strong>Email</strong><p>sibu@malitinne.co.za | info@malitinne.co.za</p></div></div>
+            <div class="contact-detail"><div class="contact-icon"><i class="fas fa-envelope"></i></div><div><strong>Email</strong><p><a href="mailto:{{ CONTACT_EMAIL }}" style="color:inherit;">{{ CONTACT_EMAIL }}</a></p></div></div>
             <div class="contact-detail"><div class="contact-icon"><i class="fas fa-mail-bulk"></i></div><div><strong>Postal Address</strong><p>P O Box 30165, Plessislaer, 3216</p></div></div>
         </div>
         <div class="contact-form fade-in">
@@ -54,7 +54,18 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>Email Address</label><input type="email" name="email" placeholder="your@email.com" required></div>
+                    <div class="form-group"><label>Phone (optional)</label><input type="tel" name="phone" placeholder="e.g. 073 000 0000" maxlength="30"></div>
+                </div>
+                <div class="form-row">
                     <div class="form-group"><label>Organisation</label><input type="text" name="organisation" placeholder="Company / Institution"></div>
+                    <div class="form-group"><label>Reason for contacting us</label>
+                        <select name="enquiry_type" id="enquiryType">
+                            <option value="general">General enquiry</option>
+                            <option value="join">I want to join a programme</option>
+                            <option value="partner">Partnership / funding / host employer</option>
+                            <option value="programme">Programme information</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group"><label>I am a</label>
                     <select name="client_type">
@@ -65,7 +76,9 @@
                         <option>Other</option>
                     </select>
                 </div>
-                <div class="form-group"><label>Message</label><textarea name="message" placeholder="Tell us about your needs..." required></textarea></div>
+                <div class="form-group"><label>Message</label><textarea name="message" placeholder="Tell us about your needs..." required maxlength="5000"></textarea></div>
+                <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+                <label class="consent" style="margin:4px 0 16px;"><input type="checkbox" name="popia_consent" value="1" required> <span>I agree that Malitinne may use my details to respond to this message, as described in the <a href="{% url 'privacy' %}">privacy policy</a>.</span></label>
                 <button type="submit" class="btn-form"><i class="fas fa-paper-plane"></i> Send Message</button>
             </form>
         </div>
@@ -98,4 +111,17 @@
     </div>
 </section>
 
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function(){ var t = new URLSearchParams(location.search).get('type'); var sel = document.getElementById('enquiryType');
+  if (t && sel && sel.querySelector('option[value="'+t+'"]')) { sel.value = t; }
+})();
+</script>
+<script>
+(function(){ var t = new URLSearchParams(location.search).get('type'); var sel = document.getElementById('enquiryType');
+  if (t && sel && sel.querySelector('option[value="'+t+'"]')) { sel.value = t; }
+})();
+</script>
 {% endblock %}

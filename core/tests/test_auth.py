@@ -25,6 +25,7 @@ class RegistrationTests(TestCase):
             "contact_number": "0712345678",
             "disability": "None",
             "preferred_language": "English",
+            "popia_consent": "1",
         }
         data.update(overrides)
         return data
@@ -143,7 +144,7 @@ class LoginTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Invalid username or password.")
 
-    def test_unapproved_student_currently_logs_in(self):
+    def test_unapproved_student_cannot_log_in(self):
         user = User.objects.create_user(
             username="pending-login",
             email="pending-login@test.local",
@@ -158,7 +159,9 @@ class LoginTests(TestCase):
             {"username": user.username, "password": "TestPass123!"},
         )
 
-        self.assertRedirects(response, reverse("student_dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "waiting for approval")
+        self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_logout_clears_session_and_redirects_to_login(self):
         user = make_student(username="logout-user")

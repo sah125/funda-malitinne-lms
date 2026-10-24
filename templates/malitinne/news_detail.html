@@ -4,7 +4,7 @@
 {% block title %}{{ post.title }} | Malitinne News{% endblock %}
 {% block meta_description %}{{ post.excerpt }}{% endblock %}
 
-{% block content %}
+{% block legacy_content %}
 
 <!-- Reading Progress Bar -->
 <div id="reading-progress" style="position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, #9f7734, #c9a96e); width: 0%; z-index: 9999; transition: width 0.1s ease;"></div>
@@ -339,4 +339,4 @@
     })();
 </script>
 
-{% endblock %}
+{% endblock %}

@@ -16,6 +16,7 @@ class StaticViewSitemap(Sitemap):
         return [
             'company_home',   # /
             'programmes',     # /programmes/
+            'gallery',        # /gallery/
             'clients',        # /clients/
             'opportunities',  # /opportunities/
             'lms_portal',     # /lms/

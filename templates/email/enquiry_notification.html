@@ -1,0 +1,16 @@
+{% extends 'email/_base.html' %}
+{% block body %}
+<h2 style="font-family:Georgia,serif;color:#1a1a2e;margin:0 0 16px;">New {{ e.get_enquiry_type_display|lower }}</h2>
+<table role="presentation" cellspacing="0" cellpadding="6" style="font-size:14px;border-collapse:collapse;width:100%;">
+<tr><td style="color:#888;width:140px;">Name</td><td><strong>{{ e.name }}</strong></td></tr>
+<tr><td style="color:#888;">Email</td><td><a href="mailto:{{ e.email }}" style="color:#9f7734;">{{ e.email }}</a></td></tr>
+<tr><td style="color:#888;">Phone</td><td>{{ e.phone|default:"—" }}</td></tr>
+<tr><td style="color:#888;">Organisation</td><td>{{ e.organisation|default:"—" }}</td></tr>
+<tr><td style="color:#888;">I am a</td><td>{{ e.client_type|default:"—" }}</td></tr>
+{% if e.programme %}<tr><td style="color:#888;">Programme</td><td>{{ e.programme.title }}{% if e.programme.code %} ({{ e.programme.code }}){% endif %}</td></tr>{% endif %}
+</table>
+<p style="margin:18px 0 6px;color:#888;font-size:13px;">Message</p>
+<div style="background:#fbf3e4;border-left:4px solid #9f7734;padding:14px 16px;white-space:pre-wrap;">{{ e.message }}</div>
+<p style="font-size:13px;color:#888;">Just press <strong>Reply</strong> to answer {{ e.name }} directly. This enquiry is also saved in the admin under Enquiries.</p>
+{% include 'email/_button.html' with href=admin_url label='Open in admin' %}
+{% endblock %}

@@ -1,56 +1,103 @@
 {% extends 'base.html' %}
-
-{% block title %}Roster - {{ course.title }}{% endblock %}
+{% block title %}Class roster · {{ course.title }} | Funda Malitinne{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header bg-primary text-white">
-        <h4 class="mb-0"><i class="fas fa-users me-2"></i> Course Roster</h4>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Student</th>
-                        <th>Email</th>
-                        <th>Progress</th>
-                        <th>Attendance</th>
-                        <th>Grade</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for student_data in students %}
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="user-avatar-sm me-2">
-                                    {{ student_data.student.username|slice:":1"|upper }}
-                                </div>
-                                {{ student_data.student.get_full_name|default:student_data.student.username }}
-                            </div>
-                        </td>
-                        <td>{{ student_data.student.email }}</td>
-                        <td>
-                            <div class="progress" style="height: 20px;">
-                                <div class="progress-bar bg-success" style="width: {{ student_data.progress|default:0 }}%">
-                                    {{ student_data.progress|default:0 }}%
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="badge bg-{% if student_data.attendance > 80 %}success{% elif student_data.attendance > 60 %}warning{% else %}danger{% endif %}">
-                                {{ student_data.attendance|default:0 }}%
-                            </span>
-                        </td>
-                        <td>
-                            <span class="badge bg-info">{{ student_data.grade|default:"N/A" }}</span>
-                        </td>
-                     </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small mb-0">
+        <li class="breadcrumb-item"><a href="{% url 'lms_portal' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'course_detail' course.id %}">{{ course.title|truncatechars:40 }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Roster</li>
+    </ol>
+</nav>
+
+<section class="lms-hero">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div>
+            <div class="eyebrow mb-1">Class roster</div>
+            <h1 class="mb-1" style="font-size:clamp(1.8rem,3vw,2.5rem);">{{ course.title }}</h1>
+            <p>{{ total_lessons }} lesson{{ total_lessons|pluralize }} · confidential learner information — do not share outside Malitinne.</p>
         </div>
+        <div class="d-flex gap-2 no-print">
+            <a href="?export=csv{% if query %}&q={{ query|urlencode }}{% endif %}" class="btn btn-primary btn-sm"><i class="fas fa-file-csv me-1"></i> Export CSV</a>
+            <button type="button" onclick="window.print()" class="btn btn-sm" style="background:rgba(255,255,255,.12);color:#fff;"><i class="fas fa-print me-1"></i> Print</button>
+        </div>
+    </div>
+</section>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-label">Learners</div><div class="stat-number">{{ summary.count }}</div></div></div>
+    <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-label">Average progress</div><div class="stat-number">{{ summary.avg_progress }}%</div></div></div>
+    <div class="col-6 col-md-3"><div class="stat-card" style="border-left-color:#2e8b57;"><div class="stat-label">Completed</div><div class="stat-number">{{ summary.completed }}</div></div></div>
+    <div class="col-6 col-md-3"><div class="stat-card" style="border-left-color:#c0392b;"><div class="stat-label">Need support (&lt;20%)</div><div class="stat-number">{{ summary.at_risk }}</div></div></div>
+</div>
+
+{% if pending_requests %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between"><span><i class="fas fa-user-clock me-2" style="color:var(--gold);"></i> Waiting to join this course</span><span class="pill pill-amber">{{ pending_requests|length }}</span></div>
+    <div class="list-group list-group-flush">
+        {% for r in pending_requests %}
+        <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+            <div><strong>{{ r.student.get_full_name|default:r.student.username }}</strong> <span class="small text-muted">· requested {{ r.created_at|timesince }} ago</span>{% if r.motivation %}<div class="small text-muted">“{{ r.motivation|truncatechars:140 }}”</div>{% endif %}</div>
+            {% if user.role == 'admin' or user.is_superuser %}
+            <div class="d-flex gap-2">
+                <form method="post" action="{% url 'decide_enrollment' r.id %}">{% csrf_token %}<input type="hidden" name="decision" value="approve"><input type="hidden" name="next" value="{{ request.path }}"><button class="btn btn-sm btn-primary"><i class="fas fa-check"></i> Approve</button></form>
+                <form method="post" action="{% url 'decide_enrollment' r.id %}">{% csrf_token %}<input type="hidden" name="decision" value="decline"><input type="hidden" name="next" value="{{ request.path }}"><button class="btn btn-sm btn-outline-primary">Decline</button></form>
+            </div>
+            {% else %}<span class="pill pill-grey">Awaiting admin</span>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2 no-print">
+        <span><i class="fas fa-users me-2" style="color:var(--gold);"></i> Learners</span>
+        <form method="get" class="d-flex gap-2" role="search">
+            <input type="search" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search name, username or email" style="min-width:230px;" aria-label="Search learners">
+            <button class="btn btn-sm btn-dark"><i class="fas fa-search"></i></button>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover table-brand">
+            <thead>
+                <tr><th>Learner</th><th>Progress</th><th>Attendance</th><th>Avg grade</th><th>Status</th><th>Last sign-in</th><th class="no-print"></th></tr>
+            </thead>
+            <tbody>
+            {% for row in students %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="avatar-sm">{{ row.student.first_name|default:row.student.username|slice:":1"|upper }}</span>
+                            <div class="min-w-0">
+                                <div class="fw-semibold">{{ row.student.get_full_name|default:row.student.username }}</div>
+                                <div class="small text-muted text-truncate" style="max-width:240px;">{{ row.student.email }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="min-width:150px;">
+                        <div class="d-flex align-items-center gap-2"><div class="mini-progress flex-grow-1"><span style="width:{{ row.progress }}%"></span></div><span class="small fw-semibold">{{ row.progress }}%</span></div>
+                        <div class="small text-muted">{{ row.lessons_done }}/{{ total_lessons }} lessons</div>
+                    </td>
+                    <td>{% if row.attendance is None %}<span class="text-muted small">—</span>{% else %}<span class="pill {% if row.attendance >= 80 %}pill-green{% elif row.attendance >= 60 %}pill-amber{% else %}pill-red{% endif %}">{{ row.attendance }}%</span>{% endif %}</td>
+                    <td>{% if row.grade is None %}<span class="text-muted small">—</span>{% else %}<strong>{{ row.grade }}%</strong>{% endif %}</td>
+                    <td>
+                        {% if row.status == 'completed' %}<span class="pill pill-green"><i class="fas fa-award"></i> Completed</span>
+                        {% elif row.status == 'on_track' %}<span class="pill pill-navy">On track</span>
+                        {% elif row.status == 'at_risk' %}<span class="pill pill-red">Needs support</span>
+                        {% else %}<span class="pill pill-gold">In progress</span>{% endif %}
+                    </td>
+                    <td class="small text-muted">{% if row.last_login %}{{ row.last_login|timesince }} ago{% else %}Never{% endif %}</td>
+                    <td class="no-print text-end">
+                        {% if user.role == 'instructor' %}<a class="btn btn-sm btn-outline-primary" href="{% url 'instructor_student_view' row.student.id %}">Profile</a>
+                        {% elif user.role == 'admin' or user.is_superuser %}<a class="btn btn-sm btn-outline-primary" href="{% url 'learner_profile' row.student.id %}">Profile</a>{% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-5"><i class="fas fa-user-graduate fa-2x mb-2 d-block" style="color:var(--gold-light);"></i>{% if query %}No learners match “{{ query }}”.{% else %}No learners are enrolled yet.{% endif %}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}

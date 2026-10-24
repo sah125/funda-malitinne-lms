@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %}Approvals | Funda Malitinne{% endblock %}
+
+{% block content %}
+<section class="lms-hero">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div>
+            <div class="eyebrow mb-1">Admin · Approvals</div>
+            <h1 class="mb-1" style="font-size:clamp(1.8rem,3vw,2.6rem);">Who may enter the LMS</h1>
+            <p>New learners cannot sign in until you approve them. Approving sends them an email with their login link automatically.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="pill pill-gold" style="font-size:.85rem;"><i class="fas fa-user-clock"></i> {{ pending_users|length }} registration{{ pending_users|length|pluralize }}</span>
+            <span class="pill pill-gold" style="font-size:.85rem;"><i class="fas fa-book"></i> {{ pending_enrolments|length }} course request{{ pending_enrolments|length|pluralize }}</span>
+        </div>
+    </div>
+</section>
+
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-user-clock me-2" style="color:var(--gold);"></i> New registrations waiting for approval</div>
+    <div class="table-responsive">
+        <table class="table table-brand table-hover">
+            <thead><tr><th>Learner</th><th>Contact</th><th>ID / DOB</th><th>Registered</th><th>Approve &amp; give course access <span class="fw-normal">(optional)</span></th><th></th></tr></thead>
+            <tbody>
+            {% for u in pending_users %}
+                <tr>
+                    <td>
+                        <div class="d-flex gap-2 align-items-center">
+                            <span class="avatar-sm">{{ u.first_name|default:u.username|slice:":1"|upper }}</span>
+                            <div><div class="fw-semibold">{{ u.get_full_name|default:u.username }}</div><div class="small text-muted">@{{ u.username }}{% if u.preferred_language %} · {{ u.preferred_language }}{% endif %}</div>{% if u.disability %}<span class="pill pill-navy mt-1"><i class="fas fa-universal-access"></i> support needs noted</span>{% endif %}</div>
+                        </div>
+                    </td>
+                    <td class="small">{{ u.email }}<br><span class="text-muted">{{ u.contact_number|default:"—" }}</span></td>
+                    <td class="small">{% if u.id_number %}••••{{ u.id_number|slice:"-4:" }}{% else %}—{% endif %}<br><span class="text-muted">{{ u.date_of_birth|date:"j M Y"|default:"—" }}</span></td>
+                    <td class="small text-muted">{{ u.date_joined|date:"j M Y" }}<br>{{ u.date_joined|timesince }} ago</td>
+                    <td style="min-width:300px;">
+                        <form method="post" action="{% url 'approve_user' u.id %}" class="d-flex gap-2">
+                            {% csrf_token %}
+                            <select name="course" class="form-select form-select-sm" aria-label="Optional course for {{ u.username }}">
+                                <option value="">Account only</option>
+                                {% for c in courses %}<option value="{{ c.id }}">{{ c.title|truncatechars:45 }}</option>{% endfor %}
+                            </select>
+                            <button class="btn btn-sm btn-primary text-nowrap" type="submit"><i class="fas fa-check"></i> Approve</button>
+                        </form>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#decline{{ u.id }}" aria-expanded="false">Decline</button>
+                    </td>
+                </tr>
+                <tr class="collapse" id="decline{{ u.id }}">
+                    <td colspan="6" style="background:#fffaf2;">
+                        <form method="post" action="{% url 'decline_user' u.id %}" class="d-flex flex-wrap gap-2 align-items-center">
+                            {% csrf_token %}
+                            <input name="reason" class="form-control form-control-sm" style="max-width:520px;" maxlength="500" placeholder="Optional reason that will be included in the email (e.g. the intake is full)">
+                            <button class="btn btn-sm btn-dark" type="submit">Decline &amp; notify learner</button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-5"><i class="fas fa-circle-check fa-2x d-block mb-2" style="color:#2e8b57;"></i>Nobody is waiting. All registrations have been handled.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><i class="fas fa-book-open me-2" style="color:var(--gold);"></i> Course enrolment requests</div>
+    <div class="list-group list-group-flush">
+        {% for r in pending_enrolments %}
+        <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+            <div>
+                <strong>{{ r.student.get_full_name|default:r.student.username }}</strong> wants to join <strong>{{ r.course.title }}</strong>
+                <div class="small text-muted">{{ r.created_at|date:"j M Y H:i" }}{% if r.motivation %} · “{{ r.motivation|truncatechars:160 }}”{% endif %}</div>
+            </div>
+            <div class="d-flex gap-2">
+                <form method="post" action="{% url 'decide_enrollment' r.id %}">{% csrf_token %}<input type="hidden" name="decision" value="approve"><button class="btn btn-sm btn-primary"><i class="fas fa-check"></i> Give access</button></form>
+                <form method="post" action="{% url 'decide_enrollment' r.id %}">{% csrf_token %}<input type="hidden" name="decision" value="decline"><button class="btn btn-sm btn-outline-primary">Decline</button></form>
+            </div>
+        </div>
+        {% empty %}
+        <div class="list-group-item text-muted py-4 text-center">No course requests waiting.</div>
+        {% endfor %}
+    </div>
+</div>
+
+{% if recently_approved %}
+<div class="card">
+    <div class="card-header"><i class="fas fa-clock-rotate-left me-2" style="color:var(--gold);"></i> Recently approved</div>
+    <div class="list-group list-group-flush">
+        {% for u in recently_approved %}
+        <div class="list-group-item d-flex justify-content-between small py-2"><span>{{ u.get_full_name|default:u.username }} <span class="text-muted">· {{ u.email }}</span></span><span class="text-muted">{{ u.approved_at|date:"j M Y H:i" }}{% if u.approved_by %} by {{ u.approved_by.get_full_name|default:u.approved_by.username }}{% endif %}</span></div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+<p class="small text-muted mt-3"><i class="fas fa-circle-info me-1"></i> You can also approve in the Django admin: Users → filter “Is approved: No” → select → “Approve selected learners and email them a login link”.</p>
+{% endblock %}

@@ -22,3 +22,12 @@ def risk_color(risk):
         'low': 'text-success',
     }
     return mapping.get(risk, 'text-secondary')
+
+
+@register.filter
+def get_item(mapping, key):
+    """{{ my_dict|get_item:key }} — dictionary lookup in templates."""
+    try:
+        return mapping.get(key)
+    except AttributeError:
+        return None

@@ -1,0 +1,81 @@
+{% extends 'malitinne/site_base.html' %}
+{% load static %}
+{% block title %}Accreditation | QCTO & SETA Accredited Training Provider | Malitinne{% endblock %}
+{% block meta_description %}Malitinne is a QCTO-accredited skills development provider with a long SETA track record. See our accredited qualifications, skills programmes and those in the accreditation process.{% endblock %}
+
+{% block page_banner %}
+<section class="page-banner">
+    <div class="page-banner-inner">
+        <h1>Accredited. <em>Accountable.</em> Proven.</h1>
+        <p>Every programme we deliver is aligned to the Quality Council for Trades and Occupations (QCTO) and backed by a decade of SETA-funded projects across South Africa.</p>
+        <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="{% url 'company_home' %}">Home</a><i class="fas fa-chevron-right" aria-hidden="true"></i><span class="current" aria-current="page">Accreditation</span>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="section-pad tight bg-off">
+    <div class="wrap trust-row">
+        <div class="trust-card"><i class="fas fa-certificate"></i><div class="num">{{ accredited|length }}</div><p>QCTO-accredited qualifications &amp; skills programmes</p></div>
+        <div class="trust-card"><i class="fas fa-hourglass-half"></i><div class="num">{{ in_progress|length }}</div><p>Programmes currently in evaluation</p></div>
+        <div class="trust-card"><i class="fas fa-building-columns"></i><div class="num">10+</div><p>SETAs we have delivered funded projects with</p></div>
+        <div class="trust-card"><i class="fas fa-users"></i><div class="num">10000+</div><p>Graduates, TVET learners &amp; apprentices placed</p></div>
+    </div>
+</section>
+
+<section class="section-pad">
+    <div class="wrap">
+        <div class="section-tag"><i class="fas fa-circle-check"></i> QCTO accredited</div>
+        <h2 class="section-title">Accredited programmes</h2>
+        <p class="section-sub" style="margin-bottom:30px;">These programmes have completed QCTO accreditation and learning material approval. Click any programme for details, delivery options and to enquire.</p>
+        <div class="table-scroll">
+        <table class="accr-table">
+            <thead><tr><th>Programme</th><th>Code</th><th>Credits</th><th>Notional hours</th><th>Delivery</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for p in accredited %}
+                <tr>
+                    <td><a href="{% url 'programme_detail' p.slug %}"><i class="fas {{ p.icon }}" style="color:var(--gold);width:22px;"></i> {{ p.title }}</a></td>
+                    <td>{{ p.code|default:"—" }}</td>
+                    <td>{{ p.credits|default:"—" }}</td>
+                    <td>{{ p.notional_hours|default:"—" }}</td>
+                    <td>{{ p.get_delivery_mode_display }}</td>
+                    <td><span class="chip chip-green"><i class="fas fa-circle-check"></i> Accredited</span></td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6">Our accredited programme list is being updated.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</section>
+
+{% if in_progress %}
+<section class="section-pad bg-off">
+    <div class="wrap">
+        <div class="section-tag"><i class="fas fa-hourglass-half"></i> Growing our offering</div>
+        <h2 class="section-title">In the accreditation process</h2>
+        <p class="section-sub" style="margin-bottom:30px;">Applications submitted to the QCTO and under evaluation. Register your interest now and we will contact you as soon as intake opens.</p>
+        <div class="pg-grid">{% for p in in_progress %}{% include 'malitinne/partials/programme_card.html' %}{% endfor %}</div>
+    </div>
+</section>
+{% endif %}
+
+<section class="section-pad">
+    <div class="wrap">
+        <div class="section-tag"><i class="fas fa-building-columns"></i> SETA track record</div>
+        <h2 class="section-title">Trusted by sector education &amp; training authorities</h2>
+        <p class="section-sub" style="margin-bottom:30px;">Before and alongside QCTO accreditation, Malitinne has delivered learnerships, skills programmes, internships and apprenticeships funded through these SETAs.</p>
+        <div class="filter-bar" style="margin-top:0;">
+            <span class="chip chip-outline">AgriSETA</span><span class="chip chip-outline">Services SETA</span><span class="chip chip-outline">FP&amp;M SETA</span><span class="chip chip-outline">LGSETA</span><span class="chip chip-outline">CATHSSETA</span><span class="chip chip-outline">CETA</span><span class="chip chip-outline">MICT SETA</span><span class="chip chip-outline">TETA</span><span class="chip chip-outline">HWSETA</span><span class="chip chip-outline">EW SETA</span>
+        </div>
+        <div class="cta-trio mt-3">
+            <div class="cta-card"><i class="fas fa-file-shield"></i><h3>Need our documents?</h3><p>Accreditation letters, B-BBEE certificate, tax clearance and the company profile are available to partners and funders on request.</p><a class="btn btn-ghost" href="{% url 'contact' %}?type=partner">Request documents</a></div>
+            <div class="cta-card dark"><i class="fas fa-handshake"></i><h3>Fund or host learners</h3><p>Use your SETA grant, CSI budget or municipal skills plan to train your people or community with an accredited provider.</p><a class="btn btn-gold" href="{% url 'contact' %}?type=partner">Partner with us</a></div>
+            <div class="cta-card"><i class="fas fa-map-location-dot"></i><h3>See our footprint</h3><p>Explore the municipalities, colleges and partners where Malitinne has delivered skills programmes.</p><a class="btn btn-ghost" href="{% url 'footprint' %}">Where we work</a></div>
+        </div>
+    </div>
+</section>
+{% endblock %}

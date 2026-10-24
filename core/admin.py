@@ -1,11 +1,14 @@
 # core/admin.py
 import xlwt
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils import timezone
 
+from .emails import send_account_declined_email, send_enrollment_decision
 from .models import (
     Announcement,
     Accreditation,
@@ -24,6 +27,8 @@ from .models import (
     DailyStreak,
     DocumentCategory,
     DocumentDownloadLog,
+    Enquiry,
+    EnrollmentRequest,
     ForumPost,
     ForumTopic,
     LearnerDocument,
@@ -33,14 +38,18 @@ from .models import (
     LessonInteraction,
     LessonModule,
     LogbookEntry,
+    LoginAttempt,
     NewsPost,
     Notification,
     Opportunity,
+    Programme,
     Progress,
     Quiz,
     QuizAttempt,
     QuizQuestion,
     SharedDocument,
+    GalleryPhoto,
+    ServiceLocation,
     Submission,
     TenderOpportunity,
     User,
@@ -50,28 +59,78 @@ from .models import (
 
 
 # ==================== USER ADMIN ====================
+class LearnerCreationForm(UserCreationForm):
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ('username', 'email', 'role')
+
+
+class LearnerChangeForm(UserChangeForm):
+    class Meta(UserChangeForm.Meta):
+        model = User
+        fields = '__all__'
+
+
+@admin.action(description='Approve selected learners and email them a login link')
+def approve_and_email(modeladmin, request, queryset):
+    count = 0
+    for user in queryset.filter(is_approved=False):
+        user.is_approved = True
+        user.is_active = True
+        user.approved_by = request.user
+        user.save()  # User.save() sends the approval email with the login link
+        count += 1
+    modeladmin.message_user(request, f'{count} learner(s) approved and emailed their login link.')
+
+
+@admin.action(description='Decline selected registrations (deactivate + polite email)')
+def decline_registration(modeladmin, request, queryset):
+    count = 0
+    for user in queryset.filter(is_approved=False, role='student'):
+        user.is_active = False
+        user.save(update_fields=['is_active'])
+        send_account_declined_email(user)
+        count += 1
+    modeladmin.message_user(request, f'{count} registration(s) declined.')
+
+
 @admin.register(User)
-class UserAdmin(admin.ModelAdmin):
-    list_display = ('username', 'email', 'role', 'is_approved', 'date_joined')
-    list_filter = ('role', 'is_approved', 'gender')
-    search_fields = ('username', 'email', 'id_number')
-    readonly_fields = ('date_joined', 'last_login')
+class UserAdmin(BaseUserAdmin):
+    form = LearnerChangeForm
+    add_form = LearnerCreationForm
+    list_display = ('username', 'full_name', 'email', 'role', 'approval_badge', 'is_active', 'date_joined', 'last_login')
+    list_filter = ('is_approved', 'role', 'is_active', 'gender', 'date_joined')
+    search_fields = ('username', 'email', 'first_name', 'last_name', 'id_number', 'contact_number')
+    readonly_fields = ('date_joined', 'last_login', 'approved_at', 'approved_by', 'popia_consent_at')
+    actions = [approve_and_email, decline_registration]
+    ordering = ('is_approved', '-date_joined')
 
     fieldsets = (
-        ('Account Information', {
-            'fields': ('username', 'email', 'password', 'role', 'is_approved', 'is_active')
+        ('Account', {'fields': ('username', 'email', 'password', 'role', 'department')}),
+        ('Approval', {
+            'fields': ('is_approved', 'approved_at', 'approved_by', 'is_active'),
+            'description': 'Ticking "Is approved" and saving automatically emails the learner a login link.',
         }),
-        ('Personal Information', {
-            'fields': ('first_name', 'last_name', 'id_number', 'date_of_birth', 'gender', 'nationality')
-        }),
-        ('Contact Information', {
-            'fields': ('contact_number', 'preferred_language', 'disability')
-        }),
-        ('Important Dates', {
-            'fields': ('last_login', 'date_joined'),
-            'classes': ('collapse',)
-        }),
+        ('Personal information', {'fields': ('first_name', 'last_name', 'id_number', 'date_of_birth', 'gender', 'nationality')}),
+        ('Contact', {'fields': ('contact_number', 'preferred_language', 'disability')}),
+        ('POPIA', {'fields': ('popia_consent', 'popia_consent_at')}),
+        ('Permissions', {'fields': ('is_staff', 'is_superuser', 'groups', 'user_permissions'), 'classes': ('collapse',)}),
+        ('Important dates', {'fields': ('last_login', 'date_joined'), 'classes': ('collapse',)}),
     )
+    add_fieldsets = (
+        (None, {'classes': ('wide',), 'fields': ('username', 'email', 'role', 'password1', 'password2')}),
+    )
+
+    @admin.display(description='Name')
+    def full_name(self, obj):
+        return obj.get_full_name() or '—'
+
+    @admin.display(description='Approved', ordering='is_approved')
+    def approval_badge(self, obj):
+        if obj.is_approved or obj.role != 'student':
+            return format_html('<span style="color:#1e7e34;font-weight:600;">✔ Approved</span>')
+        return format_html('<span style="background:#fbf3e4;color:#7a5828;padding:2px 8px;border-radius:10px;font-weight:600;">⏳ Waiting</span>')
+
 
 # ==================== COURSE & LESSON ====================
 @admin.register(Course)
@@ -860,3 +919,98 @@ class NewsPostAdmin(admin.ModelAdmin):
     list_filter = ('is_published',)
     prepopulated_fields = {'slug': ('title',)}
     date_hierarchy = 'published_date'
+
+
+# ==================== PUBLIC WEBSITE ====================
+@admin.register(Programme)
+class ProgrammeAdmin(admin.ModelAdmin):
+    list_display = ('title', 'code', 'status', 'quality_partner', 'nqf_level', 'credits', 'delivery_mode', 'course', 'is_published', 'is_featured', 'order')
+    list_editable = ('status', 'is_published', 'is_featured', 'order')
+    list_filter = ('status', 'category', 'delivery_mode', 'quality_partner', 'is_published')
+    search_fields = ('title', 'code', 'summary')
+    prepopulated_fields = {'slug': ('title',)}
+    autocomplete_fields = ('course',)
+    fieldsets = (
+        (None, {'fields': ('title', 'slug', 'code', 'category', 'quality_partner', 'status', 'image')}),
+        ('Facts', {'fields': ('nqf_level', 'credits', 'notional_hours', 'duration_text', 'delivery_mode')}),
+        ('Public description (no learning content)', {'fields': ('summary', 'who_is_it_for', 'outcomes', 'entry_requirements')}),
+        ('Online delivery', {'fields': ('course',), 'description': 'Link the LMS course that delivers this programme. Only lesson titles are shown publicly.'}),
+        ('Visibility', {'fields': ('is_published', 'is_featured', 'order')}),
+    )
+
+
+@admin.register(ServiceLocation)
+class ServiceLocationAdmin(admin.ModelAdmin):
+    list_display = ('name', 'kind', 'town', 'province', 'beneficiaries', 'period', 'is_published', 'order')
+    list_editable = ('is_published', 'order')
+    list_filter = ('kind', 'province', 'is_published')
+    search_fields = ('name', 'town', 'programmes')
+
+
+@admin.register(Enquiry)
+class EnquiryAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'name', 'email', 'enquiry_type', 'programme', 'organisation', 'status', 'email_sent')
+    list_filter = ('status', 'enquiry_type', 'email_sent', 'created_at')
+    list_editable = ('status',)
+    search_fields = ('name', 'email', 'organisation', 'message')
+    readonly_fields = ('created_at', 'ip_address', 'email_sent', 'popia_consent')
+    date_hierarchy = 'created_at'
+
+
+@admin.action(description='Approve selected enrolment requests')
+def approve_enrolments(modeladmin, request, queryset):
+    for req in queryset.filter(status='pending'):
+        req.approve(by=request.user)
+        send_enrollment_decision(req)
+    modeladmin.message_user(request, 'Selected learners now have access to their courses.')
+
+
+@admin.action(description='Decline selected enrolment requests')
+def decline_enrolments(modeladmin, request, queryset):
+    for req in queryset.filter(status='pending'):
+        req.decline(by=request.user)
+        send_enrollment_decision(req)
+    modeladmin.message_user(request, 'Selected requests declined.')
+
+
+@admin.register(EnrollmentRequest)
+class EnrollmentRequestAdmin(admin.ModelAdmin):
+    list_display = ('student', 'course', 'status', 'created_at', 'decided_by', 'decided_at')
+    list_filter = ('status', 'course')
+    search_fields = ('student__username', 'student__email', 'course__title')
+    actions = [approve_enrolments, decline_enrolments]
+    readonly_fields = ('created_at', 'decided_at', 'decided_by')
+
+
+@admin.register(LoginAttempt)
+class LoginAttemptAdmin(admin.ModelAdmin):
+    list_display = ('timestamp', 'username', 'success', 'ip_address', 'attempt_type', 'user_agent')
+    list_filter = ('success', 'attempt_type', 'timestamp')
+    search_fields = ('username', 'ip_address', 'user_agent')
+    date_hierarchy = 'timestamp'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+admin.site.site_header = 'Malitinne Administration'
+admin.site.site_title = 'Malitinne Admin'
+admin.site.index_title = 'Funda Malitinne — learners, programmes & website'
+
+
+@admin.register(GalleryPhoto)
+class GalleryPhotoAdmin(admin.ModelAdmin):
+    list_display = ('preview', 'title', 'category', 'show_on_home', 'is_published', 'order')
+    list_display_links = ('preview', 'title')
+    list_editable = ('show_on_home', 'is_published', 'order')
+    list_filter = ('category', 'show_on_home', 'is_published')
+    search_fields = ('title', 'caption')
+    readonly_fields = ('preview',)
+
+    @admin.display(description='Photo')
+    def preview(self, obj):
+        from django.utils.html import format_html
+        return format_html('<img src="{}" style="height:56px;border-radius:6px">', obj.thumb_url) if obj.thumb_url else '—'

@@ -1,0 +1,7 @@
+{% extends 'email/_base.html' %}
+{% block body %}
+<h2 style="font-family:Georgia,serif;color:#1a1a2e;margin:0 0 16px;">Thank you, {{ e.name }}</h2>
+<p>We have received your {{ e.get_enquiry_type_display|lower }}{% if e.programme %} about <strong>{{ e.programme.title }}</strong>{% endif %}. A member of our team will get back to you within <strong>two working days</strong>.</p>
+<p>In the meantime you are welcome to call us on 073 931 7923 or (031) 301 0835.</p>
+<p>Warm regards,<br><strong>The Malitinne Team</strong></p>
+{% endblock %}

@@ -105,9 +105,12 @@ class StudentCourseDataPermissionTests(TestCase):
         self.quiz = Quiz.objects.create(lesson=self.lesson, title="Protected Quiz")
 
     def test_unenrolled_student_cannot_view_course(self):
+        # Unenrolled learners may see the outline (lesson titles) to request access,
+        # but never the lesson content itself.
         self.client.force_login(self.student_b)
         response = self.client.get(reverse("course_detail", args=[self.course.id]))
-        self.assertNotEqual(response.status_code, 200)
+        self.assertNotContains(response, "Protected content")
+        self.assertNotContains(response, reverse("lesson_detail", args=[self.lesson.id]))
 
     def test_unenrolled_student_cannot_view_lesson(self):
         self.client.force_login(self.student_b)

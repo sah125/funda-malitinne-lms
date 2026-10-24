@@ -1,0 +1,17 @@
+<a class="pg-card fade-in" href="{% url 'programme_detail' p.slug %}">
+    <div class="pg-card-top">
+        <div class="pg-icon"><i class="fas {{ p.icon }}"></i></div>
+        <h3>{{ p.title }}</h3>
+        {% if p.code %}<div class="pg-code">{{ p.quality_partner }} · {{ p.code }}</div>{% endif %}
+    </div>
+    <div class="pg-card-body">
+        <div class="pg-facts">
+            {% if p.status == 'accredited' %}<span class="chip chip-green"><i class="fas fa-circle-check"></i> Accredited</span>{% else %}<span class="chip chip-amber"><i class="fas fa-hourglass-half"></i> Accreditation in progress</span>{% endif %}
+            {% if p.nqf_level %}<span class="chip chip-navy">NQF {{ p.nqf_level }}</span>{% endif %}
+            {% if p.credits %}<span class="chip chip-outline">{{ p.credits }} credits</span>{% endif %}
+            <span class="chip chip-gold"><i class="fas {% if p.delivery_mode == 'online' %}fa-laptop{% elif p.delivery_mode == 'blended' %}fa-people-arrows{% else %}fa-chalkboard-user{% endif %}"></i> {{ p.get_delivery_mode_display }}</span>
+        </div>
+        <p>{{ p.summary|truncatewords:28 }}</p>
+        <div class="pg-card-foot"><span>View programme</span><i class="fas fa-arrow-right"></i></div>
+    </div>
+</a>

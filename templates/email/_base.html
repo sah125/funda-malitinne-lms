@@ -1,0 +1,25 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{% block subject %}Malitinne{% endblock %}</title></head>
+<body style="margin:0;padding:0;background:#f8f5f0;font-family:Arial,Helvetica,sans-serif;color:#3a3a3a;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8f5f0;padding:24px 12px;">
+<tr><td align="center">
+  <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #eadfcd;">
+    <tr><td style="background:#1a1a2e;padding:26px 32px;border-bottom:4px solid #9f7734;">
+      <div style="font-family:Georgia,'Times New Roman',serif;font-size:26px;letter-spacing:6px;color:#ffffff;">MALITINNE</div>
+      <div style="font-size:12px;letter-spacing:1px;color:#c9a96e;margin-top:4px;">GROOMING HUMAN CAPITAL FOR THE WORKPLACE</div>
+    </td></tr>
+    <tr><td style="padding:32px;font-size:15px;line-height:1.65;">
+<!--TEXT-->
+{% block body %}{% endblock %}
+    </td></tr>
+    <tr><td style="background:#fbf3e4;padding:20px 32px;font-size:12px;line-height:1.6;color:#7a5828;">
+      Malitinne (Pty) Ltd · Office 1138, 11th Floor, Commercial City, 40 Dr A B Xuma Rd, Durban 4001<br>
+      {{ contact_email }} · 073 931 7923 · (031) 301 0835<br>
+      <span style="color:#888;">Your personal information is processed in line with the Protection of Personal Information Act (POPIA). If you did not expect this email, please let us know at {{ contact_email }}.</span>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>

@@ -1,0 +1,65 @@
+{% extends 'malitinne/site_base.html' %}
+{% load static humanize_lite %}
+{% block title %}Where We Work | Malitinne Skills Development Footprint{% endblock %}
+{% block meta_description %}Map of the municipalities, colleges and partners across KwaZulu-Natal and South Africa where Malitinne has delivered skills programmes, learnerships and placements.{% endblock %}
+{% block extra_head %}{% include 'malitinne/partials/leaflet_head.html' %}{% endblock %}
+
+{% block page_banner %}
+<section class="page-banner">
+    <div class="page-banner-inner">
+        <h1>Where we <em>deliver skills</em></h1>
+        <p>We deploy facilitators, assessors and project managers wherever our services are needed — and with Funda Malitinne online, learners can now join from anywhere in South Africa.</p>
+        <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="{% url 'company_home' %}">Home</a><i class="fas fa-chevron-right" aria-hidden="true"></i><span class="current" aria-current="page">Where We Work</span>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="section-pad tight bg-off">
+    <div class="wrap trust-row">
+        <div class="trust-card"><i class="fas fa-location-dot"></i><div class="num">{{ locations|length }}</div><p>Project sites &amp; partners on the map</p></div>
+        <div class="trust-card"><i class="fas fa-people-group"></i><div class="num">{{ total_beneficiaries|thousands }}</div><p>Beneficiaries at the sites shown</p></div>
+        <div class="trust-card"><i class="fas fa-building"></i><div class="num">2850+</div><p>Host workplaces nationally</p></div>
+        <div class="trust-card"><i class="fas fa-earth-africa"></i><div class="num">9</div><p>Provinces reachable online through Funda Malitinne</p></div>
+    </div>
+</section>
+
+<section class="section-pad">
+    <div class="wrap">
+        <div class="map-shell">
+            <div class="map-list">
+                {% for p in map_points %}<button type="button" data-map-index="{{ forloop.counter0 }}"><span class="ben">{% if p.beneficiaries %}{{ p.beneficiaries|thousands }}{% endif %}</span><strong>{{ p.name }}</strong><span>{{ p.town }}{% if p.period %} · {{ p.period }}{% endif %}</span></button>{% endfor %}
+            </div>
+            <div id="serviceMap" role="region" aria-label="Map of places where Malitinne delivers programmes"></div>
+        </div>
+        <div class="map-legend"><span class="l-office">Head office</span><span class="l-project">Project site</span><span class="l-partner">Partner</span></div>
+    </div>
+</section>
+
+<section class="section-pad bg-off">
+    <div class="wrap">
+        <h2 class="section-title" style="font-size:2.2rem;">What we delivered <em>on the ground</em></h2>
+        <div class="table-scroll mt-3">
+        <table class="accr-table">
+            <thead><tr><th>Client / site</th><th>Town</th><th>Programmes &amp; services</th><th>Beneficiaries</th><th>Period</th></tr></thead>
+            <tbody>
+            {% for loc in locations %}{% if loc.kind != 'office' %}
+                <tr><td><strong>{{ loc.name }}</strong></td><td>{{ loc.town }}</td><td style="font-size:.86rem;line-height:1.6;">{{ loc.programmes_list|join:" · " }}</td><td>{{ loc.beneficiaries|default:"—"|thousands }}</td><td>{{ loc.period }}</td></tr>
+            {% endif %}{% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div class="center mt-4">
+            <a href="{% url 'contact' %}?type=partner" class="btn btn-gold"><i class="fas fa-handshake"></i> Bring a programme to your area</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ map_points|json_script:'map-data' }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>document.addEventListener('DOMContentLoaded', function(){ initServiceMap(JSON.parse(document.getElementById('map-data').textContent)); });</script>
+{% endblock %}

@@ -1,0 +1,11 @@
+{# Photo grid. Click a photo to open it larger (lightbox in static/js/site.js). #}
+<div class="gallery-grid{% if compact %} compact{% endif %}" data-gallery>
+    {% for photo in photos %}
+    <figure class="gallery-item" data-category="{{ photo.category }}">
+        <button type="button" class="gallery-open" data-full="{{ photo.url }}" data-caption="{{ photo.caption|default:photo.title }}" aria-label="Open photo: {{ photo.title }}">
+            <img src="{{ photo.thumb_url }}" alt="{{ photo.caption|default:photo.title }}" loading="lazy" decoding="async">
+        </button>
+        <figcaption><strong>{{ photo.title }}</strong>{% if not compact and photo.caption %}<span>{{ photo.caption }}</span>{% endif %}</figcaption>
+    </figure>
+    {% endfor %}
+</div>

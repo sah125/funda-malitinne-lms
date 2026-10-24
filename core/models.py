@@ -51,26 +51,40 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.role})"
 
-    def send_reset_email(self):
-        self.reset_password_token = get_random_string(64)
-        self.reset_password_expires = timezone.now() + timezone.timedelta(hours=24)
-        self.save()
+    # POPIA: record that the learner agreed to the processing of their personal information
+    popia_consent = models.BooleanField(default=False)
+    popia_consent_at = models.DateTimeField(blank=True, null=True)
+    approved_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_users')
 
-        try:
-            html_message = render_to_string('email/reset_password.html', {
-                'user': self,
-                'reset_link': f'/reset-password/{self.reset_password_token}/'
-            })
-            send_mail(
-                'Password Reset - Funda Malitinne LMS',
-                f'Click here to reset your password: /reset-password/{self.reset_password_token}/',
-                'noreply@fundamalitinne.com',
-                [self.email],
-                html_message=html_message,
-                fail_silently=True
-            )
-        except Exception as exc:
-            logger.warning("Failed to send password reset email for user %s: %s", self.pk, exc)
+    @property
+    def needs_approval(self):
+        """Learners must be approved by Malitinne before they can sign in."""
+        return self.role == 'student' and not self.is_approved and not self.is_superuser
+
+    def save(self, *args, **kwargs):
+        # Detect the moment an account is approved (from the admin, the dashboard
+        # or the shell) so the learner automatically receives their login link.
+        newly_approved = False
+        if self.pk and self.is_approved:
+            was_approved = type(self).objects.filter(pk=self.pk).values_list('is_approved', flat=True).first()
+            newly_approved = was_approved is False
+        if newly_approved and not self.approved_at:
+            self.approved_at = timezone.now()
+        super().save(*args, **kwargs)
+        if newly_approved and not getattr(self, '_skip_approval_email', False):
+            from django.db import transaction
+
+            from .emails import send_account_approved_email
+            transaction.on_commit(lambda: send_account_approved_email(self))
+
+    def send_reset_email(self):
+        from .emails import send_password_reset_email
+
+        self.reset_password_token = secrets.token_urlsafe(48)
+        self.reset_password_expires = timezone.now() + timezone.timedelta(hours=2)
+        self.save(update_fields=['reset_password_token', 'reset_password_expires'])
+        send_password_reset_email(self)
+
 
 class Course(models.Model):
     LEVEL_CHOICES = (
@@ -855,10 +869,10 @@ class Application(models.Model):
     skills = models.TextField(help_text="Relevant skills, separated by commas")
 
     # Documents
-    cv = models.FileField(upload_to='applications/cvs/%Y/%m/', null=True, blank=True)
-    cover_letter = models.FileField(upload_to='applications/cover_letters/%Y/%m/', null=True, blank=True)
-    id_document = models.FileField(upload_to='applications/ids/%Y/%m/', null=True, blank=True)
-    qualifications = models.FileField(upload_to='applications/qualifications/%Y/%m/', null=True, blank=True)
+    cv = models.FileField(upload_to='applications/cvs/%Y/%m/', validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'])], null=True, blank=True)
+    cover_letter = models.FileField(upload_to='applications/cover_letters/%Y/%m/', validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'])], null=True, blank=True)
+    id_document = models.FileField(upload_to='applications/ids/%Y/%m/', validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'])], null=True, blank=True)
+    qualifications = models.FileField(upload_to='applications/qualifications/%Y/%m/', validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'])], null=True, blank=True)
 
     # Additional Information
     hear_about_us = models.CharField(max_length=200, blank=True, help_text="How did you hear about this opportunity?")
@@ -1386,3 +1400,256 @@ class NewsPost(models.Model):
     def get_absolute_url(self):
         from django.urls import reverse
         return reverse('news_detail', kwargs={'slug': self.slug})
+
+
+
+# ==================== PUBLIC WEBSITE: PROGRAMMES, FOOTPRINT, ENROLMENT ====================
+
+class Programme(models.Model):
+    """A skills programme / qualification Malitinne offers, shown on the public
+    website WITHOUT its learning content. Visitors can enquire, apply or partner;
+    the actual material lives in the linked LMS Course and is only visible to
+    approved, enrolled learners."""
+
+    STATUS_CHOICES = (
+        ('accredited', 'Accredited'),
+        ('in_progress', 'Accreditation in progress'),
+        ('planned', 'Planned'),
+    )
+    CATEGORY_CHOICES = (
+        ('business', 'Business & Management'),
+        ('health_safety', 'Health & Safety'),
+        ('beauty', 'Beauty & Hair'),
+        ('agriculture', 'Agriculture & Environment'),
+        ('digital', 'Digital & Office'),
+        ('services', 'Services & Facilities'),
+        ('local_government', 'Local Government'),
+        ('construction', 'Construction & Trades'),
+    )
+    DELIVERY_CHOICES = (
+        ('online', 'Online'),
+        ('blended', 'Blended (online + contact sessions)'),
+        ('contact', 'Face-to-face'),
+    )
+
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(unique=True)
+    code = models.CharField('SAQA / QCTO code', max_length=40, blank=True)
+    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='business')
+    quality_partner = models.CharField(max_length=100, default='QCTO', help_text='e.g. QCTO, Services SETA, LGSETA')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='accredited')
+    nqf_level = models.PositiveSmallIntegerField(null=True, blank=True)
+    credits = models.PositiveIntegerField(null=True, blank=True)
+    notional_hours = models.PositiveIntegerField(null=True, blank=True)
+    duration_text = models.CharField(max_length=100, blank=True, help_text='e.g. "3 months" or "40 training days"')
+    delivery_mode = models.CharField(max_length=20, choices=DELIVERY_CHOICES, default='blended')
+    summary = models.TextField(help_text='Short public overview (no learning content).')
+    who_is_it_for = models.TextField(blank=True, help_text='One item per line')
+    outcomes = models.TextField(blank=True, help_text='What learners will be able to do — one per line')
+    entry_requirements = models.TextField(blank=True, help_text='One per line')
+    image = models.ImageField(upload_to='programmes/', blank=True, null=True)
+    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True, related_name='programmes',
+                               help_text='LMS course that delivers this programme online (content stays private).')
+    is_published = models.BooleanField(default=True)
+    is_featured = models.BooleanField(default=False)
+    order = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'title']
+
+    def __str__(self):
+        return self.title
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('programme_detail', kwargs={'slug': self.slug})
+
+    @staticmethod
+    def _lines(text):
+        return [line.strip(' -•\t') for line in (text or '').splitlines() if line.strip(' -•\t')]
+
+    def outcomes_list(self):
+        return self._lines(self.outcomes)
+
+    def audience_list(self):
+        return self._lines(self.who_is_it_for)
+
+    def requirements_list(self):
+        return self._lines(self.entry_requirements)
+
+    ICONS = {
+        'business': 'fa-briefcase', 'health_safety': 'fa-kit-medical', 'beauty': 'fa-spa',
+        'agriculture': 'fa-seedling', 'digital': 'fa-laptop', 'services': 'fa-broom',
+        'local_government': 'fa-landmark', 'construction': 'fa-helmet-safety',
+    }
+
+    @property
+    def icon(self):
+        return self.ICONS.get(self.category, 'fa-graduation-cap')
+
+    @property
+    def training_days(self):
+        if self.notional_hours:
+            return round(self.notional_hours / 8)
+        return None
+
+    @property
+    def module_titles(self):
+        """Public outline: lesson *titles only* from the linked course."""
+        if not self.course_id:
+            return []
+        return list(self.course.lessons.order_by('order').values_list('title', flat=True)[:30])
+
+
+class ServiceLocation(models.Model):
+    """A place where Malitinne has delivered programmes — drawn on the public map."""
+
+    KIND_CHOICES = (
+        ('office', 'Head office'),
+        ('project', 'Project site'),
+        ('partner', 'Partner / client'),
+    )
+    name = models.CharField(max_length=150)
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default='project')
+    town = models.CharField(max_length=100, blank=True)
+    province = models.CharField(max_length=60, default='KwaZulu-Natal')
+    latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    programmes = models.TextField(blank=True, help_text='One programme/service per line')
+    beneficiaries = models.PositiveIntegerField(null=True, blank=True)
+    period = models.CharField(max_length=60, blank=True)
+    is_published = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name
+
+    def programmes_list(self):
+        return [p.strip() for p in self.programmes.splitlines() if p.strip()]
+
+
+class Enquiry(models.Model):
+    """Every message from the public website is stored here (and emailed to
+    CONTACT_EMAIL) so nothing is lost if email delivery fails."""
+
+    TYPE_CHOICES = (
+        ('general', 'General enquiry'),
+        ('programme', 'Programme enquiry'),
+        ('partner', 'Partnership / funding'),
+        ('join', 'I want to join a programme'),
+    )
+    STATUS_CHOICES = (('new', 'New'), ('in_progress', 'In progress'), ('closed', 'Closed'))
+
+    enquiry_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='general')
+    programme = models.ForeignKey(Programme, on_delete=models.SET_NULL, null=True, blank=True, related_name='enquiries')
+    name = models.CharField(max_length=150)
+    email = models.EmailField()
+    phone = models.CharField(max_length=30, blank=True)
+    organisation = models.CharField(max_length=200, blank=True)
+    client_type = models.CharField(max_length=60, blank=True)
+    message = models.TextField()
+    popia_consent = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    email_sent = models.BooleanField(default=False)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name_plural = 'Enquiries'
+
+    def __str__(self):
+        return f"{self.get_enquiry_type_display()} — {self.name}"
+
+
+class EnrollmentRequest(models.Model):
+    """An approved learner asks to join a course; an admin approves it."""
+
+    STATUS_CHOICES = (('pending', 'Pending'), ('approved', 'Approved'), ('declined', 'Declined'))
+
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='enrollment_requests')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrollment_requests')
+    motivation = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='enrollment_decisions')
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['student', 'course']
+
+    def __str__(self):
+        return f"{self.student} → {self.course} ({self.status})"
+
+    def approve(self, by=None):
+        self.status = 'approved'
+        self.decided_at = timezone.now()
+        self.decided_by = by
+        self.save()
+        self.course.students.add(self.student)
+        Progress.objects.get_or_create(student=self.student, course=self.course)
+        Notification.objects.create(
+            user=self.student, title='Enrolment approved',
+            message=f'You now have access to {self.course.title}.', link=f'/course/{self.course_id}/')
+
+    def decline(self, by=None):
+        self.status = 'declined'
+        self.decided_at = timezone.now()
+        self.decided_by = by
+        self.save()
+        Notification.objects.create(
+            user=self.student, title='Enrolment request update',
+            message=f'Your request for {self.course.title} was not approved at this time. Please contact us for more information.')
+
+
+
+class GalleryPhoto(models.Model):
+    """A photo of Malitinne's work for the public gallery. Upload new photos in
+    the admin (Gallery photos); the first set ships with the site in static/."""
+
+    CATEGORY_CHOICES = (
+        ('furniture', 'Furniture making (EPWP)'),
+        ('leather', 'Leather & skins'),
+        ('community', 'Community & partnerships'),
+        ('classroom', 'Classroom & assessment'),
+    )
+    title = models.CharField(max_length=120)
+    caption = models.CharField(max_length=300, blank=True)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='community')
+    image = models.ImageField(
+        upload_to='gallery/', blank=True, null=True,
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp'])],
+        help_text='Upload a photo (JPG/PNG/WebP). Make sure the people shown agreed to appear on the website.',
+    )
+    static_path = models.CharField(max_length=200, blank=True, help_text='Used for the built-in photos; leave blank when uploading.')
+    show_on_home = models.BooleanField(default=False, help_text='Show in "Our work in action" on the home page')
+    is_published = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def url(self):
+        from django.templatetags.static import static
+        if self.image:
+            return self.image.url
+        return static(self.static_path) if self.static_path else ''
+
+    @property
+    def thumb_url(self):
+        from django.templatetags.static import static
+        if self.image:
+            return self.image.url
+        if self.static_path:
+            return static(self.static_path.replace('.jpg', '-sm.jpg'))
+        return ''

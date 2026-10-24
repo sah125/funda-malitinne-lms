@@ -11,7 +11,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('favicon.ico', RedirectView.as_view(url=static_url('favicon.ico'), permanent=True)),
+    path('favicon.ico', RedirectView.as_view(url=static_url('favicon.ico'), permanent=False)),
+    path('site.webmanifest', TemplateView.as_view(template_name='site.webmanifest', content_type='application/manifest+json')),
     # ===== ADMIN =====
     path('admin/', admin.site.urls),
     path('health/', HealthCheckView.health_check, name='health_check'),
@@ -21,7 +22,12 @@ urlpatterns = [
     path('about/', views.about_page, name='about'),
     path('services/', views.services_page, name='services'),
     path('impact/', views.impact_page, name='impact'),
+    path('gallery/', views.gallery_page, name='gallery'),
     path('programmes/', views.programmes_page, name='programmes'),
+    path('programmes/<slug:slug>/', views.programme_detail, name='programme_detail'),
+    path('accreditation/', views.accreditation_page, name='accreditation'),
+    path('where-we-work/', views.footprint_page, name='footprint'),
+    path('privacy/', views.privacy_page, name='privacy'),
     path('clients/', views.clients_page, name='clients'),
     path('contact/', views.contact_page, name='contact'),
     path('news/', views.news_list, name='news_list'),
@@ -53,6 +59,7 @@ urlpatterns = [
     path('instructor/student/<int:user_id>/', views.instructor_student_view, name='instructor_student_view'),
     path('instructor/create-course/', views.create_course, name='create_course'),
     path('instructor/manage/<int:course_id>/', views.manage_course, name='manage_course'),
+    path('instructor/course/<int:course_id>/import-guide/', views.import_learner_guide_view, name='import_learner_guide'),
     path('delete-course/<int:course_id>/', views.delete_course, name='delete_course'),
     path('instructor/course/<int:course_id>/add-lesson/', views.add_lesson, name='add_lesson'),
     path('instructor/lesson/<int:lesson_id>/edit/', views.edit_lesson, name='edit_lesson'),
@@ -68,6 +75,10 @@ urlpatterns = [
 
     # ===== ADMIN DASHBOARD =====
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
+    path('admin-dashboard/approvals/', views.pending_approvals, name='pending_approvals'),
+    path('admin-dashboard/approvals/user/<int:user_id>/approve/', views.approve_user, name='approve_user'),
+    path('admin-dashboard/approvals/user/<int:user_id>/decline/', views.decline_user, name='decline_user'),
+    path('admin-dashboard/approvals/enrolment/<int:request_id>/', views.decide_enrollment, name='decide_enrollment'),
     path('delete-user/<int:user_id>/', views.delete_user, name='delete_user'),
 
     # ===== STAFF PORTAL =====

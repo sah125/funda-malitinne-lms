@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Bring a programme online · {{ course.title }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3"><ol class="breadcrumb small mb-0">
+    <li class="breadcrumb-item"><a href="{% url 'lms_portal' %}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'course_detail' course.id %}">{{ course.title|truncatechars:40 }}</a></li>
+    <li class="breadcrumb-item active">Import learner guide</li>
+</ol></nav>
+
+<section class="lms-hero">
+    <div class="eyebrow mb-1">Face-to-face → online</div>
+    <h1 class="mb-1" style="font-size:clamp(1.8rem,3vw,2.6rem);">Bring your classroom material online</h1>
+    <p>Upload the Word learner guide you use in class. Each topic element becomes a short online lesson (tables, lists and pictures included), and each activity in the learner assessment becomes an online assignment for the Portfolio of Evidence.</p>
+</section>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card"><div class="card-body p-4">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="module_title">Knowledge module name</label>
+                    <input class="form-control" id="module_title" name="module_title" list="modules" placeholder="e.g. KM-01 Introductory studies for Project Managers" required>
+                    <datalist id="modules">{% for m in modules %}<option value="{{ m.title }}">{% endfor %}</datalist>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="guide">Learner guide (.docx) <span class="text-danger">*</span></label>
+                    <input class="form-control" type="file" id="guide" name="guide" accept=".docx" required>
+                    <div class="form-text">Use Word <strong>Heading 1</strong> for topics (KT01, KT02…) and <strong>Heading 2</strong> for topic elements (KT0101…).</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="assessment">Learner assessment (.docx) <span class="text-muted fw-normal">(optional)</span></label>
+                    <input class="form-control" type="file" id="assessment" name="assessment" accept=".docx">
+                    <div class="form-text">Every <strong>Heading 2</strong> that starts with “Activity” becomes an online assignment.</div>
+                </div>
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" name="replace" id="replace" value="1">
+                    <label class="form-check-label" for="replace">Replace lessons previously imported into this module</label>
+                </div>
+                <button class="btn btn-primary" type="submit"><i class="fas fa-wand-magic-sparkles me-1"></i> Convert to online lessons</button>
+            </form>
+        </div></div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card"><div class="card-body p-4">
+            <h5 class="mb-3">How the QCTO model maps online</h5>
+            <ul class="list-unstyled small mb-0" style="line-height:1.9;">
+                <li><span class="pill pill-gold me-2">KM</span> Knowledge modules → online lessons, read on any device</li>
+                <li><span class="pill pill-gold me-2">IAC</span> Formative activities → online assignments (upload answers)</li>
+                <li><span class="pill pill-navy me-2">PM</span> Practical modules → live or recorded sessions + observation checklists signed by the assessor</li>
+                <li><span class="pill pill-navy me-2">WM</span> Work experience → digital logbook signed by the workplace supervisor</li>
+                <li><span class="pill pill-green me-2">PoE</span> Everything collects into the learner's digital Portfolio of Evidence</li>
+            </ul>
+            <hr>
+            <p class="small text-muted mb-0">Keep the course as <strong>Draft</strong> while you check the lessons. Learners only see it once it is published and their enrolment is approved.</p>
+        </div></div>
+    </div>
+</div>
+{% endblock %}

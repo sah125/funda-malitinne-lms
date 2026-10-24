@@ -1,0 +1,57 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{% block title %}Funda Malitinne{% endblock %} | Malitinne</title>
+    {% include 'partials/favicons.html' %}
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+</head>
+<body>
+<div class="auth">
+    <aside class="auth-side" style="--bg: url('{% static 'images/classroom-2.jpg' %}');">
+        <a href="{% url 'company_home' %}" class="auth-logo"><img src="{% static 'Malitinne-logo.png' %}" alt="Malitinne — back to website"></a>
+        <div class="auth-side-copy">
+            <div class="eyebrow">Funda Malitinne LMS</div>
+            <h1>{% block side_title %}Skills that travel <em>with you</em>{% endblock %}</h1>
+            <p>{% block side_text %}Accredited programmes from Malitinne, now online. Learn from anywhere — on your phone, tablet or computer.{% endblock %}</p>
+            <ul class="auth-points">
+                <li><i class="fas fa-certificate"></i> QCTO &amp; SETA accredited training</li>
+                <li><i class="fas fa-user-check"></i> Every learner approved by our team</li>
+                <li><i class="fas fa-shield-halved"></i> Your information protected under POPIA</li>
+            </ul>
+        </div>
+        <div class="auth-side-foot">Need help? <a href="mailto:{{ CONTACT_EMAIL }}">{{ CONTACT_EMAIL }}</a> · 073 931 7923</div>
+    </aside>
+    <main class="auth-main">
+        <div class="auth-card {% block card_class %}{% endblock %}">
+            {% if messages %}
+            <div class="auth-messages" role="status" aria-live="polite">
+                {% for message in messages %}<div class="auth-msg {{ message.tags }}"><i class="fas {% if message.tags == 'success' %}fa-circle-check{% elif message.tags == 'warning' %}fa-hourglass-half{% elif message.tags == 'error' %}fa-circle-exclamation{% else %}fa-circle-info{% endif %}"></i><span>{{ message }}</span></div>{% endfor %}
+            </div>
+            {% endif %}
+            {% block card %}{% endblock %}
+        </div>
+        <p class="auth-legal"><a href="{% url 'company_home' %}"><i class="fas fa-arrow-left"></i> Back to website</a> · <a href="{% url 'privacy' %}">Privacy &amp; POPIA</a></p>
+    </main>
+</div>
+<script>
+document.querySelectorAll('[data-toggle-password]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        var input = document.getElementById(btn.getAttribute('data-toggle-password'));
+        var show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        btn.innerHTML = show ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+        btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    });
+});
+document.querySelectorAll('form[data-once]').forEach(function (f) {
+    f.addEventListener('submit', function () { var b = f.querySelector('button[type=submit]'); if (b) { b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Please wait…'; } });
+});
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

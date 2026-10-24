@@ -53,6 +53,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.ApprovalRequiredMiddleware',   # blocks learners until admin approval
+    'core.middleware.SecurityHeadersMiddleware',    # POPIA: extra browser hardening headers
 ]
 
 ROOT_URLCONF = 'lms.urls'
@@ -68,6 +70,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.site',
             ],
         },
     },
@@ -107,14 +110,14 @@ AUTH_USER_MODEL = 'core.User'
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 10}},
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 # ===== INTERNATIONALIZATION =====
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = env('TIME_ZONE', default='Africa/Johannesburg')
 USE_I18N = True
 USE_TZ = True
 
@@ -172,9 +175,29 @@ EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.
 EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = env.int('EMAIL_PORT', default=587)
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL', default=False)   # cPanel mail on port 465 uses SSL
+if EMAIL_USE_SSL:
+    EMAIL_USE_TLS = False   # Django does not allow both at once
+EMAIL_TIMEOUT = env.int('EMAIL_TIMEOUT', default=20)
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')  # Leave empty for console backend
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')  # Leave empty for console backend
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@malitinne.local')
+# Read literally (not via env()) so passwords starting with $ or containing # work.
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')  # Leave empty for console backend
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='Malitinne <hello@malitinne.co.za>')
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+# ===== SITE / BUSINESS SETTINGS =====
+# Public address of the site — used to build absolute links in emails (login link, password reset)
+SITE_URL = env('SITE_URL', default='http://127.0.0.1:8000').rstrip('/')
+# Where website enquiries (contact form, programme enquiries, partnership requests) are delivered
+CONTACT_EMAIL = env('CONTACT_EMAIL', default='hello@malitinne.co.za')
+# Who is told when a new learner registers and needs approval (comma separated in .env)
+REGISTRATION_NOTIFY_EMAILS = env.list('REGISTRATION_NOTIFY_EMAILS', default=[CONTACT_EMAIL])
+# When True, approved learners must *request* a course and an admin approves the enrolment
+COURSE_ENROLMENT_REQUIRES_APPROVAL = env.bool('COURSE_ENROLMENT_REQUIRES_APPROVAL', default=True)
+
+# ===== LOGIN PROTECTION (brute-force) =====
+LOGIN_MAX_ATTEMPTS = env.int('LOGIN_MAX_ATTEMPTS', default=5)        # failed attempts allowed...
+LOGIN_LOCKOUT_SECONDS = env.int('LOGIN_LOCKOUT_SECONDS', default=900)  # ...per 15 minutes
 
 # ===== LOGGING =====
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)
@@ -233,6 +256,10 @@ else:
     CSRF_COOKIE_SECURE = False
 
 SESSION_COOKIE_HTTPONLY = True  # Always True — JS cannot read session cookie
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_AGE = env.int('SESSION_COOKIE_AGE', default=60 * 60 * 8)  # 8 hours
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'SAMEORIGIN'  # Less strict than DENY for development

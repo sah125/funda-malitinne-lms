@@ -1,7 +1,7 @@
 /* ===== GLOBAL RESET ===== */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { 
-    font-family: 'Inter', sans-serif; 
+    font-family: 'DM Sans', sans-serif; 
     background: #f0f2f5; 
     overflow-x: hidden;
 }
@@ -246,7 +246,7 @@ body {
     padding: 7px 12px;
     font-size: 0.82rem; 
     outline: none; 
-    font-family: 'Inter', sans-serif;
+    font-family: 'DM Sans', sans-serif;
 }
 .filter-bar select:focus, .filter-bar input:focus { border-color: #9f7734; }
 .filter-bar .btn-filter {
@@ -406,4 +406,4 @@ body {
     font-size: 1.5rem;
     cursor: pointer;
     padding: 5px;
-}
+}

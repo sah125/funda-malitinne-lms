@@ -68,6 +68,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.ApprovalRequiredMiddleware',   # blocks learners until admin approval
+    'core.middleware.SecurityHeadersMiddleware',    # POPIA: extra browser hardening headers
 ]
 
 ROOT_URLCONF = 'lms.urls'
@@ -83,6 +85,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.site',
             ],
         },
     },
@@ -193,6 +196,8 @@ SESSION_CACHE_ALIAS = 'default'
 SESSION_COOKIE_AGE = 3600            # 1-hour idle timeout
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_HTTPONLY = True       # JS cannot read the session cookie
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
 
 # ─────────────────────────────────────────────
 # CELERY
@@ -211,10 +216,25 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = env.int('EMAIL_PORT', default=587)
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL', default=False)   # cPanel mail on port 465 uses SSL
+if EMAIL_USE_SSL:
+    EMAIL_USE_TLS = False
+EMAIL_TIMEOUT = env.int('EMAIL_TIMEOUT', default=20)
 EMAIL_HOST_USER = env('EMAIL_HOST_USER')        # REQUIRED
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')  # REQUIRED
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@malitinne.co.za')
+# Read literally (not via env()) so passwords starting with $ work.
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD') or env('EMAIL_HOST_PASSWORD')  # REQUIRED
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='Malitinne <hello@malitinne.co.za>')
 SERVER_EMAIL = DEFAULT_FROM_EMAIL               # used by AdminEmailHandler
+
+# ─────────────────────────────────────────────
+# SITE / BUSINESS SETTINGS
+# ─────────────────────────────────────────────
+SITE_URL = env('SITE_URL', default='https://malitinne.co.za').rstrip('/')
+CONTACT_EMAIL = env('CONTACT_EMAIL', default='hello@malitinne.co.za')
+REGISTRATION_NOTIFY_EMAILS = env.list('REGISTRATION_NOTIFY_EMAILS', default=[CONTACT_EMAIL])
+COURSE_ENROLMENT_REQUIRES_APPROVAL = env.bool('COURSE_ENROLMENT_REQUIRES_APPROVAL', default=True)
+LOGIN_MAX_ATTEMPTS = env.int('LOGIN_MAX_ATTEMPTS', default=5)
+LOGIN_LOCKOUT_SECONDS = env.int('LOGIN_LOCKOUT_SECONDS', default=900)
 
 # ─────────────────────────────────────────────
 # SECURITY HEADERS
@@ -227,7 +247,8 @@ CSRF_COOKIE_SECURE = True
 
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_REFERRER_POLICY = 'same-origin'
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
 
 # HSTS — tell browsers to always use HTTPS
 # WARNING: set SECURE_HSTS_SECONDS to 60 first, confirm everything works,
@@ -242,7 +263,7 @@ X_FRAME_OPTIONS = 'DENY'
 # ADMINS — receives 500 error emails via AdminEmailHandler
 # ─────────────────────────────────────────────
 ADMINS = [
-    ('Mondli Dlamini', env('ADMIN_EMAIL', default='admin@malitinne.co.za')),
+    ('Malitinne Admin', env('ADMIN_EMAIL', default='hello@malitinne.co.za')),
 ]
 
 # ─────────────────────────────────────────────

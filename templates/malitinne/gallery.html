@@ -1,0 +1,42 @@
+{% extends 'malitinne/site_base.html' %}
+{% load static %}
+{% block title %}Gallery | Malitinne Skills Development in Action{% endblock %}
+{% block meta_description %}Photos of Malitinne learners at work: EPWP furniture making, leather and skins craft, youth entrepreneurship sessions and accredited classroom training.{% endblock %}
+
+{% block page_banner %}
+<section class="page-banner">
+    <div class="page-banner-inner">
+        <h1>Skills you can <em>see</em></h1>
+        <p>Real learners, real workplaces, real products. Every photo here comes from a Malitinne programme.</p>
+        <div class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+            <a href="{% url 'company_home' %}">Home</a><i class="fas fa-chevron-right" aria-hidden="true"></i><span class="current" aria-current="page">Gallery</span>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="section-pad">
+    <div class="wrap">
+        {% if categories|length > 1 %}
+        <div class="gallery-filters" role="group" aria-label="Filter photos">
+            <button type="button" class="active" data-filter="all">All <span>{{ photos|length }}</span></button>
+            {% for key, label in categories %}<button type="button" data-filter="{{ key }}">{{ label }}</button>{% endfor %}
+        </div>
+        {% endif %}
+        {% include 'malitinne/partials/gallery_grid.html' with photos=photos %}
+        {% if not photos %}<p class="section-sub">Photos are on their way.</p>{% endif %}
+    </div>
+</section>
+
+<section class="gallery-cta">
+    <div class="wrap">
+        <h2>Want your people in the next photo?</h2>
+        <p>We deliver accredited programmes on site, in our training rooms and now online through Funda Malitinne.</p>
+        <div class="gallery-cta-btns">
+            <a href="{% url 'programmes' %}" class="btn-primary">Browse programmes <i class="fas fa-arrow-right"></i></a>
+            <a href="{% url 'contact' %}" class="btn-outline-light">Partner with us</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

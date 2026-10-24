@@ -14,7 +14,13 @@ from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
+from django.contrib.auth.password_validation import validate_password
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.core.validators import validate_email
+from django.urls import reverse
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, F, Q
 from django.http import (
@@ -33,6 +39,14 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
 from .ai_assistant import AIAdminAssistant
+from .emails import (
+    notify_admins_new_registration,
+    send_account_declined_email,
+    send_enquiry_acknowledgement,
+    send_enquiry_notification,
+    send_enrollment_decision,
+    send_registration_received,
+)
 from .ai_recommendations import get_course_recommendations
 from .models import (
     Announcement,
@@ -48,6 +62,8 @@ from .models import (
     DailyStreak,
     DocumentCategory,
     DocumentDownloadLog,
+    Enquiry,
+    EnrollmentRequest,
     ForumPost,
     ForumTopic,
     LearnerDocument,
@@ -57,6 +73,7 @@ from .models import (
     LessonInteraction,
     LessonModule,
     LogbookEntry,
+    LoginAttempt,
     Meeting,
     ModuleEvidence,
     NewsPost,
@@ -64,6 +81,7 @@ from .models import (
     ObservationChecklistItem,
     Opportunity,
     PortfolioOfEvidence,
+    Programme,
     Progress,
     Quiz,
     QuizAttempt,
@@ -71,6 +89,8 @@ from .models import (
     SharedDocument,
     StaffAnnouncement,
     StudentChecklistResult,
+    GalleryPhoto,
+    ServiceLocation,
     Submission,
     SummativeAssessment,
     SummativeAssessmentSubmission,
@@ -126,8 +146,73 @@ def check_for_badges(user):
 
 # ==================== PUBLIC PAGE VIEWS ====================
 
+PROGRAMME_CATEGORY_ICONS = Programme.ICONS
+
+
 def programmes_page(request):
-    return render(request, 'malitinne/programmes.html')
+    """Public catalogue — shows what we offer, never the learning content."""
+    programmes = Programme.objects.filter(is_published=True)
+    category = request.GET.get('category') or ''
+    status = request.GET.get('status') or ''
+    query = (request.GET.get('q') or '').strip()
+    if category:
+        programmes = programmes.filter(category=category)
+    if status:
+        programmes = programmes.filter(status=status)
+    if query:
+        programmes = programmes.filter(Q(title__icontains=query) | Q(summary__icontains=query) | Q(code__icontains=query))
+    published = Programme.objects.filter(is_published=True)
+    return render(request, 'malitinne/programmes.html', {
+        'programmes': programmes,
+        'categories': [(key, label, PROGRAMME_CATEGORY_ICONS.get(key, 'fa-book')) for key, label in Programme.CATEGORY_CHOICES
+                       if published.filter(category=key).exists()],
+        'active_category': category, 'active_status': status, 'query': query,
+        'accredited_count': published.filter(status='accredited').count(),
+        'in_progress_count': published.filter(status='in_progress').count(),
+        'icons': PROGRAMME_CATEGORY_ICONS,
+    })
+
+
+def programme_detail(request, slug):
+    programme = get_object_or_404(Programme, slug=slug, is_published=True)
+    related = Programme.objects.filter(is_published=True, category=programme.category).exclude(pk=programme.pk)[:3]
+    return render(request, 'malitinne/programme_detail.html', {
+        'programme': programme, 'related': related,
+        'icon': PROGRAMME_CATEGORY_ICONS.get(programme.category, 'fa-book'),
+        'enquiry_types': Enquiry.TYPE_CHOICES,
+    })
+
+
+def accreditation_page(request):
+    programmes = Programme.objects.filter(is_published=True)
+    return render(request, 'malitinne/accreditation.html', {
+        'accredited': programmes.filter(status='accredited'),
+        'in_progress': programmes.filter(status='in_progress'),
+        'icons': PROGRAMME_CATEGORY_ICONS,
+    })
+
+
+def footprint_page(request):
+    locations = list(ServiceLocation.objects.filter(is_published=True))
+    total = sum(loc.beneficiaries or 0 for loc in locations)
+    return render(request, 'malitinne/footprint.html', {
+        'locations': locations, 'total_beneficiaries': total,
+        'map_points': _map_points(locations),
+    })
+
+
+def _map_points(locations=None):
+    if locations is None:
+        locations = ServiceLocation.objects.filter(is_published=True)
+    return [{
+        'name': loc.name, 'kind': loc.kind, 'town': loc.town, 'province': loc.province,
+        'lat': float(loc.latitude), 'lng': float(loc.longitude),
+        'programmes': loc.programmes_list()[:6], 'beneficiaries': loc.beneficiaries, 'period': loc.period,
+    } for loc in locations]
+
+
+def privacy_page(request):
+    return render(request, 'malitinne/privacy.html')
 
 
 def clients_page(request):
@@ -143,7 +228,16 @@ def services_page(request):
 
 
 def impact_page(request):
-    return render(request, 'malitinne/impact.html')
+    return render(request, 'malitinne/impact.html', {
+        'gallery_photos': GalleryPhoto.objects.filter(is_published=True, show_on_home=True)[:6],
+    })
+
+
+def gallery_page(request):
+    photos = GalleryPhoto.objects.filter(is_published=True)
+    categories = [(key, label) for key, label in GalleryPhoto.CATEGORY_CHOICES
+                  if any(p.category == key for p in photos)]
+    return render(request, 'malitinne/gallery.html', {'photos': photos, 'categories': categories})
 
 
 def contact_page(request):
@@ -528,139 +622,203 @@ def like_reply(request, reply_id):
 
 # ==================== AUTHENTICATION ====================
 
+def _login_cache_keys(request, username):
+    ip = get_client_ip(request) or 'unknown'
+    return f"login-fail:ip:{ip}", f"login-fail:user:{(username or '').lower()[:150]}"
+
+
+def _is_locked_out(request, username):
+    limit = getattr(settings, 'LOGIN_MAX_ATTEMPTS', 5)
+    return any((cache.get(key) or 0) >= limit for key in _login_cache_keys(request, username))
+
+
+def _record_failed_login(request, username):
+    timeout = getattr(settings, 'LOGIN_LOCKOUT_SECONDS', 900)
+    for key in _login_cache_keys(request, username):
+        try:
+            cache.incr(key)
+        except ValueError:
+            cache.set(key, 1, timeout)
+
+
+def _log_attempt(request, username, user=None, successful=False, reason=''):
+    try:
+        LoginAttempt.objects.create(
+            username=(username or '')[:150], ip_address=get_client_ip(request) or '0.0.0.0',
+            user_agent=f"{reason} | {request.META.get('HTTP_USER_AGENT', '')}"[:500], attempt_type='web', success=successful)
+    except Exception as exc:
+        logger.warning("Could not record login attempt: %s", exc)
+
+
+def _dashboard_for(user):
+    if user.role == 'student':
+        return 'student_dashboard'
+    if user.role == 'instructor':
+        return 'instructor_dashboard'
+    return 'admin_dashboard'
+
+
 def user_login(request):
+    if request.user.is_authenticated:
+        return redirect(_dashboard_for(request.user))
+
     if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+        username = (request.POST.get('username') or '').strip()
+        password = request.POST.get('password') or ''
 
-        user = authenticate(request, username=username, password=password)
+        if _is_locked_out(request, username):
+            minutes = getattr(settings, 'LOGIN_LOCKOUT_SECONDS', 900) // 60
+            _log_attempt(request, username, reason='locked_out')
+            messages.error(request, f'Too many failed sign-in attempts. For your security, please wait {minutes} minutes and try again, or reset your password.')
+            return render(request, 'login.html', status=429)
 
-        if user:
-            login(request, user)
-            messages.success(request, f'Welcome back, {user.username}!')
-            if user.role == 'student':
-                return redirect('student_dashboard')
-            elif user.role == 'instructor':
-                return redirect('instructor_dashboard')
-            else:
-                return redirect('admin_dashboard')
-        else:
+        # Allow signing in with either username or email address
+        lookup = username
+        if '@' in username:
+            match = User.objects.filter(email__iexact=username).values_list('username', flat=True).first()
+            lookup = match or username
+
+        user = authenticate(request, username=lookup, password=password)
+
+        if user is None:
+            # Was it a correct password for a learner who is not approved yet?
+            pending = User.objects.filter(username=lookup, is_active=True, role='student', is_approved=False).first()
+            if pending and pending.check_password(password):
+                _log_attempt(request, username, user=pending, reason='awaiting_approval')
+                messages.warning(request, 'Your registration is still waiting for approval. We will email you a login link as soon as it is approved.')
+                return render(request, 'login.html', {'pending_approval': True})
+            _record_failed_login(request, username)
+            _log_attempt(request, username, reason='bad_credentials')
             messages.error(request, 'Invalid username or password.')
+            return render(request, 'login.html')
+
+        if getattr(user, 'needs_approval', False):
+            _log_attempt(request, username, user=user, reason='awaiting_approval')
+            messages.warning(request, 'Your registration is still waiting for approval. We will email you a login link as soon as it is approved.')
+            return render(request, 'login.html', {'pending_approval': True})
+
+        for key in _login_cache_keys(request, username):
+            cache.delete(key)
+        login(request, user)
+        _log_attempt(request, username, user=user, successful=True)
+        messages.success(request, f'Welcome back, {user.first_name or user.username}!')
+        next_url = request.POST.get('next') or request.GET.get('next')
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+            return redirect(next_url)
+        return redirect(_dashboard_for(user))
 
     return render(request, 'login.html')
 
 
 def user_logout(request):
     logout(request)
-    messages.success(request, 'Logged out successfully.')
+    messages.success(request, 'You have been signed out securely.')
     return redirect('login')
 
 
 def register(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        password2 = request.POST.get('password2')
+    if request.user.is_authenticated:
+        return redirect(_dashboard_for(request.user))
 
-        full_name = request.POST.get('full_name', '').split(' ', 1)
+    form_data = {}
+    if request.method == 'POST':
+        form_data = request.POST
+        username = (request.POST.get('username') or '').strip()
+        email = (request.POST.get('email') or '').strip().lower()
+        password = request.POST.get('password') or ''
+        password2 = request.POST.get('password2') or ''
+
+        full_name = (request.POST.get('full_name') or '').strip().split(' ', 1)
         first_name = full_name[0] if full_name else ''
         last_name = full_name[1] if len(full_name) > 1 else ''
 
-        id_number = request.POST.get('id_number')
-        date_of_birth = request.POST.get('date_of_birth')
-        gender = request.POST.get('gender')
-        nationality = request.POST.get('nationality')
-        contact_number = request.POST.get('contact_number')
-        disability = request.POST.get('disability')
-        preferred_language = request.POST.get('preferred_language')
-
+        errors = []
+        if not username or not email or not password:
+            errors.append('Please complete all required fields.')
         if password != password2:
-            messages.error(request, 'Passwords do not match.')
-        elif User.objects.filter(username=username).exists():
-            messages.error(request, 'Username already exists.')
-        elif User.objects.filter(email=email).exists():
-            messages.error(request, 'Email already exists.')
-        else:
-            user = User.objects.create_user(
-                username=username, email=email, password=password,
-                first_name=first_name, last_name=last_name,
-                role='student', is_active=True, is_approved=False
-            )
-
-            user.id_number = id_number
-            if date_of_birth:
-                user.date_of_birth = datetime.strptime(date_of_birth, '%Y-%m-%d').date()
-            user.gender = gender
-            user.nationality = nationality
-            user.contact_number = contact_number
-            user.disability = disability
-            user.preferred_language = preferred_language
-            user.save()
-
+            errors.append('Passwords do not match.')
+        if username and User.objects.filter(username__iexact=username).exists():
+            errors.append('Username already exists.')
+        if email and User.objects.filter(email__iexact=email).exists():
+            errors.append('Email already exists.')
+        if not request.POST.get('popia_consent'):
+            errors.append('Please confirm that you consent to Malitinne processing your personal information (POPIA).')
+        if password and password == password2:
             try:
-                html_message = render_to_string('email/registration_pending.html', {'user': user, 'full_name': f"{first_name} {last_name}"})
-                send_mail(
-                    'Registration Received - Funda Malitinne LMS',
-                    f'Dear {first_name},\n\nYour registration has been received. You will receive an email once approved.\n\nRegards,\nFunda Malitinne Team',
-                    'noreply@fundamalitinne.com', [email], html_message=html_message, fail_silently=True
-                )
-            except Exception as exc:
-                logger.warning("Failed to send registration confirmation email: %s", exc)
+                validate_password(password, User(username=username, email=email, first_name=first_name, last_name=last_name))
+            except ValidationError as exc:
+                errors.extend(exc.messages)
 
-            admins = User.objects.filter(role='admin', is_approved=True)
-            for admin in admins:
-                try:
-                    html_message = render_to_string('email/admin_approval_needed.html', {'user': user, 'admin': admin})
-                    send_mail(
-                        f'New Student Registration - {username}',
-                        f'A new student has registered. Please review and approve their account.\n\nUsername: {username}\nEmail: {email}',
-                        'noreply@fundamalitinne.com', [admin.email], html_message=html_message, fail_silently=True
-                    )
-                except Exception as exc:
-                    logger.warning("Failed to send admin registration notification: %s", exc)
+        if errors:
+            for err in errors:
+                messages.error(request, err)
+            return render(request, 'register.html', {'form_data': form_data})
 
-            messages.success(request, 'Registration submitted! Please wait for admin approval.')
-            return redirect('login')
+        date_of_birth = None
+        if request.POST.get('date_of_birth'):
+            try:
+                date_of_birth = datetime.strptime(request.POST['date_of_birth'], '%Y-%m-%d').date()
+            except ValueError:
+                date_of_birth = None
 
-    return render(request, 'register.html')
+        user = User.objects.create_user(
+            username=username, email=email, password=password,
+            first_name=first_name, last_name=last_name,
+            role='student', is_active=True, is_approved=False,
+            id_number=(request.POST.get('id_number') or '').strip()[:20] or None,
+            date_of_birth=date_of_birth,
+            gender=request.POST.get('gender') or None,
+            nationality=request.POST.get('nationality') or None,
+            contact_number=(request.POST.get('contact_number') or '').strip()[:20] or None,
+            disability=request.POST.get('disability') or None,
+            preferred_language=request.POST.get('preferred_language') or 'English',
+            popia_consent=True, popia_consent_at=timezone.now(),
+        )
+
+        send_registration_received(user)
+        notify_admins_new_registration(user)
+
+        messages.success(request, 'Thank you for registering! Your account is now waiting for approval. We will email you a login link as soon as it is approved.')
+        return redirect('login')
+
+    return render(request, 'register.html', {'form_data': form_data})
 
 
 def forgot_password(request):
     if request.method == 'POST':
-        email = request.POST.get('email')
-        try:
-            user = User.objects.get(email=email)
+        email = (request.POST.get('email') or '').strip()
+        user = User.objects.filter(email__iexact=email, is_active=True).first()
+        if user:
             user.send_reset_email()
-        except User.DoesNotExist:
-            pass
-
+        # Same message either way so nobody can find out which emails are registered
         messages.success(request, 'If an account exists, a password reset link has been sent.')
 
     return render(request, 'forgot_password.html')
 
 
 def reset_password(request, token):
-    try:
-        user = User.objects.get(reset_password_token=token, reset_password_expires__gt=timezone.now())
-        valid = True
-    except User.DoesNotExist:
-        valid = False
-        user = None
+    user = User.objects.filter(reset_password_token=token, reset_password_expires__gt=timezone.now()).first() if token else None
+    valid = user is not None
 
     if request.method == 'POST' and valid:
-        password = request.POST.get('password')
-        password2 = request.POST.get('password2')
+        password = request.POST.get('password') or ''
+        password2 = request.POST.get('password2') or ''
 
-        if password == password2:
-            user.set_password(password)
-            user.reset_password_token = None
-            user.reset_password_expires = None
-            user.save()
-            messages.success(request, 'Password reset successful!')
-            return redirect('login')
-        else:
+        if password != password2:
             messages.error(request, 'Passwords do not match.')
+        else:
+            try:
+                validate_password(password, user)
+            except ValidationError as exc:
+                for err in exc.messages:
+                    messages.error(request, err)
+            else:
+                user.set_password(password)
+                user.reset_password_token = None
+                user.reset_password_expires = None
+                user.save()
+                messages.success(request, 'Password reset successful! You can now log in.')
+                return redirect('login')
 
     return render(request, 'reset_password.html', {'valid': valid, 'user': user})
 
@@ -674,7 +832,12 @@ def home(request):
 
 def company_home(request):
     latest_news = NewsPost.objects.filter(is_published=True).order_by('-published_date')[:3]
-    return render(request, 'malitinne/home.html', {'latest_news': latest_news})
+    return render(request, 'malitinne/home.html', {
+        'latest_news': latest_news,
+        'featured_programmes': Programme.objects.filter(is_published=True, status='accredited').order_by('-is_featured', 'order')[:6],
+        'map_points': _map_points(),
+        'gallery_photos': GalleryPhoto.objects.filter(is_published=True, show_on_home=True)[:6],
+    })
 
 
 def lms_portal(request):
@@ -714,7 +877,11 @@ def student_dashboard(request):
     certificates_count = Certificate.objects.filter(student=request.user).count()
     notifications = request.user.notifications.filter(is_read=False)[:5]
 
+    request_status = dict(EnrollmentRequest.objects.filter(student=request.user).values_list('course_id', 'status'))
+
     return render(request, 'student_dashboard.html', {
+        'request_status': request_status,
+        'requires_approval': settings.COURSE_ENROLMENT_REQUIRES_APPROVAL,
         'enrolled_courses': enrolled_courses,
         'available_courses': available_courses,
         'course_progress': course_progress,
@@ -728,50 +895,106 @@ def student_dashboard(request):
 
 @login_required
 def course_detail(request, course_id):
-    course = get_object_or_404(Course, id=course_id)
+    course = get_object_or_404(Course.objects.select_related('instructor'), id=course_id)
+    user = request.user
+
+    if user.role == 'instructor' and course.instructor_id != user.id and not user.is_superuser:
+        messages.error(request, 'You can only open courses that you facilitate.')
+        return redirect('instructor_dashboard')
+
     lessons = course.lessons.all().order_by('order')
-    assignments = course.assignments.all()
-    quizzes = []
+    is_enrolled = user.role != 'student' or course.students.filter(id=user.id).exists()
+
+    if user.role == 'student' and not is_enrolled:
+        # Not enrolled: show the outline only (lesson titles) — never the content.
+        if course.status != 'published':
+            raise Http404("Course not available")
+        enrollment_request = EnrollmentRequest.objects.filter(student=user, course=course).first()
+        return render(request, 'course_detail.html', {
+            'course': course,
+            'lessons': lessons,
+            'is_enrolled': False,
+            'enrollment_request': enrollment_request,
+            'requires_approval': settings.COURSE_ENROLMENT_REQUIRES_APPROVAL,
+        })
 
     progress = None
-    if request.user.role == 'student':
-        if request.user not in course.students.all():
-            messages.warning(request, 'You need to enroll in this course first.')
-            return redirect('student_dashboard')
-        progress, _created = Progress.objects.get_or_create(student=request.user, course=course)
+    completed_ids = set()
+    if user.role == 'student':
+        progress, _created = Progress.objects.get_or_create(student=user, course=course)
+        completed_ids = set(progress.completed_lessons.values_list('id', flat=True))
 
-    for lesson in lessons:
+    quizzes = []
+    for lesson in lessons.select_related('quiz'):
         if hasattr(lesson, 'quiz'):
-            quiz = lesson.quiz
-            quiz_attempt = None
-            if request.user.is_authenticated:
-                quiz_attempt = QuizAttempt.objects.filter(quiz=quiz, student=request.user).first()
-            quizzes.append({'quiz': quiz, 'attempt': quiz_attempt, 'lesson': lesson})
+            attempt = QuizAttempt.objects.filter(quiz=lesson.quiz, student=user).first() if user.role == 'student' else None
+            quizzes.append({'quiz': lesson.quiz, 'attempt': attempt, 'lesson': lesson})
+
+    # Sequential unlocking: a lesson opens once the previous one is completed
+    lesson_rows = []
+    previous_done = True
+    for index, lesson in enumerate(lessons, start=1):
+        done = lesson.id in completed_ids
+        if user.role != 'student':
+            state = 'open'
+        elif done:
+            state = 'completed'
+        elif previous_done:
+            state = 'current'
+        else:
+            state = 'locked'
+        lesson_rows.append({'lesson': lesson, 'number': index, 'state': state})
+        previous_done = done
 
     return render(request, 'course_detail.html', {
         'course': course,
         'lessons': lessons,
-        'assignments': assignments,
+        'lesson_rows': lesson_rows,
+        'assignments': course.assignments.all(),
         'quizzes': quizzes,
-        'progress': progress
+        'progress': progress,
+        'is_enrolled': True,
+        'is_staff_view': user.role != 'student',
+        'announcements': course.announcements.all()[:3],
     })
 
 
 @login_required
 def enroll_course(request, course_id):
     if request.user.role != 'student':
-        return JsonResponse({'error': 'Only students can enroll'}, status=403)
+        messages.error(request, 'Only learners can join courses.')
+        return redirect('lms_portal')
 
-    course = get_object_or_404(Course, id=course_id)
-    if request.user not in course.students.all():
+    course = get_object_or_404(Course, id=course_id, status='published')
+    if request.method != 'POST':
+        return redirect('course_detail', course_id=course.id)
+
+    if course.students.filter(id=request.user.id).exists():
+        messages.info(request, f'You are already enrolled in {course.title}.')
+        return redirect('course_detail', course_id=course.id)
+
+    if not settings.COURSE_ENROLMENT_REQUIRES_APPROVAL:
         course.students.add(request.user)
         Progress.objects.get_or_create(student=request.user, course=course)
         send_notification(request.user, 'Course Enrolled', f'You have successfully enrolled in {course.title}', f'/course/{course.id}/')
         messages.success(request, f'Successfully enrolled in {course.title}!')
-    else:
-        messages.info(request, f'You are already enrolled in {course.title}')
+        return redirect('course_detail', course_id=course.id)
 
-    return redirect('student_dashboard')
+    req, created = EnrollmentRequest.objects.get_or_create(
+        student=request.user, course=course,
+        defaults={'motivation': (request.POST.get('motivation') or '')[:2000]},
+    )
+    if not created and req.status == 'declined':
+        req.status = 'pending'
+        req.motivation = (request.POST.get('motivation') or req.motivation)[:2000]
+        req.decided_at = None
+        req.save()
+        created = True
+    if created:
+        messages.success(request, f'Your request to join {course.title} has been sent. We will notify you once it is approved.')
+    else:
+        messages.info(request, 'Your request for this course is already being reviewed.')
+    return redirect('course_detail', course_id=course.id)
 
 
 @login_required
@@ -1056,6 +1279,51 @@ def create_course(request):
             messages.error(request, 'Course title is required')
 
     return render(request, 'instructor/create_course.html')
+
+
+@login_required
+def import_learner_guide_view(request, course_id):
+    """Convert a face-to-face Word learner guide into online lessons for this course."""
+    from .importers import import_into_course
+
+    course = get_object_or_404(Course, id=course_id)
+    if not (request.user.is_superuser or request.user.role == 'admin' or
+            (request.user.role == 'instructor' and course.instructor_id == request.user.id)):
+        messages.error(request, 'Only the course facilitator or an administrator can import material.')
+        return redirect('lms_portal')
+
+    if request.method == 'POST':
+        guide = request.FILES.get('guide')
+        assessment = request.FILES.get('assessment')
+        problems = []
+        for f in filter(None, [guide, assessment]):
+            if not f.name.lower().endswith('.docx'):
+                problems.append(f'{f.name}: please upload a Word .docx file.')
+            elif f.size > 25 * 1024 * 1024:
+                problems.append(f'{f.name}: file is larger than 25 MB.')
+        if not guide:
+            problems.append('Please choose the learner guide (.docx).')
+        if problems:
+            for p in problems:
+                messages.error(request, p)
+        else:
+            try:
+                result = import_into_course(course, guide, assessment,
+                                            module_title=(request.POST.get('module_title') or '').strip()[:200],
+                                            replace=bool(request.POST.get('replace')))
+            except Exception as exc:
+                logger.exception('Learner guide import failed')
+                messages.error(request, f'Could not import that document: {exc}')
+            else:
+                AuditLog.objects.create(user=request.user, action='create', resource_type='learner_guide_import',
+                                        resource_id=course.id, ip_address=get_client_ip(request), details=result)
+                messages.success(request, f"Done! {result['lessons']} online lessons (about {result['minutes']} minutes of reading) "
+                                          f"and {result['assignments']} assessment activities were added to {course.title}.")
+                return redirect('course_detail', course_id=course.id)
+
+    return render(request, 'instructor/import_guide.html', {
+        'course': course, 'modules': course.learning_modules.all(),
+    })
 
 
 @login_required
@@ -1760,34 +2028,81 @@ def delete_discussion(request, discussion_id):
 
 @login_required
 def course_roster(request, course_id):
+    """Class list with progress. Staff only — learners may not see each other's
+    personal information (POPIA)."""
     course = get_object_or_404(Course, id=course_id)
 
-    if request.user.role == 'student' and request.user not in course.students.all():
-        messages.error(request, 'You are not enrolled in this course.')
-        return redirect('student_dashboard')
+    if request.user.role == 'student':
+        messages.error(request, 'The class roster is only available to facilitators.')
+        return redirect('course_detail', course_id=course.id)
 
-    if request.user.role == 'instructor' and course.instructor != request.user:
+    if request.user.role == 'instructor' and course.instructor_id != request.user.id:
         messages.error(request, 'You do not own this course.')
         return redirect('instructor_dashboard')
 
+    total_lessons = course.lessons.count()
+    students_qs = course.students.order_by('first_name', 'last_name', 'username')
+
+    completed_map = dict(
+        Progress.objects.filter(course=course).annotate(done=Count('completed_lessons')).values_list('student_id', 'done')
+    )
+    att_rows = Attendance.objects.filter(course=course).values('student_id').annotate(
+        total=Count('id'), present=Count('id', filter=Q(status='present')))
+    attendance_map = {r['student_id']: (r['present'], r['total']) for r in att_rows}
+    grade_map = dict(
+        Submission.objects.filter(assignment__course=course, grade__isnull=False)
+        .values('student_id').annotate(avg=Avg('grade')).values_list('student_id', 'avg')
+    )
+    last_seen = dict(students_qs.values_list('id', 'last_login'))
+
     students = []
-    for student in course.students.all():
-        progress, _ = Progress.objects.get_or_create(student=student, course=course)
-        attendance_count = Attendance.objects.filter(student=student, course=course, status='present').count()
-        total_attendance = Attendance.objects.filter(student=student, course=course).count()
-        attendance_percent = int((attendance_count / total_attendance) * 100) if total_attendance > 0 else 0
-
-        submissions = Submission.objects.filter(student=student, assignment__course=course, grade__isnull=False)
-        avg_grade = submissions.aggregate(avg=Avg('grade'))['avg'] or 0
-
+    for student in students_qs:
+        done = completed_map.get(student.id, 0)
+        progress = int(done * 100 / total_lessons) if total_lessons else 0
+        present, total = attendance_map.get(student.id, (0, 0))
+        attendance = int(present * 100 / total) if total else None
+        avg = grade_map.get(student.id)
+        status = 'completed' if progress == 100 else 'on_track' if progress >= 50 else 'at_risk' if progress < 20 else 'in_progress'
         students.append({
             'student': student,
-            'progress': progress.progress_percentage,
-            'attendance': attendance_percent,
-            'grade': f"{avg_grade:.0f}%" if avg_grade > 0 else "N/A"
+            'progress': progress,
+            'lessons_done': done,
+            'attendance': attendance,
+            'grade': round(avg) if avg is not None else None,
+            'status': status,
+            'last_login': last_seen.get(student.id),
         })
 
-    return render(request, 'course_roster.html', {'course': course, 'students': students})
+    query = (request.GET.get('q') or '').strip().lower()
+    if query:
+        students = [s for s in students if query in (s['student'].get_full_name() + ' ' + s['student'].username + ' ' + s['student'].email).lower()]
+
+    if request.GET.get('export') == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="roster-{course.id}.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Name', 'Username', 'Email', 'Lessons completed', 'Progress %', 'Attendance %', 'Average grade %', 'Last login'])
+        for row in students:
+            st = row['student']
+            writer.writerow([st.get_full_name(), st.username, st.email, row['lessons_done'], row['progress'],
+                             '' if row['attendance'] is None else row['attendance'], '' if row['grade'] is None else row['grade'],
+                             row['last_login'].strftime('%Y-%m-%d %H:%M') if row['last_login'] else ''])
+        AuditLog.objects.create(user=request.user, action='export', resource_type='course_roster', resource_id=course.id,
+                                ip_address=get_client_ip(request))
+        return response
+
+    summary = {
+        'count': len(students),
+        'completed': sum(1 for s in students if s['status'] == 'completed'),
+        'at_risk': sum(1 for s in students if s['status'] == 'at_risk'),
+        'avg_progress': int(sum(s['progress'] for s in students) / len(students)) if students else 0,
+    }
+    pending_requests = course.enrollment_requests.filter(status='pending').select_related('student')
+
+    return render(request, 'course_roster.html', {
+        'course': course, 'students': students, 'summary': summary, 'total_lessons': total_lessons,
+        'query': request.GET.get('q', ''), 'pending_requests': pending_requests,
+    })
 
 
 @login_required
@@ -2468,52 +2783,153 @@ def get_backup_log_api(request):
     return JsonResponse({'backups': [{'timestamp': b.backup_timestamp.isoformat(), 'type': b.backup_type, 'size': b.backup_size, 'status': b.status} for b in backups]})
 
 
-# ==================== CONTACT FORM SUBMIT ====================
+# ==================== CONTACT FORM / ENQUIRIES ====================
+
+def _enquiry_rate_limited(request):
+    key = f"enquiry:{get_client_ip(request)}"
+    count = cache.get(key, 0)
+    if count >= 5:
+        return True
+    cache.set(key, count + 1, 3600)
+    return False
+
 
 def contact_form_submit(request):
-    if request.method == 'POST':
-        try:
-            first_name = request.POST.get('first_name', '')
-            last_name = request.POST.get('last_name', '')
-            email = request.POST.get('email', '')
-            organisation = request.POST.get('organisation', '')
-            client_type = request.POST.get('client_type', '')
-            message = request.POST.get('message', '')
+    """Handles the contact form AND programme 'enquire / join / partner' forms.
+    Saves the enquiry, emails it to settings.CONTACT_EMAIL (hello@malitinne.co.za)
+    and sends the visitor an acknowledgement."""
+    if request.method != 'POST':
+        return redirect('contact')
 
-            if not first_name or not last_name or not email or not message:
-                messages.error(request, 'Please fill in all required fields.')
-                return redirect('contact')
+    back = request.POST.get('return_to') or ''
+    if not url_has_allowed_host_and_scheme(back, allowed_hosts={request.get_host()}):
+        back = reverse('contact')
 
-            full_name = f"{first_name} {last_name}"
+    # Honeypot: real people never fill in this hidden field
+    if request.POST.get('website'):
+        messages.success(request, 'Thank you! Your message has been sent.')
+        return redirect(back)
 
-            html_message = f"""
-            <html>
-            <body>
-                <h2>New Contact Form Submission</h2>
-                <p><strong>Name:</strong> {full_name}</p>
-                <p><strong>Email:</strong> {email}</p>
-                <p><strong>Organisation:</strong> {organisation or 'Not provided'}</p>
-                <p><strong>I am a:</strong> {client_type or 'Not specified'}</p>
-                <p><strong>Message:</strong></p>
-                <p>{message}</p>
-            </body>
-            </html>
-            """
+    first_name = (request.POST.get('first_name') or '').strip()
+    last_name = (request.POST.get('last_name') or '').strip()
+    name = (request.POST.get('name') or f"{first_name} {last_name}").strip()
+    email = (request.POST.get('email') or '').strip()
+    message = (request.POST.get('message') or '').strip()
 
-            send_mail(
-                subject=f'New Contact Form Submission from {full_name}',
-                message=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=['sah.sakhile@gmail.com'],
-                html_message=html_message,
-                fail_silently=False
-            )
+    try:
+        validate_email(email)
+        email_ok = True
+    except ValidationError:
+        email_ok = False
 
-            messages.success(request, 'Thank you! Your message has been sent.')
-        except Exception:
-            messages.error(request, 'An error occurred. Please try again.')
+    if not name or not email_ok or not message:
+        messages.error(request, 'Please fill in your name, a valid email address and your message.')
+        return redirect(back)
+    if not request.POST.get('popia_consent'):
+        messages.error(request, 'Please tick the box to allow us to use your details to respond to you (POPIA).')
+        return redirect(back)
+    if _enquiry_rate_limited(request):
+        messages.error(request, 'You have sent several messages already. Please wait a while or call us on 073 931 7923.')
+        return redirect(back)
 
-    return redirect('contact')
+    programme = None
+    if request.POST.get('programme'):
+        programme = Programme.objects.filter(pk=request.POST.get('programme'), is_published=True).first()
+    enquiry_type = request.POST.get('enquiry_type') or ('programme' if programme else 'general')
+    if enquiry_type not in dict(Enquiry.TYPE_CHOICES):
+        enquiry_type = 'general'
+
+    enquiry = Enquiry.objects.create(
+        enquiry_type=enquiry_type, programme=programme, name=name[:150], email=email,
+        phone=(request.POST.get('phone') or '').strip()[:30],
+        organisation=(request.POST.get('organisation') or '').strip()[:200],
+        client_type=(request.POST.get('client_type') or '').strip()[:60],
+        message=message[:5000], popia_consent=True, ip_address=get_client_ip(request),
+    )
+    enquiry.email_sent = send_enquiry_notification(enquiry)
+    enquiry.save(update_fields=['email_sent'])
+    send_enquiry_acknowledgement(enquiry)
+
+    messages.success(request, 'Thank you! Your message has been sent to our team. We will respond within two working days.')
+    return redirect(back)
+
+
+# ==================== APPROVALS (ADMIN) ====================
+
+def _safe_next(request, fallback):
+    nxt = request.POST.get('next') or ''
+    if nxt and url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}):
+        return nxt
+    return fallback
+
+def _is_admin_user(user):
+    return user.is_authenticated and (user.is_superuser or getattr(user, 'role', '') == 'admin')
+
+
+@login_required
+@user_passes_test(_is_admin_user)
+def pending_approvals(request):
+    pending_users = User.objects.filter(role='student', is_approved=False, is_active=True).order_by('date_joined')
+    pending_enrolments = EnrollmentRequest.objects.filter(status='pending').select_related('student', 'course')
+    recently_approved = User.objects.filter(role='student', is_approved=True, approved_at__isnull=False).order_by('-approved_at')[:10]
+    return render(request, 'approvals.html', {
+        'pending_users': pending_users, 'pending_enrolments': pending_enrolments, 'recently_approved': recently_approved,
+        'courses': Course.objects.filter(status='published').order_by('title'),
+    })
+
+
+@login_required
+@user_passes_test(_is_admin_user)
+def approve_user(request, user_id):
+    if request.method != 'POST':
+        return redirect('pending_approvals')
+    learner = get_object_or_404(User, id=user_id, role='student')
+    learner.is_approved = True
+    learner.is_active = True
+    learner.approved_by = request.user
+    learner.save()  # save() sends the "you're approved — log in here" email
+    course_id = request.POST.get('course')
+    if course_id:
+        course = Course.objects.filter(id=course_id).first()
+        if course:
+            req, _ = EnrollmentRequest.objects.get_or_create(student=learner, course=course)
+            req.approve(by=request.user)
+    AuditLog.objects.create(user=request.user, action='edit', resource_type='user_approval', resource_id=learner.id,
+                            ip_address=get_client_ip(request), details={'approved': True})
+    messages.success(request, f'{learner.get_full_name() or learner.username} approved. A login link was emailed to {learner.email}.')
+    return redirect(_safe_next(request, 'pending_approvals'))
+
+
+@login_required
+@user_passes_test(_is_admin_user)
+def decline_user(request, user_id):
+    if request.method != 'POST':
+        return redirect('pending_approvals')
+    learner = get_object_or_404(User, id=user_id, role='student', is_approved=False)
+    reason = (request.POST.get('reason') or '').strip()[:500]
+    learner.is_active = False
+    learner.save(update_fields=['is_active'])
+    send_account_declined_email(learner, reason)
+    AuditLog.objects.create(user=request.user, action='edit', resource_type='user_approval', resource_id=learner.id,
+                            ip_address=get_client_ip(request), details={'approved': False, 'reason': reason})
+    messages.info(request, f'Registration for {learner.username} was declined and the learner was notified.')
+    return redirect('pending_approvals')
+
+
+@login_required
+@user_passes_test(_is_admin_user)
+def decide_enrollment(request, request_id):
+    if request.method != 'POST':
+        return redirect('pending_approvals')
+    req = get_object_or_404(EnrollmentRequest, id=request_id)
+    if request.POST.get('decision') == 'approve':
+        req.approve(by=request.user)
+        messages.success(request, f'{req.student.username} now has access to {req.course.title}.')
+    else:
+        req.decline(by=request.user)
+        messages.info(request, f'Enrolment request from {req.student.username} declined.')
+    send_enrollment_decision(req)
+    return redirect(_safe_next(request, 'pending_approvals'))
 
 
 # ==================== OPPORTUNITIES ====================
@@ -2622,15 +3038,22 @@ def apply_for_opportunity(request, opportunity_id):
                 except Exception as exc:
                     logger.warning("Failed to send admin application notification: %s", exc)
 
+            request.session['submitted_application'] = application.application_number
             messages.success(request, f'Application submitted successfully! Your reference number is {application.application_number}')
             return redirect('application_success', application_number=application.application_number)
-        except Exception as e:
-            messages.error(request, f'Error submitting application: {e!s}')
+        except Exception:
+            logger.exception("Application submission failed")
+            messages.error(request, 'Sorry, we could not submit your application. Please check your details and try again.')
 
     return render(request, 'malitinne/apply_dynamic.html', {'opportunity': opportunity})
 
 
 def application_success(request, application_number):
+    # POPIA: only the person who just submitted (same browser session) or staff may view it
+    allowed = request.session.get('submitted_application') == application_number or (
+        request.user.is_authenticated and (request.user.is_staff or request.user.role == 'admin'))
+    if not allowed:
+        raise Http404("Application not found")
     application = get_object_or_404(Application, application_number=application_number)
     return render(request, 'malitinne/application_success.html', {'application': application})
 
@@ -3250,4 +3673,4 @@ def custom_404(request, exception):
 
 
 def custom_500(request):
-    return render(request, '404.html', status=500)
+    return render(request, '500.html', status=500)

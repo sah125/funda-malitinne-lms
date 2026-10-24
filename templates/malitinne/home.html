@@ -16,12 +16,12 @@
     <div class="hero-grid-lines"></div>
     <div class="hero-content">
         <div class="hero-left">
-            <div class="hero-badge"><i class="fas fa-award"></i> Black-Women Owned · SETA Accredited</div>
+            <div class="hero-badge"><i class="fas fa-award"></i> Black-Women Owned · QCTO &amp; SETA Accredited</div>
             <h1>Grooming Human Capital<br>for the <em>Workplace</em></h1>
             <p class="hero-sub">Malitinne is South Africa's trusted partner in skills development, training, workplace placements and project management — bridging available and required skills to improve competencies across Africa.</p>
             <div class="hero-btns">
-                <a href="{% url 'services' %}" class="btn-primary"><i class="fas fa-arrow-right"></i> Our Services</a>
-                <a href="{% url 'lms_portal' %}" class="btn-outline-white"><i class="fas fa-graduation-cap"></i> Access LMS</a>
+                <a href="{% url 'programmes' %}" class="btn-primary"><i class="fas fa-book-open"></i> Explore Programmes</a>
+                <a href="{% url 'contact' %}?type=partner" class="btn-outline-white"><i class="fas fa-handshake"></i> Partner With Us</a>
             </div>
         </div>
         <div class="hero-right">
@@ -67,9 +67,47 @@
     </div>
 </section>
 
+<!-- Featured Programmes -->
+{% if featured_programmes %}
+<section class="section-pad bg-off" id="programmes">
+    <div class="wrap">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:40px;">
+            <div>
+                <div class="section-tag fade-in"><i class="fas fa-certificate"></i> QCTO Accredited</div>
+                <h2 class="section-title fade-in">Programmes that build <em>real skills</em></h2>
+                <p class="section-sub fade-in">Accredited occupational qualifications and skills programmes — delivered face-to-face, blended or fully online so distance is never a barrier.</p>
+            </div>
+            <a href="{% url 'programmes' %}" class="btn btn-navy fade-in">All programmes <i class="fas fa-arrow-right"></i></a>
+        </div>
+        <div class="pg-grid">
+            {% for p in featured_programmes %}{% include 'malitinne/partials/programme_card.html' %}{% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Learn from anywhere -->
+<section class="section-pad bg-navy">
+    <div class="wrap">
+        <div class="center" style="margin-bottom:44px;">
+            <div class="section-tag fade-in" style="margin:0 auto 12px;"><i class="fas fa-laptop"></i> Funda Malitinne LMS</div>
+            <h2 class="section-title fade-in" style="color:#fff;">The classroom now comes <em>to you</em></h2>
+            <p class="section-sub fade-in" style="color:rgba(255,255,255,.65);">We have taken our proven face-to-face programmes online. A learner in Nkandla, Pongola or Bergville gets the same accredited training as one sitting in our Durban office.</p>
+        </div>
+        <div class="promise-grid">
+            <div class="promise fade-in"><i class="fas fa-mobile-screen"></i><h4>Any device</h4><p>Learn on a phone, tablet or computer. Lessons are broken into short, data-friendly steps.</p></div>
+            <div class="promise fade-in"><i class="fas fa-user-check"></i><h4>Approved learners only</h4><p>Every registration is reviewed by our team before access is given — your learning space stays safe.</p></div>
+            <div class="promise fade-in"><i class="fas fa-clipboard-check"></i><h4>Real assessment</h4><p>Formative activities, quizzes, uploaded evidence and a digital Portfolio of Evidence, marked by registered assessors.</p></div>
+            <div class="promise fade-in"><i class="fas fa-shield-halved"></i><h4>POPIA protected</h4><p>Your ID, documents and results are private, encrypted in transit and only seen by authorised staff.</p></div>
+        </div>
+        <div class="center mt-4"><a href="{% url 'register' %}" class="btn btn-gold"><i class="fas fa-user-plus"></i> Register to learn</a> &nbsp; <a href="{% url 'programmes' %}" class="btn btn-ghost-light">See what you can study</a></div>
+    </div>
+</section>
+
 <!-- Latest News -->
-<section style="padding: 80px 0; background: #f8f9fa;">
-    <div class="max-container">
+{% if latest_news %}
+<section class="section-pad" style="background:#fff;">
+    <div class="wrap">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:40px;">
             <div>
                 <div class="section-tag"><i class="fas fa-newspaper"></i> News & Updates</div>
@@ -82,21 +120,20 @@
                 <article>
                     <a href="{% url 'news_detail' post.slug %}" style="text-decoration:none;color:inherit;display:block;">
                         {% if post.cover_image %}
-                            <div style="aspect-ratio:16/10;overflow:hidden;margin-bottom:20px;background:#eee;">
-                                <img src="{{ post.cover_image.url }}" alt="{{ post.title }}" style="width:100%;height:100%;object-fit:cover;">
+                            <div style="aspect-ratio:16/10;overflow:hidden;margin-bottom:20px;background:#eee;border-radius:14px;">
+                                <img src="{{ post.cover_image.url }}" alt="{{ post.title }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">
                             </div>
                         {% endif %}
-                        <h3 style="font-size:1.15rem;font-weight:700;color:var(--navy);line-height:1.4;margin:0 0 12px;">{{ post.title }}</h3>
+                        <h3 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:700;color:var(--navy);line-height:1.2;margin:0 0 12px;">{{ post.title }}</h3>
                         <p style="font-size:0.9rem;color:var(--text-muted);line-height:1.6;margin:0 0 16px;">{{ post.excerpt|truncatewords:20 }}</p>
                         <div style="font-size:0.75rem;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;">{{ post.published_date|date:"F j, Y" }}</div>
                     </a>
                 </article>
-            {% empty %}
-                <p style="grid-column:1 / -1;text-align:center;color:var(--text-muted);padding:30px 0;">No news posts yet. Check back soon.</p>
             {% endfor %}
         </div>
     </div>
 </section>
+{% endif %}
 
 <!-- Services -->
 <section class="services-section" id="services">
@@ -164,6 +201,35 @@
     </div>
 </section>
 
+<!-- Our work in action -->
+{% if gallery_photos %}
+<section class="section-pad bg-off" id="gallery">
+    <div class="wrap">
+        <div class="section-tag fade-in"><i class="fas fa-camera"></i> Our Work in Action</div>
+        <h2 class="section-title fade-in">Skills you can <em>see</em></h2>
+        <p class="section-sub fade-in" style="margin-bottom:34px;">From EPWP furniture workshops to leather &amp; skins craft and youth entrepreneurship sessions: these are Malitinne learners building real products and real careers.</p>
+        <div class="fade-in">{% include 'malitinne/partials/gallery_grid.html' with photos=gallery_photos compact=True %}</div>
+        <div style="text-align:center;margin-top:36px;"><a href="{% url 'gallery' %}" class="btn-primary">View the full gallery <i class="fas fa-arrow-right"></i></a></div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Where we work -->
+<section class="section-pad" id="where-we-work">
+    <div class="wrap">
+        <div class="section-tag fade-in"><i class="fas fa-map-location-dot"></i> Our Footprint</div>
+        <h2 class="section-title fade-in">Where we <em>deliver skills</em></h2>
+        <p class="section-sub fade-in" style="margin-bottom:34px;">From uPhongolo to Okhahlamba — municipalities, colleges, parks and partners who trust Malitinne with their people. Tap a place to see what we did there.</p>
+        <div class="map-shell fade-in">
+            <div class="map-list">
+                {% for p in map_points %}<button type="button" data-map-index="{{ forloop.counter0 }}"><span class="ben">{% if p.beneficiaries %}{{ p.beneficiaries }}{% endif %}</span><strong>{{ p.name }}</strong><span>{{ p.town }}{% if p.period %} · {{ p.period }}{% endif %}</span></button>{% endfor %}
+            </div>
+            <div id="serviceMap" role="region" aria-label="Map of places where Malitinne delivers programmes"></div>
+        </div>
+        <div class="map-legend"><span class="l-office">Head office</span><span class="l-project">Project site</span><span class="l-partner">Partner</span><a href="{% url 'footprint' %}" style="margin-left:auto;color:var(--gold-dark);font-weight:600;">Full footprint &rarr;</a></div>
+    </div>
+</section>
+
 <!-- Founder -->
 <section class="founder-section" id="founder">
     <div class="founder-inner">
@@ -198,18 +264,6 @@
     </div>
 </section>
 
-<!-- LMS CTA Banner -->
-<div class="lms-banner">
-    <div class="lms-banner-inner">
-        <h2>Ready to Start Learning?</h2>
-        <p>Access our Funda Malitinne Learning Management System — your gateway to accredited courses, learnerships, and skills development programmes.</p>
-        <div class="lms-btns">
-            <a href="{% url 'lms_portal' %}" class="btn-white"><i class="fas fa-graduation-cap"></i> Access LMS Portal</a>
-            <a href="{% url 'register' %}" class="btn-outline-white2"><i class="fas fa-user-plus"></i> Register Now</a>
-        </div>
-    </div>
-</div>
-
 <!-- Contact -->
 <section class="contact-section" id="contact">
     <div class="max-container">
@@ -223,7 +277,7 @@
             <p>Whether you are a corporate looking for skills development solutions, a learner seeking placements, or a government entity seeking a reliable partner — we are here for you.</p>
             <div class="contact-detail"><div class="contact-icon"><i class="fas fa-map-marker-alt"></i></div><div><strong>Physical Address</strong><p>Office 1138, 11th Floor, Commercial City Building<br>40 DR A B Xuma Road, Durban, 4001</p></div></div>
             <div class="contact-detail"><div class="contact-icon"><i class="fas fa-phone"></i></div><div><strong>Phone</strong><p>073 931 7923 | 086 246 0207 | (031) 301 0835</p></div></div>
-            <div class="contact-detail"><div class="contact-icon"><i class="fas fa-envelope"></i></div><div><strong>Email</strong><p>sibu@malitinne.co.za | info@malitinne.co.za</p></div></div>
+            <div class="contact-detail"><div class="contact-icon"><i class="fas fa-envelope"></i></div><div><strong>Email</strong><p><a href="mailto:{{ CONTACT_EMAIL }}" style="color:inherit;">{{ CONTACT_EMAIL }}</a></p></div></div>
             <div class="contact-detail"><div class="contact-icon"><i class="fas fa-mail-bulk"></i></div><div><strong>Postal Address</strong><p>P O Box 30165, Plessislaer, 3216</p></div></div>
         </div>
         <div class="contact-form fade-in">
@@ -250,7 +304,10 @@
                         <option>Other</option>
                     </select>
                 </div>
-                <div class="form-group"><label>Message</label><textarea name="message" placeholder="Tell us about your needs..." required></textarea></div>
+                <div class="form-group"><label>Message</label><textarea name="message" placeholder="Tell us about your needs..." required maxlength="5000"></textarea></div>
+                <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+                <input type="hidden" name="return_to" value="/#contact">
+                <label class="consent" style="margin:4px 0 16px;"><input type="checkbox" name="popia_consent" value="1" required> <span>I agree that Malitinne may use my details to respond to this message, as described in the <a href="{% url 'privacy' %}">privacy policy</a>.</span></label>
                 <button type="submit" class="btn-form"><i class="fas fa-paper-plane"></i> Send Message</button>
             </form>
         </div>
@@ -261,7 +318,7 @@
 </section>
 
 <!-- SEO Content -->
-<section style="padding:60px 0;background:#f8f9fa;border-top:1px solid #eee;">
+<section style="padding:60px 0;background:var(--off-white);border-top:1px solid #eee;">
     <div class="container" style="max-width: 900px; margin: 0 auto; padding: 0 24px;">
         <h2 style="text-align:center;margin-bottom:40px;font-weight:700;">Skills Development & Training in South Africa</h2>
         <p style="font-size:1.1rem;line-height:1.8;"><strong>Malitinne</strong> is a leading skills development company based in Durban, KwaZulu-Natal. We specialize in <strong>learnerships</strong>, <strong>apprenticeships</strong>, and <strong>SETA-accredited training programmes</strong> that help South African youth and professionals build sustainable careers.</p>
@@ -276,6 +333,9 @@
 {% endblock %}
 
 {% block extra_scripts %}
+{{ map_points|json_script:'map-data' }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>document.addEventListener('DOMContentLoaded', function(){ initServiceMap(JSON.parse(document.getElementById('map-data').textContent)); });</script>
 <script>
 let currentSlide = 0;
 const slides = document.querySelectorAll('.hero-slide');
@@ -331,3 +391,4 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal()
 {% endblock %}
 
 {% block nav_class %}{% endblock %}
+{% block extra_head %}{% include 'malitinne/partials/leaflet_head.html' %}{% endblock %}

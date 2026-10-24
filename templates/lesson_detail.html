@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load lesson_html %}
 {% load static %}
 
 {% block title %}{{ lesson.title }} - Funda Malitinne{% endblock %}
@@ -465,7 +466,7 @@
           <h3><i class="fas fa-book" style="color: #9f7734;"></i> Step 1: Read & Understand</h3>
         </div>
         <div class="card-body">
-          <div style="line-height: 1.8; color: #4a4a4a;">{{ lesson.content|linebreaks }}</div>
+          <div style="line-height: 1.8; color: #4a4a4a;">{{ lesson.content|lesson_body }}</div>
           <div class="verification-grid">
             <div class="verification-card" onclick="toggleVerification(this, 1)">
               <div class="custom-checkbox"></div>
@@ -856,4 +857,4 @@
     document.getElementById('completeBtn').innerHTML = '<i class="fas fa-check-circle"></i> Lesson Completed! ✓';
   {% endif %}
 </script>
-{% endblock %}
+{% endblock %}

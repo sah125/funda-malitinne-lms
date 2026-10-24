@@ -124,3 +124,13 @@ django_debug.log
 .DS_Store
 Thumbs.db
 desktop.ini
+# ---- Website images ship with the code (logo, hero photos, gallery) ----
+# Learner uploads stay private: media/ is still ignored above.
+!static/**/*.jpg
+!static/**/*.jpeg
+!static/**/*.png
+!static/**/*.ico
+!static/**/*.svg
+!static/**/*.webp
+!static/*.png
+!static/*.ico

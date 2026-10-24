@@ -12,3 +12,11 @@
 *.cfg text eol=lf
 *.ini text eol=lf
 requirements.txt diff
+# Deploy scripts and images
+*.sh text eol=lf
+*.bat text eol=crlf
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.ico binary
+*.webp binary

@@ -1,0 +1,9 @@
+{% extends 'email/_base.html' %}
+{% block body %}
+<h2 style="font-family:Georgia,serif;color:#1a1a2e;margin:0 0 16px;">Update on your registration</h2>
+<p>Dear {{ user.first_name|default:user.username }},</p>
+<p>Thank you for your interest in learning with Malitinne. Unfortunately we are unable to approve your registration at this time.</p>
+{% if reason %}<p style="background:#fbf3e4;border-left:4px solid #9f7734;padding:12px 16px;">{{ reason }}</p>{% endif %}
+<p>If you believe this is a mistake, or you would like to know about upcoming intakes and funded programmes, please reply to this email.</p>
+<p>Kind regards,<br><strong>The Malitinne Team</strong></p>
+{% endblock %}

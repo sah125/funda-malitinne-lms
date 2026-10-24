@@ -58,12 +58,40 @@ class AuditLoggingMiddleware(MiddlewareMixin):
 
 
 class SecurityHeadersMiddleware(MiddlewareMixin):
-    """Add security headers to all responses"""
+    """Extra browser hardening headers (POPIA: protect learners' personal data)."""
+
+    PRIVATE_PREFIXES = ('/student', '/instructor', '/admin', '/admin-dashboard', '/course/', '/lesson/',
+                        '/learner', '/api/', '/staff-portal', '/shared-drive', '/certificate')
 
     def process_response(self, request, response):
-        """Add security headers"""
-        response['X-Content-Type-Options'] = 'nosniff'
-        response['X-Frame-Options'] = 'DENY'
-        response['X-XSS-Protection'] = '1; mode=block'
-        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        response.setdefault('X-Content-Type-Options', 'nosniff')
+        response.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        response.setdefault('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=(), usb=()')
+        response.setdefault('Cross-Origin-Opener-Policy', 'same-origin')
+        # Never let browsers / proxies cache pages that contain personal information
+        if request.path.startswith(self.PRIVATE_PREFIXES) or getattr(request, 'user', None) and request.user.is_authenticated:
+            response['Cache-Control'] = 'no-store, private'
         return response
+
+
+class ApprovalRequiredMiddleware:
+    """Learners who registered but are not yet approved cannot use the LMS.
+
+    Login already refuses them; this also ends any session that existed before
+    approval was required, or if an admin un-approves / deactivates someone.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = getattr(request, 'user', None)
+        if user is not None and user.is_authenticated and getattr(user, 'needs_approval', False):
+            from django.contrib import messages
+            from django.contrib.auth import logout
+            from django.shortcuts import redirect
+
+            logout(request)
+            messages.warning(request, 'Your account is still waiting for approval. You will receive an email with your login link once it is approved.')
+            return redirect('login')
+        return self.get_response(request)

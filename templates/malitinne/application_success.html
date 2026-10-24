@@ -1,0 +1,23 @@
+{% extends 'malitinne/site_base.html' %}
+{% block title %}Application received | Malitinne{% endblock %}
+{% block page_banner %}
+<section class="page-banner">
+    <div class="page-banner-inner">
+        <h1>Application <em>received</em></h1>
+        <p>Thank you, {{ application.first_name }}. Your application for {{ application.opportunity.title }} has been submitted.</p>
+    </div>
+</section>
+{% endblock %}
+{% block content %}
+<section class="section-pad">
+    <div class="wrap center" style="max-width:640px;">
+        <div class="trust-card" style="text-align:center;">
+            <i class="fas fa-circle-check" style="font-size:2.4rem;color:#2e8b57;"></i>
+            <p style="margin-top:14px;">Your reference number</p>
+            <div class="num" style="font-size:2rem;">{{ application.application_number }}</div>
+            <p>Please keep this number. We have emailed a confirmation to <strong>{{ application.email }}</strong> and will contact you about the outcome.</p>
+        </div>
+        <div class="mt-3"><a class="btn btn-gold" href="{% url 'opportunities' %}">Back to opportunities</a> <a class="btn btn-ghost" href="{% url 'programmes' %}">Explore programmes</a></div>
+    </div>
+</section>
+{% endblock %}
